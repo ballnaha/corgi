@@ -1,0 +1,152 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  lineUserId    String   @unique @map("line_user_id")
+  displayName   String   @map("display_name")
+  pictureUrl    String?  @map("picture_url")
+  email         String?
+  statusMessage String?  @map("status_message") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  lastLoginAt   DateTime @default(now()) @map("last_login_at")
+
+  // Relations for future features
+  orders        Order[]
+  favorites     Favorite[]
+
+  @@map("users")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  price       Decimal  @db.Decimal(10, 2)
+  salePrice   Decimal? @map("sale_price") @db.Decimal(10, 2)
+  discountPercent Decimal? @map("discount_percent") @db.Decimal(5, 2)
+  imageUrl    String?  @map("image_url") // Primary image for backward compatibility
+  category    String
+  categoryId  String?  @map("category_id")
+  stock       Int      @default(0)
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  // Pet-specific fields
+  gender      String?  // เพศ: MALE, FEMALE, UNKNOWN
+  age         String?  // อายุ เช่น "2 เดือน", "1 ปี"
+  weight      String?  // น้ำหนัก เช่น "2.5 กก."
+  breed       String?  // สายพันธุ์
+  color       String?  // สี
+  
+  // Health and certification
+  vaccinated  Boolean  @default(false) // ฉีดวัคซีนแล้ว
+  certified   Boolean  @default(false) // มีใบรับรอง
+  healthNote  String?  @map("health_note") @db.Text // หมายเหตุสุขภาพ
+  
+  // Location and contact
+  location    String?  // สถานที่
+  contactInfo String?  @map("contact_info") @db.Text // ข้อมูลติดต่อ
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  categoryRef Category? @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+  favorites   Favorite[]
+  images      ProductImage[] // Multiple images
+
+  @@map("products")
+  @@index([categoryId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String  @map("product_id")
+  imageUrl  String  @map("image_url")
+  altText   String? @map("alt_text")
+  order     Int     @default(0) // สำหรับเรียงลำดับรูป
+  isMain    Boolean @default(false) @map("is_main") // รูปหลัก
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String      @map("user_id")
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @map("total_amount") @db.Decimal(10, 2)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  user        User        @relation(fields: [userId], references: [id])
+  orderItems  OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String  @map("order_id")
+  productId String  @map("product_id")
+  quantity  Int
+  price     Decimal @db.Decimal(10, 2)
+
+  // Relations
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model Favorite {
+  id        String @id @default(cuid())
+  userId    String @map("user_id")
+  productId String @map("product_id")
+
+  // Relations
+  user      User    @relation(fields: [userId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@unique([userId, productId])
+  @@map("favorites")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  key         String    @unique
+  name        String
+  icon        String?
+  description String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  products    Product[]
+
+  @@map("categories")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// MySQL doesn't support custom enums, using String with constraints instead

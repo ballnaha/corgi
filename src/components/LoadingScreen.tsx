@@ -1,0 +1,50 @@
+"use client";
+
+import { Box, CircularProgress, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+
+interface LoadingScreenProps {
+  message?: string;
+  fullScreen?: boolean;
+}
+
+export default function LoadingScreen({ 
+  message = "กำลังโหลด...", 
+  fullScreen = true 
+}: LoadingScreenProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const boxProps = fullScreen ? {
+    position: "fixed" as const,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "background.default",
+    zIndex: 9999,
+  } : {
+    minHeight: "100vh",
+  };
+
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 2,
+        ...boxProps,
+      }}
+    >
+      <CircularProgress />
+      <Typography suppressHydrationWarning>
+        {mounted ? message : "กำลังโหลด..."}
+      </Typography>
+    </Box>
+  );
+}

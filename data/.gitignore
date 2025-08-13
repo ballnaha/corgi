@@ -1,0 +1,5 @@
+# Ignore user data files
+users.json
+
+# Keep directory structure
+!.gitignore

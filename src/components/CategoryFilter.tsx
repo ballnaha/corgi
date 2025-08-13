@@ -2,12 +2,14 @@
 
 import React from "react";
 import { Box, Typography } from "@mui/material";
+import Image from "next/image";
 import { colors } from "@/theme/colors";
 
 interface Category {
   id: string;
   name: string;
-  emoji: string;
+  emoji?: string;
+  image?: string;
   color: string;
   bgColor: string;
 }
@@ -20,40 +22,35 @@ interface CategoryFilterProps {
 
 const defaultCategories: Category[] = [
   {
-    id: "fish",
-    name: "Fish",
-    emoji: "🐠",
-    color: colors.secondary.main,
-    bgColor: colors.categories.fish,
-  },
-  {
-    id: "birds",
-    name: "Birds",
-    emoji: "🦜",
-    color: colors.secondary.main,
-    bgColor: colors.categories.birds,
-  },
-  {
     id: "dogs",
-    name: "Dogs",
-    emoji: "🐕",
+    name: "สุนัข",
+    image: "/images/icon-corgi.png",
     color: colors.text.primary,
     bgColor: colors.categories.dogs,
   },
   {
-    id: "rabbit",
-    name: "Rabbit",
-    emoji: "🐰",
+    id: "birds",
+    name: "นก",
+    image: "/images/icon-bird.png",
     color: colors.secondary.main,
-    bgColor: colors.categories.rabbit,
+    bgColor: colors.categories.birds,
   },
+
   {
     id: "cats",
-    name: "Cats",
-    emoji: "🐱",
+    name: "แมว",
+    image: "/images/icon-cats.png",
     color: colors.secondary.main,
     bgColor: colors.categories.cats,
   },
+  {
+    id: "toys",
+    name: "ของเล่น",
+    image: "/images/icon-toys.png",
+    color: colors.secondary.main,
+    bgColor: colors.categories.rabbit,
+  },
+
 ];
 
 export default function CategoryFilter({
@@ -115,6 +112,7 @@ export default function CategoryFilter({
             onClick={() => onCategoryChange(category.id)}
             sx={{
               minWidth: 60,
+              pl: 1,
               textAlign: "center",
               cursor: "pointer",
               transition: "all 0.2s ease",
@@ -152,7 +150,21 @@ export default function CategoryFilter({
                 transition: "all 0.2s ease",
               }}
             >
-              {category.emoji}
+              {category.image ? (
+                <Image
+                  src={category.image}
+                  alt={category.name}
+                  width={48}
+                  height={48}
+                  priority={false}
+                  unoptimized
+                  style={{
+                    objectFit: "contain",
+                  }}
+                />
+              ) : (
+                category.emoji
+              )}
             </Box>
             <Typography
               variant="caption"
@@ -163,7 +175,7 @@ export default function CategoryFilter({
                     : colors.text.secondary,
                 fontWeight:
                   selectedCategory === category.id ? "bold" : "normal",
-                fontSize: "0.75rem",
+                fontSize: "0.85rem",
               }}
             >
               {category.name}

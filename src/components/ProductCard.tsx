@@ -52,6 +52,8 @@ export default function ProductCard({
     }
   };
 
+  const isOutOfStock = typeof product.stock === 'number' ? product.stock <= 0 : true;
+
   return (
     <Card
       onClick={handleProductClick}
@@ -83,7 +85,7 @@ export default function ProductCard({
         <CardMedia
           component="img"
           height="150"
-          image={product.image}
+          image={product.image || product.imageUrl || ''}
           alt={product.name}
           sx={{
             objectFit: 'cover',
@@ -92,6 +94,28 @@ export default function ProductCard({
             display: 'block',
           }}
         />
+        {isOutOfStock && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.35)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <Typography
+              variant="subtitle1"
+              sx={{ color: colors.secondary.main, fontWeight: 'bold' }}
+            >
+              สินค้าหมด
+            </Typography>
+          </Box>
+        )}
         
         {/* Favorite Button */}
         <IconButton
@@ -151,20 +175,46 @@ export default function ProductCard({
               fontSize: '0.75rem'
             }}
           >
-            Distance (Near 10km)
+            {product.location}
           </Typography>
         </Box>
 
-        <Typography
-          variant="h6"
-          sx={{
-            color: colors.primary.main,
-            fontWeight: 'bold',
-            fontSize: '1rem'
-          }}
-        >
-          ฿{product.price.toLocaleString()}
-        </Typography>
+        {(() => {
+          const hasSalePrice = product.salePrice != null;
+          const hasDiscountPercent = !hasSalePrice && product.discountPercent != null && product.discountPercent > 0;
+          const finalPrice = hasSalePrice
+            ? (product.salePrice as number)
+            : (hasDiscountPercent
+              ? Math.max(0, product.price - (product.price * ((product.discountPercent as number) / 100)))
+              : product.price);
+
+          return (
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
+              {(hasSalePrice || hasDiscountPercent) && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: colors.text.secondary,
+                    textDecoration: 'line-through',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  ฿{product.price.toLocaleString()}
+                </Typography>
+              )}
+              <Typography
+                variant="h6"
+                sx={{
+                  color: colors.primary.main,
+                  fontWeight: 'bold',
+                  fontSize: '1rem'
+                }}
+              >
+                ฿{finalPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </Typography>
+            </Box>
+          );
+        })()}
       </Box>
     </Card>
   );

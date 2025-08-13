@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Box,
-  IconButton,
   Typography
 } from '@mui/material';
 import {
@@ -19,10 +20,32 @@ interface BottomNavigationProps {
   onTabChange?: (tab: string) => void;
 }
 
-export default function BottomNavigation({ 
-  activeTab = 'home',
-  onTabChange 
+export default function BottomNavigation({
+  activeTab,
+  onTabChange
 }: BottomNavigationProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  // Derive active tab from current path when not explicitly controlled
+  const derivedActiveTab = useMemo(() => {
+    if (!pathname) return 'home';
+    if (pathname === '/' || pathname.startsWith('/product')) return 'home';
+    if (pathname.startsWith('/profile')) return 'profile';
+    if (pathname.startsWith('/favorites')) return 'favorites';
+    if (pathname.startsWith('/calendar')) return 'calendar';
+    return 'home';
+  }, [pathname]);
+
+  const isControlled = typeof activeTab !== 'undefined';
+  const currentActiveTab = isControlled ? (activeTab as string) : derivedActiveTab;
+
+  // Trigger a subtle bottom animation bar on route change
+  const [routeAnimKey, setRouteAnimKey] = useState(0);
+  useEffect(() => {
+    setRouteAnimKey((k) => k + 1);
+  }, [pathname]);
+
   const tabs = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'favorites', icon: FavoriteBorder, label: 'Favorites' },
@@ -30,10 +53,49 @@ export default function BottomNavigation({
     { id: 'profile', icon: Person, label: 'Profile' },
   ];
 
+  const getHrefForTab = (tabId: string) => {
+    switch (tabId) {
+      case 'home':
+        return '/';
+      case 'profile':
+        return '/profile';
+      case 'favorites':
+        return '/favorites';
+      case 'calendar':
+        return '/calendar';
+      default:
+        return '/';
+    }
+  };
+
+  const handleTabClick = (tabId: string) => {
+    switch (tabId) {
+      case 'home':
+        router.push('/');
+        break;
+      case 'profile':
+        router.push('/profile');
+        break;
+      case 'favorites':
+        router.push('/favorites');
+        break;
+      case 'calendar':
+        // TODO: Navigate to calendar page when implemented
+        console.log('Calendar page not implemented yet');
+        break;
+      default:
+        onTabChange?.(tabId);
+    }
+  };
+
+  // Hide bottom navigation on product detail pages
+  if (pathname && pathname.startsWith('/product/')) {
+    return null;
+  }
+
   return (
     <Box
       sx={{
-        position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
@@ -47,17 +109,36 @@ export default function BottomNavigation({
         alignItems: 'center',
         boxShadow: '0 -2px 12px rgba(0,0,0,0.08)',
         zIndex: 1000,
-        height: 70
+        height: 70,
+        position: 'fixed'
       }}
     >
+      {/* Route change bottom animation */}
+      <Box
+        key={routeAnimKey}
+        sx={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 3,
+          backgroundColor: `${colors.primary.main}55`,
+          transformOrigin: 'left',
+          animation: 'growX 400ms ease',
+          '@keyframes growX': {
+            from: { transform: 'scaleX(0)' },
+            to: { transform: 'scaleX(1)' }
+          }
+        }}
+      />
       {tabs.map((tab) => {
         const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
-        
-        return (
+        const isActive = currentActiveTab === tab.id || derivedActiveTab === tab.id;
+        const isNavigable = tab.id === 'home' || tab.id === 'profile' || tab.id === 'favorites';
+        const content = (
           <Box
             key={tab.id}
-            onClick={() => onTabChange?.(tab.id)}
+            onClick={!isNavigable ? () => handleTabClick(tab.id) : undefined}
             sx={{
               display: 'flex',
               flexDirection: isActive ? 'row' : 'column',
@@ -73,12 +154,12 @@ export default function BottomNavigation({
               height: 48
             }}
           >
-            <Icon 
-              fontSize="small" 
-              sx={{ 
+            <Icon
+              fontSize="small"
+              sx={{
                 color: isActive ? colors.secondary.main : colors.text.secondary,
                 mb: isActive ? 0 : 0.5
-              }} 
+              }}
             />
             <Typography
               variant="caption"
@@ -94,6 +175,12 @@ export default function BottomNavigation({
             </Typography>
           </Box>
         );
+
+        return isNavigable ? (
+          <Link key={tab.id} href={getHrefForTab(tab.id)} prefetch style={{ textDecoration: 'none' }}>
+            {content}
+          </Link>
+        ) : content;
       })}
     </Box>
   );

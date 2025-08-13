@@ -1,29 +1,36 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Typography, Snackbar, Alert } from "@mui/material";
+import { Box, Typography, Snackbar, Alert, CircularProgress, Slide } from "@mui/material";
+import type { SlideProps } from "@mui/material";
 import { colors } from "@/theme/colors";
-import ThemeProvider from "@/components/ThemeProvider";
 import Header from "@/components/Header";
-
-
+import Navigation from "@/components/Navigation";
 import CategoryFilter from "@/components/CategoryFilter";
 import ProductCard from "@/components/ProductCard";
 import Cart from "@/components/Cart";
-import BottomNavigation from "@/components/BottomNavigation";
 import BannerSection from "@/components/BannerSection";
-import { products } from "@/data/products";
+import { generateSlug } from "@/lib/products";
+import { readCartFromStorage, writeCartToStorage, addToCartStorage } from "@/lib/cart";
+import { readFavoriteIds, toggleFavoriteId } from "@/lib/favorites";
 import { Product, CartItem } from "@/types";
 
 export default function Home() {
+  const SlideUpTransition = React.forwardRef(function SlideUpTransition(
+    props: SlideProps,
+    ref: React.Ref<unknown>
+  ) {
+    return <Slide direction="up" ref={ref} {...props} />;
+  });
   const router = useRouter();
   const [selectedCategory, setSelectedCategory] = useState("dogs");
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState("home");
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -34,6 +41,72 @@ export default function Home() {
     message: "",
     severity: "success",
   });
+  const [snackbarKey, setSnackbarKey] = useState<number>(0);
+
+  // Load cart from localStorage
+  useEffect(() => {
+    const stored = readCartFromStorage();
+    if (stored.length) setCartItems(stored);
+    setFavoriteIds(readFavoriteIds());
+  }, []);
+
+  useEffect(() => {
+    writeCartToStorage(cartItems);
+  }, [cartItems]);
+
+  // Fetch products from database
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/products');
+        if (response.ok) {
+          type DbProduct = {
+            id: string;
+            name: string;
+            category: string;
+            price: number | string;
+            salePrice?: number | string | null;
+            discountPercent?: number | string | null;
+            description?: string | null;
+            imageUrl?: string | null;
+            stock?: number | string | null;
+            gender?: 'MALE' | 'FEMALE' | 'UNKNOWN' | null;
+            age?: string | null;
+            breed?: string | null;
+            location?: string | null;
+          };
+          const data: DbProduct[] = await response.json();
+          // Transform database products to match component expectations
+          const transformedProducts: Product[] = data.map((p) => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+            price: Number(p.price),
+            salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+            discountPercent: p.discountPercent != null ? Number(p.discountPercent) : null,
+            description: p.description ?? '',
+            imageUrl: p.imageUrl ?? null,
+            image: p.imageUrl ?? '',
+            stock: Number(p.stock ?? 0),
+            gender: p.gender ?? null,
+            age: p.age ?? null,
+            breed: p.breed ?? null,
+            location: p.location ?? null,
+          }));
+          setProducts(transformedProducts);
+        } else {
+          console.error('Failed to fetch products');
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // Filter products based on category and search
   const filteredProducts = useMemo(() => {
@@ -51,46 +124,43 @@ export default function Home() {
       filtered = filtered.filter(
         (product) =>
           product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.description.toLowerCase().includes(searchQuery.toLowerCase())
+          (product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
       );
     }
 
     return filtered;
-  }, [selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery]);
 
 
 
   const handleAddToCart = (product: Product) => {
+    const stock = typeof product.stock === 'number' ? product.stock : 0;
+    const existing = cartItems.find(i => i.product.id === product.id);
+
+    if (stock <= 0) {
+      setSnackbar({ open: true, message: "สินค้าหมด", severity: "error" });
+      setSnackbarKey((k) => k + 1);
+      return;
+    }
+
+    if (existing && existing.quantity >= stock) {
+      setSnackbar({ open: true, message: "สินค้าเกินจำนวนคงเหลือ", severity: "warning" });
+      setSnackbarKey((k) => k + 1);
+      return;
+    }
+
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find(
-        (item) => item.product.id === product.id
-      );
-
-      if (existingItem) {
-        if (existingItem.quantity >= product.stock) {
-          setSnackbar({
-            open: true,
-            message: "Cannot add more items - insufficient stock",
-            severity: "warning",
-          });
-          return prevItems;
-        }
-
-        return prevItems.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        return [...prevItems, { product, quantity: 1 }];
+      const item = prevItems.find(i => i.product.id === product.id);
+      if (item) {
+        return prevItems.map(i => i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i);
       }
+      return [...prevItems, { product, quantity: 1 }];
     });
 
-    setSnackbar({
-      open: true,
-      message: `Added "${product.name}" to cart`,
-      severity: "success",
-    });
+    addToCartStorage(product, 1);
+
+    setSnackbar({ open: true, message: `เพิ่ม "${product.name}" ลงตะกร้าแล้ว`, severity: "success" });
+    setSnackbarKey((k) => k + 1);
   };
 
   const handleUpdateQuantity = (productId: string, quantity: number) => {
@@ -100,9 +170,13 @@ export default function Home() {
     }
 
     setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item
-      )
+      prevItems.map((item) => {
+        if (item.product.id !== productId) return item;
+        const stock = typeof item.product.stock === 'number' ? item.product.stock : 0;
+        const maxQty = Math.max(0, stock);
+        const nextQty = maxQty > 0 ? Math.min(quantity, maxQty) : item.quantity; // ถ้าไม่มี stock ไม่ให้เพิ่ม
+        return { ...item, quantity: nextQty };
+      })
     );
   };
 
@@ -115,17 +189,21 @@ export default function Home() {
       message: "Item removed from cart",
       severity: "info",
     });
+    setSnackbarKey((k) => k + 1);
   };
 
   const handleToggleFavorite = (productId: string) => {
-    setFavorites((prev) => {
-      const isFavorite = prev.includes(productId);
-      if (isFavorite) {
-        return prev.filter((id) => id !== productId);
-      } else {
-        return [...prev, productId];
-      }
+    const wasFavorite = favoriteIds.includes(productId);
+    setFavoriteIds(toggleFavoriteId(productId));
+    const product = products.find(p => p.id === productId);
+    setSnackbar({
+      open: true,
+      message: product
+        ? `${wasFavorite ? 'Removed' : 'Added'} "${product.name}" ${wasFavorite ? 'from' : 'to'} favorites`
+        : wasFavorite ? 'Removed from favorites' : 'Added to favorites',
+      severity: wasFavorite ? 'info' : 'success',
     });
+    setSnackbarKey((k) => k + 1);
   };
 
   const handleCheckout = () => {
@@ -134,11 +212,13 @@ export default function Home() {
       message: "Payment system is not available yet",
       severity: "info",
     });
+    setSnackbarKey((k) => k + 1);
   };
 
   const handleProductClick = (product: Product) => {
     // Navigate to product detail page using Next.js router
-    router.push(`/product/${product.id}`);
+    const slug = generateSlug(product.name, product.id);
+    router.push(`/product/${slug}`);
   };
 
 
@@ -146,138 +226,201 @@ export default function Home() {
   const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <ThemeProvider>
-      <Box
-        sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
+    <Box
+      sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
+    >
+      <Navigation />
+      <Header
+        cartItemCount={cartItemCount}
+        onCartClick={() => setIsCartOpen(true)}
+        onSearchChange={setSearchQuery}
+      />
+
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1,
+          backgroundColor: colors.background.default,
+          minHeight: '100vh',
+          pt: 8, // Space for fixed header
+          pb: 10 // Space for bottom navigation
+        }}
       >
-        <Header
-          cartItemCount={cartItemCount}
-          onCartClick={() => setIsCartOpen(true)}
-          onSearchChange={setSearchQuery}
+        <CategoryFilter
+          selectedCategory={selectedCategory}
+          onCategoryChange={setSelectedCategory}
         />
 
-        <Box 
-          component="main" 
-          sx={{ 
-            flexGrow: 1,
-            backgroundColor: colors.background.default,
-            minHeight: '100vh',
-            pt: 13, // Space for fixed header
-            pb: 10 // Space for bottom navigation
-          }}
-        >
-          <CategoryFilter
-            selectedCategory={selectedCategory}
-            onCategoryChange={setSelectedCategory}
-          />
+        <BannerSection />
 
-          <BannerSection />
-
-          {filteredProducts.length === 0 ? (
-            <Box sx={{ textAlign: "center", py: 8, px: 2 }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                No pets found
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Try changing category or search term
-              </Typography>
-            </Box>
-          ) : (
-            <Box sx={{ px: 2 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                mb: 2
-              }}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: colors.text.primary,
-                    fontWeight: "bold",
-                    fontSize: "1.1rem",
-                  }}
-                >
-                  Trending Pets
-                </Typography>
-
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: colors.text.secondary,
-                    fontWeight: "500",
-                    cursor: "pointer",
-                    "&:hover": {
-                      color: colors.primary.main,
-                    },
-                  }}
-                >
-                  See more
-                </Typography>
-              </Box>
-
-              <Box
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+            <CircularProgress color="primary" />
+          </Box>
+        ) : filteredProducts.length === 0 ? (
+          <Box sx={{ textAlign: "center", py: 8, px: 2 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              No pets found
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Try changing category or search term
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ px: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 2
+            }}>
+              <Typography
+                variant="h6"
                 sx={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 2,
-                  justifyContent: "flex-start",
+                  color: colors.text.primary,
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
                 }}
               >
-                {filteredProducts.map((product) => (
-                  <Box
-                    key={product.id}
-                    sx={{
-                      width: { xs: "calc(50% - 8px)", sm: "calc(33.333% - 12px)", md: "calc(25% - 12px)" },
-                      minWidth: "160px",
-                      maxWidth: "180px"
-                    }}
-                  >
-                    <ProductCard
-                      product={product}
-                      onAddToCart={handleAddToCart}
-                      onToggleFavorite={handleToggleFavorite}
-                      isFavorite={favorites.includes(product.id)}
-                      onProductClick={handleProductClick}
-                    />
-                  </Box>
-                ))}
-              </Box>
+                All Pets
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ color: colors.text.secondary }}
+              >
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
+              </Typography>
             </Box>
-          )}
-        </Box>
-
-        <BottomNavigation 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-
-
-
-        <Cart
-          open={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          items={cartItems}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-          onCheckout={handleCheckout}
-        />
-
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={3000}
-          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        >
-          <Alert
-            onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-            severity={snackbar.severity}
-            variant="filled"
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: 2,
+              }}
+            >
+              {filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  isFavorite={favoriteIds.includes(product.id)}
+                  onToggleFavorite={() => handleToggleFavorite(product.id)}
+                  onAddToCart={() => handleAddToCart(product)}
+                  onProductClick={() => handleProductClick(product)}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
       </Box>
-    </ThemeProvider>
+
+      <Cart
+        items={cartItems}
+        onClose={() => setIsCartOpen(false)}
+        open={isCartOpen}
+        onRemoveItem={handleRemoveItem}
+        onUpdateQuantity={handleUpdateQuantity}
+        onCheckout={handleCheckout}
+      />
+
+      {/* BottomNavigation moved to RootLayout for persistence across pages */}
+
+      <Snackbar
+        key={snackbarKey}
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        TransitionComponent={SlideUpTransition}
+        sx={{ pointerEvents: 'none' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="standard"
+          icon={false}
+          sx={{
+            pointerEvents: 'all',
+            width: 'auto',
+            maxWidth: 'min(480px, calc(100vw - 32px))',
+            px: 2,
+            py: 1.25,
+            borderRadius: 3,
+            boxShadow:
+              snackbar.severity === 'success' ? '0 20px 40px rgba(46,125,50,0.18)' :
+              snackbar.severity === 'warning' ? '0 20px 40px rgba(240,180,0,0.18)' :
+              snackbar.severity === 'error' ? '0 20px 40px rgba(211,47,47,0.18)' :
+              '0 20px 40px rgba(25,118,210,0.18)',
+            backdropFilter: 'saturate(180%) blur(12px)',
+            WebkitBackdropFilter: 'saturate(180%) blur(12px)',
+            backgroundColor:
+              snackbar.severity === 'success' ? 'rgba(46, 125, 50, 0.12)' :
+              snackbar.severity === 'warning' ? 'rgba(240, 180, 0, 0.12)' :
+              snackbar.severity === 'error' ? 'rgba(211, 47, 47, 0.12)' :
+              'rgba(25, 118, 210, 0.12)',
+            backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.15) 100%)',
+            backgroundBlendMode: 'overlay',
+            color:
+              snackbar.severity === 'success' ? '#1b5e20' :
+              snackbar.severity === 'warning' ? '#7a5c00' :
+              snackbar.severity === 'error' ? '#8e0000' :
+              '#0d47a1',
+            border:
+              snackbar.severity === 'success' ? '1px solid rgba(46, 125, 50, 0.28)' :
+              snackbar.severity === 'warning' ? '1px solid rgba(240, 180, 0, 0.28)' :
+              snackbar.severity === 'error' ? '1px solid rgba(211, 47, 47, 0.28)' :
+              '1px solid rgba(25, 118, 210, 0.28)',
+            borderLeft:
+              snackbar.severity === 'success' ? '4px solid rgba(46, 125, 50, 0.65)' :
+              snackbar.severity === 'warning' ? '4px solid rgba(240, 180, 0, 0.65)' :
+              snackbar.severity === 'error' ? '4px solid rgba(211, 47, 47, 0.65)' :
+              '4px solid rgba(25, 118, 210, 0.65)',
+            fontWeight: 600,
+            letterSpacing: 0.2,
+            '& .MuiAlert-action > button': {
+              color:
+                snackbar.severity === 'success' ? '#1b5e20' :
+                snackbar.severity === 'warning' ? '#7a5c00' :
+                snackbar.severity === 'error' ? '#8e0000' :
+                '#0d47a1',
+            }
+          }}
+        >
+          {snackbar.message}
+          <Box
+            sx={{
+              mt: 0.75,
+              height: 2,
+              borderRadius: 2,
+              backgroundColor:
+                snackbar.severity === 'success' ? 'rgba(46,125,50,0.2)' :
+                snackbar.severity === 'warning' ? 'rgba(240,180,0,0.2)' :
+                snackbar.severity === 'error' ? 'rgba(211,47,47,0.2)' :
+                'rgba(25,118,210,0.2)',
+              overflow: 'hidden',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: '100%',
+                backgroundColor:
+                  snackbar.severity === 'success' ? 'rgba(46,125,50,0.6)' :
+                  snackbar.severity === 'warning' ? 'rgba(240,180,0,0.6)' :
+                  snackbar.severity === 'error' ? 'rgba(211,47,47,0.6)' :
+                  'rgba(25,118,210,0.6)',
+                transformOrigin: 'left',
+                animation: 'snackGrow 3s linear forwards'
+              },
+              '@keyframes snackGrow': {
+                from: { transform: 'scaleX(0)' },
+                to: { transform: 'scaleX(1)' }
+              }
+            }}
+          />
+        </Alert>
+      </Snackbar>
+    </Box>
   );
 }

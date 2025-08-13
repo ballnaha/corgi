@@ -1,36 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  IconButton, 
-  Badge, 
+import {
+  Typography,
+  IconButton,
+  Badge,
   Box,
-  InputBase,
-  Button,
-  Menu,
-  MenuItem,
-  Chip
+  InputBase
 } from '@mui/material';
-import { 
-  ShoppingCart, 
-  Search, 
-  Person, 
-  Menu as MenuIcon,
-  Pets,
-  LocationOn,
+import {
+  ShoppingCart,
+  Search,
   Tune
 } from '@mui/icons-material';
 import { styled, alpha } from '@mui/material/styles';
 import { colors } from '@/theme/colors';
 
-const StyledAppBar = styled(AppBar)({
-  backgroundColor: colors.secondary.main,
-  boxShadow: 'none',
-  borderBottom: 'none',
-});
+
 
 const MobileHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -39,16 +25,7 @@ const MobileHeader = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(2),
 }));
 
-const LocationChip = styled(Chip)({
-  backgroundColor: alpha(colors.text.secondary, 0.1),
-  color: colors.text.secondary,
-  fontSize: '0.75rem',
-  height: '28px',
-  '& .MuiChip-icon': {
-    color: colors.text.secondary,
-    fontSize: '16px',
-  },
-});
+
 
 const SearchBox = styled(Box)(({ theme }) => ({
   position: 'relative',
@@ -104,10 +81,10 @@ interface HeaderProps {
   onSearchChange?: (query: string) => void;
 }
 
-export default function Header({ 
-  cartItemCount = 0, 
+export default function Header({
+  cartItemCount = 0,
   onCartClick,
-  onSearchChange 
+  onSearchChange
 }: HeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -130,9 +107,9 @@ export default function Header({
     <Box sx={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1100 }}>
       <MobileHeader>
         {/* Top row with profile and notification */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           mb: 1
         }}>
@@ -154,9 +131,9 @@ export default function Header({
               🐕
             </Box>
             <Box>
-              <Typography 
-                variant="h6" 
-                sx={{ 
+              <Typography
+                variant="h6"
+                sx={{
                   fontWeight: 'bold',
                   color: colors.text.primary,
                   fontSize: '1.1rem',
@@ -165,9 +142,9 @@ export default function Header({
               >
                 Welcome Back!
               </Typography>
-              <Typography 
-                variant="body2" 
-                sx={{ 
+              <Typography
+                variant="body2"
+                sx={{
                   color: colors.text.secondary,
                   fontSize: '0.85rem'
                 }}
@@ -176,11 +153,11 @@ export default function Header({
               </Typography>
             </Box>
           </Box>
-          
+
           <Box sx={{ display: 'flex', gap: 1 }}>
             <IconButton
               onClick={handleSearchToggle}
-              sx={{ 
+              sx={{
                 backgroundColor: colors.background.default,
                 color: colors.text.secondary,
                 width: 40,
@@ -195,7 +172,7 @@ export default function Header({
 
             <IconButton
               onClick={onCartClick}
-              sx={{ 
+              sx={{
                 backgroundColor: colors.background.default,
                 color: colors.text.secondary,
                 width: 40,
@@ -205,8 +182,8 @@ export default function Header({
                 }
               }}
             >
-              <Badge 
-                badgeContent={cartItemCount} 
+              <Badge
+                badgeContent={cartItemCount}
                 sx={{
                   '& .MuiBadge-badge': {
                     backgroundColor: colors.primary.main,

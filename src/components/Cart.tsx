@@ -8,7 +8,6 @@ import {
   IconButton,
   List,
   ListItem,
-  ListItemAvatar,
   Avatar,
   Button,
   Divider,
@@ -42,8 +41,22 @@ export default function Cart({
   onRemoveItem,
   onCheckout
 }: CartProps) {
+  const calculateUnitPrice = (p: CartItem['product']) => {
+    const hasSalePrice = p.salePrice != null;
+    const hasDiscountPercent = !hasSalePrice && p.discountPercent != null && p.discountPercent > 0;
+    if (hasSalePrice) return p.salePrice as number;
+    if (hasDiscountPercent) return Math.max(0, p.price - (p.price * ((p.discountPercent as number) / 100)));
+    return p.price;
+  };
+
+  const getMaxQuantity = (p: CartItem['product']) => {
+    const stock = typeof p.stock === 'number' ? p.stock : 0;
+    // ถ้าไม่มี stock หรือ = 0 ให้ถือว่าเพิ่มไม่ได้
+    return Math.max(0, stock);
+  };
+
   const totalPrice = items.reduce(
-    (sum, item) => sum + (item.product.price * item.quantity),
+    (sum, item) => sum + (calculateUnitPrice(item.product) * item.quantity),
     0
   );
 
@@ -57,41 +70,42 @@ export default function Cart({
       slotProps={{
         paper: {
           sx: {
-            width: { xs: '100%', sm: 400 },
+            width: { xs: '100%', sm: 420 },
             backgroundColor: colors.background.default,
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            borderLeft: `1px solid ${colors.primary.light}55`,
+            borderTopLeftRadius: 20,
+            borderBottomLeftRadius: 20,
+            boxShadow: '0 0 0 1px rgba(0,0,0,0.03), 0 10px 30px rgba(0,0,0,0.08)'
           }
         }
       }}
     >
-      <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', gap: 1 }}>
         {/* Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <ShoppingCart sx={{ color: colors.primary.main }} />
-            <Typography variant="h6" sx={{ color: colors.text.primary }}>
+            <Typography variant="h6" sx={{ color: colors.text.primary, fontWeight: 'bold' }}>
               ตะกร้าสินค้า
             </Typography>
-            <Badge 
-              badgeContent={totalItems} 
-              sx={{
-                '& .MuiBadge-badge': {
-                  backgroundColor: colors.primary.main,
-                  color: colors.secondary.main,
-                }
-              }}
+            <Badge
+              badgeContent={totalItems}
+              sx={{ '& .MuiBadge-badge': { backgroundColor: colors.primary.main, color: colors.secondary.main } }}
             >
               <Box />
             </Badge>
           </Box>
-          <IconButton onClick={onClose} sx={{ color: colors.accent.main }}>
+          <IconButton onClick={onClose} sx={{ color: colors.text.secondary, '&:hover': { color: colors.error } }}>
             <Close />
           </IconButton>
         </Box>
 
-        <Divider sx={{ borderColor: colors.primary.main }} />
+        <Divider sx={{ borderColor: colors.primary.light, opacity: 0.35 }} />
 
         {/* Cart Items */}
-        <Box sx={{ flexGrow: 1, overflow: 'auto', py: 2 }}>
+        <Box sx={{ flexGrow: 1, overflow: 'auto', py: 0 }}>
           {items.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
               <ShoppingCart sx={{ fontSize: 64, color: colors.text.disabled, mb: 2 }} />
@@ -106,9 +120,10 @@ export default function Cart({
                   key={item.product.id}
                   sx={{
                     backgroundColor: colors.background.paper,
-                    borderRadius: 2,
-                    mb: 1,
-                    border: `1px solid ${colors.primary.light}`,
+                    borderRadius: 3,
+                    mb: 1.25,
+                    border: `1px solid ${colors.primary.light}55`,
+                    boxShadow: '0 8px 20px rgba(0,0,0,0.04)',
                     display: 'flex',
                     alignItems: 'flex-start',
                     p: 2
@@ -117,50 +132,68 @@ export default function Cart({
                   <Avatar
                     src={item.product.image}
                     alt={item.product.name}
-                    sx={{ width: 60, height: 60, mr: 2 }}
+                    sx={{ width: 60, height: 60, mr: 2, borderRadius: 2 }}
                   />
                   <Box sx={{ flex: 1 }}>
-                    <Typography variant="subtitle2" sx={{ color: colors.text.primary, mb: 0.5 }}>
+                    <Typography variant="subtitle2" sx={{ color: colors.text.primary, mb: 0.25 }}>
                       {item.product.name}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: colors.primary.main, fontWeight: 'bold', mb: 1 }}>
-                      ฿{item.product.price.toLocaleString()}
+                    <Typography variant="caption" sx={{ color: colors.text.secondary, display: 'block', mb: 0.75 }}>
+                      คงเหลือ: {typeof item.product.stock === 'number' ? item.product.stock : 0}
                     </Typography>
+                    {(() => {
+                      const unitPrice = calculateUnitPrice(item.product);
+                      const isDiscounted = unitPrice !== item.product.price;
+                      return (
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, mb: 1 }}>
+                          {isDiscounted && (
+                            <Typography variant="body2" sx={{ color: colors.text.secondary, textDecoration: 'line-through' }}>
+                              ฿{item.product.price.toLocaleString()}
+                            </Typography>
+                          )}
+                          <Typography variant="body2" sx={{ color: colors.primary.main, fontWeight: 'bold' }}>
+                            ฿{unitPrice.toLocaleString()}
+                          </Typography>
+                        </Box>
+                      );
+                    })()}
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <ButtonGroup size="small">
-                        <Button
+                      <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        backgroundColor: colors.background.default,
+                        border: `1px solid ${colors.primary.light}66`,
+                        borderRadius: 20,
+                        px: 1,
+                        py: 0.25
+                      }}>
+                        <IconButton
                           onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
                           disabled={item.quantity <= 1}
-                          sx={{ 
+                          size="small"
+                          sx={{
                             color: colors.primary.main,
-                            borderColor: colors.primary.main,
-                            minWidth: 30
+                            '&:disabled': { color: colors.text.disabled }
                           }}
                         >
                           <Remove fontSize="small" />
-                        </Button>
-                        <Button
-                          disabled
-                          sx={{ 
-                            color: colors.text.primary,
-                            borderColor: colors.primary.main,
-                            minWidth: 40
-                          }}
-                        >
+                        </IconButton>
+                        <Typography variant="body2" sx={{ minWidth: 20, textAlign: 'center', color: colors.text.primary }}>
                           {item.quantity}
-                        </Button>
-                        <Button
+                        </Typography>
+                        <IconButton
                           onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
-                          disabled={item.quantity >= item.product.stock}
-                          sx={{ 
+                          disabled={item.quantity >= getMaxQuantity(item.product)}
+                          size="small"
+                          sx={{
                             color: colors.primary.main,
-                            borderColor: colors.primary.main,
-                            minWidth: 30
+                            '&:disabled': { color: colors.text.disabled }
                           }}
                         >
                           <Add fontSize="small" />
-                        </Button>
-                      </ButtonGroup>
+                        </IconButton>
+                      </Box>
                       <IconButton
                         onClick={() => onRemoveItem(item.product.id)}
                         sx={{ color: colors.error }}
@@ -179,7 +212,7 @@ export default function Cart({
         {/* Footer */}
         {items.length > 0 && (
           <>
-            <Divider sx={{ borderColor: colors.primary.main }} />
+            <Divider sx={{ borderColor: colors.primary.light, opacity: 0.6 }} />
             <Box sx={{ p: 2 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                 <Typography variant="h6" sx={{ color: colors.text.primary }}>
@@ -199,6 +232,7 @@ export default function Cart({
                   py: 1.5,
                   fontSize: '1.1rem',
                   fontWeight: 'bold',
+                  borderRadius: 3,
                   '&:hover': {
                     backgroundColor: colors.primary.dark,
                   }

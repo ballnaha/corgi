@@ -1,0 +1,6 @@
+# Add these dependencies to your package.json:
+
+"dependencies": {
+  "next-auth": "^4.24.5",
+  "@line/liff": "^2.23.1"
+}

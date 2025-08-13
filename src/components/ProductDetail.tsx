@@ -1,36 +1,43 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Box, Typography, IconButton, Button, CardMedia } from "@mui/material";
+import { Box, Typography, IconButton, Button, CardMedia, Badge } from "@mui/material";
 import {
   ArrowBack,
-  NotificationsNone,
+  Home,
   LocationOn,
   Phone,
   Chat,
   FiberManualRecord,
 } from "@mui/icons-material";
 import { colors } from "@/theme/colors";
+import { ShoppingCart } from "@mui/icons-material";
 import { Product } from "@/types";
 
 interface ProductDetailProps {
   product: Product;
   onBack: () => void;
   onAdopt: () => void;
+  onCartClick?: () => void;
+  cartItemCount?: number;
 }
 
 export default function ProductDetail({
   product,
   onBack,
   onAdopt,
+  onCartClick,
+  cartItemCount = 0,
 }: ProductDetailProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   // Use product images if available, otherwise use main image
-  const productImages =
-    product.images && product.images.length > 0
-      ? product.images
-      : [product.image];
+  const productImages = React.useMemo(() => {
+    if (product.images && product.images.length > 0) {
+      return product.images.map(img => img.imageUrl);
+    }
+    return [product.image || product.imageUrl || ''];
+  }, [product.images, product.image, product.imageUrl]);
 
   // Get background color based on product category
   const getCardBgColor = (category: string) => {
@@ -93,23 +100,27 @@ export default function ProductDetail({
     }
   }, [currentImageIndex]);
 
-  const petDetails = [
-    {
-      label: "Gender",
-      value: "Female",
-      bgColor: colors.cardBg.pink,
-    },
-    {
-      label: "Age",
-      value: "2 Years",
-      bgColor: colors.cardBg.orange,
-    },
-    {
-      label: "Weight",
-      value: "6 LBS",
-      bgColor: colors.cardBg.yellow,
-    },
-  ];
+  const petDetails = React.useMemo(() => {
+    return [
+      {
+        label: "เพศ",
+        value: product.gender 
+          ? (product.gender === 'MALE' ? 'ผู้ชาย' : product.gender === 'FEMALE' ? 'ผู้หญิง' : 'ไม่ระบุ')
+          : 'ไม่ระบุ',
+        bgColor: product.gender === 'MALE' ? colors.cardBg.blue : colors.cardBg.pink,
+      },
+      {
+        label: "อายุ",
+        value: product.age || 'ไม่ระบุ',
+        bgColor: colors.cardBg.orange,
+      },
+      {
+        label: "น้ำหนัก",
+        value: product.weight || 'ไม่ระบุ',
+        bgColor: colors.cardBg.yellow,
+      },
+    ];
+  }, [product]);
 
   return (
     <Box
@@ -119,67 +130,40 @@ export default function ProductDetail({
         position: "relative",
       }}
     >
-      {/* Header */}
+      {/* Header - Transparent with Liquid Glass Back Button */}
       <Box
         sx={{
           position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
+          top: 20,
+          left: 20,
           zIndex: 1100,
-          backgroundColor: colors.secondary.main,
-          px: 2,
-          py: 2,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          borderRadius: "0 0 24px 24px",
-          boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
+
         }}
       >
         <IconButton
           onClick={onBack}
           sx={{
-            backgroundColor: colors.background.default,
-            color: colors.text.primary,
-            width: 40,
-            height: 40,
+            backgroundColor: "rgba(0, 0, 0, 0.2)",
+            color: colors.secondary.main,
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            transition: "all 0.3s ease",
             "&:hover": {
-              backgroundColor: colors.background.accent,
+              backgroundColor: "rgba(0, 0, 0, 0.1)",
+              transform: "scale(1.05)",
+            },
+            "&:active": {
+              transform: "scale(0.95)",
             },
           }}
         >
-          <ArrowBack fontSize="small" />
-        </IconButton>
-
-        <Typography
-          variant="h6"
-          sx={{
-            color: colors.text.primary,
-            fontWeight: "bold",
-            fontSize: "1.1rem",
-          }}
-        >
-          Pet's Details
-        </Typography>
-
-        <IconButton
-          sx={{
-            backgroundColor: colors.background.default,
-            color: colors.text.secondary,
-            width: 40,
-            height: 40,
-            "&:hover": {
-              backgroundColor: colors.background.accent,
-            },
-          }}
-        >
-          <NotificationsNone fontSize="small" />
+          <ArrowBack fontSize="medium" />
         </IconButton>
       </Box>
 
       {/* Content */}
-      <Box sx={{ pt: 8, pb: 12 }}>
+      <Box sx={{ pb: 12 }}>
         {/* Pet Image Swiper - Full Width */}
         <Box sx={{ mb: 3 }}>
           {/* Swiper Container */}
@@ -228,25 +212,70 @@ export default function ProductDetail({
               }}
             />
 
-            {/* Image Counter (only show if multiple images) */}
-            {productImages.length > 1 && (
-              <Box
+          {/* Home and Cart Icon Buttons */}
+          <Box
+            sx={{
+              position: "fixed",
+              top: 20,
+              right: 20,
+              display: 'flex',
+              gap: 1
+            }}
+          >
+            <IconButton
+              onClick={onCartClick}
+              sx={{
+                backgroundColor: "rgba(0, 0, 0, 0.2)",
+                color: colors.secondary.main,
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  backgroundColor: "rgba(0, 0, 0, 0.1)",
+                  transform: "scale(1.05)",
+                },
+                "&:active": {
+                  transform: "scale(0.95)",
+                },
+              }}
+            >
+              <Badge
+                badgeContent={cartItemCount}
                 sx={{
-                  position: "absolute",
-                  top: 16,
-                  right: 16,
-                  backgroundColor: "rgba(0, 0, 0, 0.6)",
-                  color: colors.secondary.main,
-                  px: 2,
-                  py: 0.5,
-                  borderRadius: 3,
-                  fontSize: "0.8rem",
-                  fontWeight: "bold",
+                  '& .MuiBadge-badge': {
+                    backgroundColor: colors.primary.main,
+                    color: colors.secondary.main,
+                    fontSize: '0.7rem',
+                    minWidth: 16,
+                    height: 16,
+                  }
                 }}
               >
-                {currentImageIndex + 1} / {productImages.length}
-              </Box>
-            )}
+                <ShoppingCart fontSize="medium" />
+              </Badge>
+            </IconButton>
+            <IconButton
+              onClick={() => window.location.href = '/'}
+              sx={{
+                backgroundColor: "rgba(0, 0, 0, 0.2)",
+                color: colors.secondary.main,
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  backgroundColor: "rgba(0, 0, 0, 0.1)",
+                  transform: "scale(1.05)",
+                },
+                "&:active": {
+                  transform: "scale(0.95)",
+                },
+              }}
+            >
+              <Home fontSize="medium" />
+            </IconButton>
+          </Box>
           </Box>
 
           {/* Image Indicators (only show if multiple images) */}
@@ -302,18 +331,20 @@ export default function ProductDetail({
           </Typography>
 
           {/* Location */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
-            <LocationOn sx={{ color: colors.text.secondary, fontSize: 18 }} />
-            <Typography
-              variant="body2"
-              sx={{
-                color: colors.text.secondary,
-                fontSize: "0.9rem",
-              }}
-            >
-              New York City, USA
-            </Typography>
-          </Box>
+          {product.location && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
+              <LocationOn sx={{ color: colors.text.secondary, fontSize: 18 }} />
+              <Typography
+                variant="body2"
+                sx={{
+                  color: colors.text.secondary,
+                  fontSize: "0.9rem",
+                }}
+              >
+                {product.location}
+              </Typography>
+            </Box>
+          )}
 
           {/* Pet Details Cards */}
           <Box sx={{ display: "flex", gap: 1.5, mb: 3 }}>
@@ -395,34 +426,89 @@ export default function ProductDetail({
                 fontSize: "0.95rem",
               }}
             >
-              Dogs are more than just pets—they're family. Known for their
-              loyalty, love, and playful spirit, they bring joy to every home.
-              Whether it's a small lap dog...{" "}
-              <Typography
-                component="span"
-                sx={{
-                  color: colors.text.primary,
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                }}
-              >
-                See All
-              </Typography>
+              {product.description || 'ไม่มีรายละเอียด'}
+            </Typography>
+
+            {/* Additional Pet Info */}
+            {(product.breed || product.color || product.vaccinated || product.certified) && (
+              <Box sx={{ mt: 2, p: 2, backgroundColor: colors.background.paper, borderRadius: 2 }}>
+                {product.breed && (
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>สายพันธุ์:</strong> {product.breed}
+                  </Typography>
+                )}
+                {product.color && (
+                  <Typography variant="body2" sx={{ mb: 1 }}>
+                    <strong>สี:</strong> {product.color}
+                  </Typography>
+                )}
+                {product.vaccinated && (
+                  <Typography variant="body2" sx={{ mb: 1, color: colors.success }}>
+                    ✅ ฉีดวัคซีนแล้ว
+                  </Typography>
+                )}
+                {product.certified && (
+                  <Typography variant="body2" sx={{ mb: 1, color: colors.success }}>
+                    ✅ มีใบรับรอง
+                  </Typography>
+                )}
+                {product.healthNote && (
+                  <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                    <strong>หมายเหตุสุขภาพ:</strong> {product.healthNote}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Box>
+
+          {/* Stock */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Typography variant="body2" sx={{ color: colors.text.secondary }}>
+              คงเหลือในสต็อก:
+            </Typography>
+            <Typography variant="body2" sx={{ color: colors.text.primary, fontWeight: 'bold' }}>
+              {typeof product.stock === 'number' ? product.stock : 0}
             </Typography>
           </Box>
 
           {/* Price */}
-          <Typography
-            variant="h5"
-            sx={{
-              color: colors.primary.main,
-              fontWeight: "bold",
-              fontSize: "1.5rem",
-              mb: 3,
-            }}
-          >
-            ฿{product.price.toLocaleString()}
-          </Typography>
+          {(() => {
+            const hasSalePrice = product.salePrice != null;
+            const hasDiscountPercent = !hasSalePrice && product.discountPercent != null && product.discountPercent > 0;
+            const finalPrice = hasSalePrice
+              ? (product.salePrice as number)
+              : (hasDiscountPercent
+                ? Math.max(0, product.price - (product.price * ((product.discountPercent as number) / 100)))
+                : product.price);
+
+            return (
+              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 3 }}>
+                {(hasSalePrice || hasDiscountPercent) && (
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: colors.text.secondary,
+                      textDecoration: 'line-through',
+                      fontWeight: 'normal',
+                      fontSize: '1.1rem'
+                    }}
+                  >
+                    ฿{product.price.toLocaleString()}
+                  </Typography>
+                )}
+                <Typography
+                  variant="h5"
+                  sx={{
+                    color: colors.primary.main,
+                    fontWeight: 'bold',
+                    fontSize: '1.5rem'
+                  }}
+                >
+                  ฿{finalPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </Typography>
+              </Box>
+            );
+          })()}
         </Box>
       </Box>
 
@@ -446,8 +532,9 @@ export default function ProductDetail({
           fullWidth
           variant="contained"
           onClick={onAdopt}
+          disabled={typeof product.stock !== 'number' || product.stock <= 0}
           sx={{
-            backgroundColor: colors.primary.main,
+            backgroundColor: (typeof product.stock === 'number' && product.stock > 0) ? colors.primary.main : colors.text.disabled,
             color: colors.secondary.main,
             py: 1.5,
             fontSize: "1.1rem",
@@ -455,11 +542,11 @@ export default function ProductDetail({
             borderRadius: 3,
             flex: 1,
             "&:hover": {
-              backgroundColor: colors.primary.dark,
+              backgroundColor: (typeof product.stock === 'number' && product.stock > 0) ? colors.primary.dark : colors.text.disabled,
             },
           }}
         >
-          Adopt Now
+          {typeof product.stock === 'number' && product.stock > 0 ? 'Add to Cart' : 'สินค้าหมด'}
         </Button>
 
         <IconButton

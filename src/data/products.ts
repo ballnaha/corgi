@@ -200,3 +200,21 @@ export const products: Product[] = [
     stock: 15
   }
 ];
+
+export function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+}
+
+export function withSlugs(list: Product[]): Product[] {
+  return list.map((p) => ({ ...p, slug: p.slug ?? `${slugify(p.name)}-${p.id}` }));
+}
+
+export function findProductBySlug(slug: string): Product | undefined {
+  const list = withSlugs(products);
+  return list.find((p) => p.slug === slug);
+}
