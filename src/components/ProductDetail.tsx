@@ -538,7 +538,7 @@ export default function ProductDetail({
             color: colors.secondary.main,
             py: 1.5,
             fontSize: "1.1rem",
-            fontWeight: "bold",
+            fontWeight: "500",
             borderRadius: 3,
             flex: 1,
             "&:hover": {
@@ -546,7 +546,7 @@ export default function ProductDetail({
             },
           }}
         >
-          {typeof product.stock === 'number' && product.stock > 0 ? 'Add to Cart' : 'สินค้าหมด'}
+          {typeof product.stock === 'number' && product.stock > 0 ? 'หยิบใส่ตระกร้า' : 'สินค้าหมด'}
         </Button>
 
         <IconButton

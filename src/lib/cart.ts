@@ -71,3 +71,10 @@ export function removeFromCartStorage(productId: string) {
   writeCartToStorage(current.filter(i => i.product.id !== productId));
 }
 
+export function clearCartStorage() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {}
+}
+

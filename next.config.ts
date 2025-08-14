@@ -5,9 +5,10 @@ const nextConfig: NextConfig = {
   images: {
     domains: [
       "profile.line-scdn.net", // LINE profile images
-      "obs.line-scdn.net",     // LINE OBS images
+      "obs.line-scdn.net", // LINE OBS images
       "theredpotion.com",
       "red1.theredpotion.com",
+      "corgi.theredpotion.com",
     ],
     remotePatterns: [
       {
@@ -21,6 +22,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "red1.theredpotion.com",
+      },
+      {
+        protocol: "https",
+        hostname: "corgi.theredpotion.com",
       },
     ],
   },

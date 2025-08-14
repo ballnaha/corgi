@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,91 +8,96 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  lineUserId    String   @unique @map("line_user_id")
-  displayName   String   @map("display_name")
-  pictureUrl    String?  @map("picture_url")
+  id            String     @id @default(cuid())
+  lineUserId    String     @unique @map("line_user_id")
+  displayName   String     @map("display_name")
+  pictureUrl    String?    @map("picture_url")
   email         String?
-  statusMessage String?  @map("status_message") @db.Text
-  createdAt     DateTime @default(now()) @map("created_at")
-  lastLoginAt   DateTime @default(now()) @map("last_login_at")
-
-  // Relations for future features
-  orders        Order[]
+  statusMessage String?    @map("status_message") @db.Text
+  createdAt     DateTime   @default(now()) @map("created_at")
+  lastLoginAt   DateTime   @default(now()) @map("last_login_at")
+  phoneNumber   String?    @map("phone_number")
   favorites     Favorite[]
+  orders        Order[]
 
   @@map("users")
 }
 
 model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String?  @db.Text
-  price       Decimal  @db.Decimal(10, 2)
-  salePrice   Decimal? @map("sale_price") @db.Decimal(10, 2)
-  discountPercent Decimal? @map("discount_percent") @db.Decimal(5, 2)
-  imageUrl    String?  @map("image_url") // Primary image for backward compatibility
-  category    String
-  categoryId  String?  @map("category_id")
-  stock       Int      @default(0)
-  isActive    Boolean  @default(true) @map("is_active")
-  
-  // Pet-specific fields
-  gender      String?  // เพศ: MALE, FEMALE, UNKNOWN
-  age         String?  // อายุ เช่น "2 เดือน", "1 ปี"
-  weight      String?  // น้ำหนัก เช่น "2.5 กก."
-  breed       String?  // สายพันธุ์
-  color       String?  // สี
-  
-  // Health and certification
-  vaccinated  Boolean  @default(false) // ฉีดวัคซีนแล้ว
-  certified   Boolean  @default(false) // มีใบรับรอง
-  healthNote  String?  @map("health_note") @db.Text // หมายเหตุสุขภาพ
-  
-  // Location and contact
-  location    String?  // สถานที่
-  contactInfo String?  @map("contact_info") @db.Text // ข้อมูลติดต่อ
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id              String         @id @default(cuid())
+  name            String
+  description     String?        @db.Text
+  price           Decimal        @db.Decimal(10, 2)
+  imageUrl        String?        @map("image_url")
+  category        String
+  stock           Int            @default(0)
+  isActive        Boolean        @default(true) @map("is_active")
+  gender          String?
+  age             String?
+  weight          String?
+  breed           String?
+  color           String?
+  vaccinated      Boolean        @default(false)
+  certified       Boolean        @default(false)
+  healthNote      String?        @map("health_note") @db.Text
+  location        String?
+  contactInfo     String?        @map("contact_info") @db.Text
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  categoryId      String?        @map("category_id")
+  discountPercent Decimal?       @map("discount_percent") @db.Decimal(5, 2)
+  salePrice       Decimal?       @map("sale_price") @db.Decimal(10, 2)
+  favorites       Favorite[]
+  orderItems      OrderItem[]
+  images          ProductImage[]
+  categoryRef     Category?      @relation(fields: [categoryId], references: [id])
 
-  // Relations
-  categoryRef Category? @relation(fields: [categoryId], references: [id])
-  orderItems  OrderItem[]
-  favorites   Favorite[]
-  images      ProductImage[] // Multiple images
-
-  @@map("products")
   @@index([categoryId])
+  @@map("products")
 }
 
 model ProductImage {
-  id        String  @id @default(cuid())
-  productId String  @map("product_id")
-  imageUrl  String  @map("image_url")
-  altText   String? @map("alt_text")
-  order     Int     @default(0) // สำหรับเรียงลำดับรูป
-  isMain    Boolean @default(false) @map("is_main") // รูปหลัก
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  imageUrl  String   @map("image_url")
+  altText   String?  @map("alt_text")
+  order     Int      @default(0)
+  isMain    Boolean  @default(false) @map("is_main")
   createdAt DateTime @default(now()) @map("created_at")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  // Relations
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
+  @@index([productId], map: "product_images_product_id_fkey")
   @@map("product_images")
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  userId      String      @map("user_id")
-  status      OrderStatus @default(PENDING)
-  totalAmount Decimal     @map("total_amount") @db.Decimal(10, 2)
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
+  id               String          @id @default(cuid())
+  userId           String          @map("user_id")
+  status           orders_status   @default(PENDING)
+  totalAmount      Decimal         @map("total_amount") @db.Decimal(10, 2)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  customerEmail    String?         @map("customer_email")
+  customerName     String?         @map("customer_name")
+  customerPhone    String?         @map("customer_phone")
+  depositAmount    Decimal?        @map("deposit_amount") @db.Decimal(10, 2)
+  hasPets          Boolean         @default(false) @map("has_pets")
+  paymentType      PaymentType     @default(FULL_PAYMENT) @map("payment_type")
+  remainingAmount  Decimal?        @map("remaining_amount") @db.Decimal(10, 2)
+  requiresDeposit  Boolean         @default(false) @map("requires_deposit")
+  shippingAddress  String?         @map("shipping_address") @db.Text
+  shippingFee      Decimal?        @map("shipping_fee") @db.Decimal(10, 2)
+  shippingMethod   String?         @map("shipping_method")
+  shippingOptionId String?         @map("shipping_option_id")
+  discountAmount   Decimal?        @default(0.00) @map("discount_amount") @db.Decimal(10, 2)
+  discountCode     String?         @map("discount_code")
+  orderNumber      String?         @map("order_number")
+  orderItems       OrderItem[]
+  shippingOption   ShippingOption? @relation(fields: [shippingOptionId], references: [id])
+  user             User            @relation(fields: [userId], references: [id])
 
-  // Relations
-  user        User        @relation(fields: [userId], references: [id])
-  orderItems  OrderItem[]
-
+  @@index([shippingOptionId], map: "orders_shipping_option_id_fkey")
+  @@index([userId], map: "orders_user_id_fkey")
   @@map("orders")
 }
 
@@ -105,24 +107,23 @@ model OrderItem {
   productId String  @map("product_id")
   quantity  Int
   price     Decimal @db.Decimal(10, 2)
-
-  // Relations
   order     Order   @relation(fields: [orderId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
 
+  @@index([orderId], map: "order_items_order_id_fkey")
+  @@index([productId], map: "order_items_product_id_fkey")
   @@map("order_items")
 }
 
 model Favorite {
-  id        String @id @default(cuid())
-  userId    String @map("user_id")
-  productId String @map("product_id")
-
-  // Relations
-  user      User    @relation(fields: [userId], references: [id])
+  id        String  @id @default(cuid())
+  userId    String  @map("user_id")
+  productId String  @map("product_id")
   product   Product @relation(fields: [productId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
 
   @@unique([userId, productId])
+  @@index([productId], map: "favorites_product_id_fkey")
   @@map("favorites")
 }
 
@@ -133,14 +134,67 @@ model Category {
   icon        String?
   description String?   @db.Text
   createdAt   DateTime  @default(now()) @map("created_at")
-
-  // Relations
   products    Product[]
 
   @@map("categories")
 }
 
-enum OrderStatus {
+model ShippingOption {
+  id            String   @id @default(cuid())
+  name          String
+  description   String?
+  price         Decimal  @db.Decimal(10, 2)
+  estimatedDays String   @map("estimated_days")
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  forPetsOnly   Boolean  @default(false) @map("for_pets_only")
+  method        String   @default("delivery")
+  orders        Order[]
+
+  @@map("shipping_options")
+}
+
+model DiscountCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  type        String
+  value       Decimal   @db.Decimal(10, 2)
+  minAmount   Decimal?  @map("min_amount") @db.Decimal(10, 2)
+  description String
+  isActive    Boolean   @default(true) @map("is_active")
+  validFrom   DateTime? @map("valid_from")
+  validUntil  DateTime? @map("valid_until")
+  usageLimit  Int?      @map("usage_limit")
+  usageCount  Int       @default(0) @map("usage_count")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("discount_codes")
+}
+
+model PaymentMethod {
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  description String?
+  icon        String?
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("payment_methods")
+}
+
+enum PaymentType {
+  FULL_PAYMENT
+  DEPOSIT_PAYMENT
+  REMAINING_PAYMENT
+}
+
+enum orders_status {
   PENDING
   CONFIRMED
   PROCESSING
@@ -148,5 +202,3 @@ enum OrderStatus {
   DELIVERED
   CANCELLED
 }
-
-// MySQL doesn't support custom enums, using String with constraints instead

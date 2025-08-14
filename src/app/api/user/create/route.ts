@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { lineUserId, displayName, pictureUrl, email, statusMessage } = body;
+    const { lineUserId, displayName, pictureUrl, email, phoneNumber, statusMessage } = body;
 
     // Check if user already exists
     const existingUser = await getUserById(lineUserId);
@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
       displayName,
       pictureUrl,
       email,
+      phoneNumber,
       statusMessage,
     });
 

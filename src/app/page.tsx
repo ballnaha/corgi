@@ -187,7 +187,7 @@ export default function Home() {
     setSnackbar({
       open: true,
       message: "Item removed from cart",
-      severity: "info",
+      severity: "error",
     });
     setSnackbarKey((k) => k + 1);
   };
@@ -199,20 +199,26 @@ export default function Home() {
     setSnackbar({
       open: true,
       message: product
-        ? `${wasFavorite ? 'Removed' : 'Added'} "${product.name}" ${wasFavorite ? 'from' : 'to'} favorites`
-        : wasFavorite ? 'Removed from favorites' : 'Added to favorites',
-      severity: wasFavorite ? 'info' : 'success',
+        ? `${wasFavorite ? 'นำออก' : 'เพิ่ม'} "${product.name}" ${wasFavorite ? 'จาก' : 'เข้า'} รายการที่ชอบ`
+        : wasFavorite ? 'นำออกจากรายการที่ชอบ' : 'เพิ่มเข้ารายการที่ชอบ',
+      severity: wasFavorite ? 'error' : 'success',
     });
     setSnackbarKey((k) => k + 1);
   };
 
   const handleCheckout = () => {
-    setSnackbar({
-      open: true,
-      message: "Payment system is not available yet",
-      severity: "info",
-    });
-    setSnackbarKey((k) => k + 1);
+    if (cartItems.length === 0) {
+      setSnackbar({
+        open: true,
+        message: "ตะกร้าสินค้าว่างเปล่า",
+        severity: "warning",
+      });
+      setSnackbarKey((k) => k + 1);
+      return;
+    }
+    
+    setIsCartOpen(false);
+    router.push("/checkout");
   };
 
   const handleProductClick = (product: Product) => {
@@ -329,7 +335,7 @@ export default function Home() {
         open={snackbar.open}
         autoHideDuration={3000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         TransitionComponent={SlideUpTransition}
         sx={{ pointerEvents: 'none' }}
       >

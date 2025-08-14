@@ -15,11 +15,12 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { displayName, email, statusMessage } = body;
+    const { displayName, email, phoneNumber, statusMessage } = body;
 
     const updatedUser = await updateUser(session.user.lineUserId, {
       displayName,
       email,
+      phoneNumber,
       statusMessage,
     });
 

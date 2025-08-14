@@ -24,6 +24,7 @@ export async function createUser(userData: {
   displayName: string;
   pictureUrl?: string;
   email?: string;
+  phoneNumber?: string;
   statusMessage?: string;
 }): Promise<User> {
   try {
@@ -33,6 +34,7 @@ export async function createUser(userData: {
         displayName: userData.displayName,
         pictureUrl: userData.pictureUrl,
         email: userData.email,
+        phoneNumber: userData.phoneNumber,
         statusMessage: userData.statusMessage,
       },
     })
@@ -65,6 +67,7 @@ export async function updateUser(
   updates: {
     displayName?: string;
     email?: string;
+    phoneNumber?: string;
     statusMessage?: string;
     pictureUrl?: string;
   }

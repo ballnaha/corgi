@@ -88,8 +88,8 @@ export default function BottomNavigation({
     }
   };
 
-  // Hide bottom navigation on product detail pages
-  if (pathname && pathname.startsWith('/product/')) {
+  // Hide bottom navigation on product detail pages and checkout
+  if (pathname && (pathname.startsWith('/product/') || pathname.startsWith('/checkout'))) {
     return null;
   }
 
