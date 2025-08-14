@@ -868,8 +868,8 @@ export default function CheckoutPage() {
                 display: "flex",
                 alignItems: "center",
                 gap: 3,
-                py: 3,
-                px: 3,
+                py: 2,
+                px: 1,
                 borderTop: index > 0 ? "1px solid rgba(0,0,0,0.05)" : "none",
               }}
             >
@@ -1455,8 +1455,183 @@ export default function CheckoutPage() {
         </Box>
       </Box>
 
+      {/* Payment Summary */}
+      {orderAnalysis && (
+        <Box
+          sx={{
+            backgroundColor: "white",
+            py: 4,
+            mb: 1,
+            borderBottom: "8px solid " + colors.background.default,
+          }}
+        >
+          <Box sx={{ px: 3, mb: 3 }}>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 600, color: colors.text.primary }}
+            >
+              สรุปการชำระเงิน
+            </Typography>
+          </Box>
+          
+          <Box sx={{ px: 3 }}>
+            {/* รายการคำนวณ */}
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="body1" color="text.secondary">
+                  ยอดรวมสินค้า
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  ฿{subtotal.toLocaleString()}
+                </Typography>
+              </Box>
+              
+              {selectedShippingOption && (
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="body1" color="text.secondary">
+                    ค่าจัดส่ง ({selectedShippingOption.name})
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                    {shippingCost > 0 ? `฿${shippingCost.toLocaleString()}` : "ฟรี"}
+                  </Typography>
+                </Box>
+              )}
+              
+              {appliedDiscount && discountAmount > 0 && (
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="body1" color="text.secondary">
+                    ส่วนลด ({appliedDiscount.code})
+                  </Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 500, color: "#4caf50" }}>
+                    -฿{discountAmount.toLocaleString()}
+                  </Typography>
+                </Box>
+              )}
+              
+              <Divider />
+              
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  ยอดรวมทั้งหมด
+                </Typography>
+                <Typography variant="h6" sx={{ fontWeight: 600, color: colors.primary.main }}>
+                  ฿{total.toLocaleString()}
+                </Typography>
+              </Box>
+              
+              {/* แสดงข้อมูลการชำระเงินแบบชัดเจน */}
+              {orderAnalysis.requiresDeposit ? (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 3,
+                    borderRadius: 3,
+                    backgroundColor: `${colors.primary.main}08`,
+                    border: `2px solid ${colors.primary.main}30`,
+                  }}
+                >
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      color: colors.primary.main,
+                      mb: 2,
+                      textAlign: "center"
+                    }}
+                  >
+                    💳 การชำระเงินแบบมัดจำ
+                  </Typography>
+                  
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        ยอดมัดจำ (20%)
+                      </Typography>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 700, 
+                          color: colors.primary.main,
+                          fontSize: "1.25rem"
+                        }}
+                      >
+                        ฿{calculatePaymentAmount(
+                          orderAnalysis, 
+                          selectedShippingOption?.price || 0, 
+                          appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0
+                        ).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    
+                    <Divider sx={{ borderStyle: "dashed" }} />
+                    
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                        ยอดคงเหลือ
+                      </Typography>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 600, 
+                          color: "#ff9800",
+                          fontSize: "1.1rem"
+                        }}
+                      >
+                        ฿{orderAnalysis.remainingAmount?.toLocaleString()}
+                      </Typography>
+                    </Box>
+                    
+                    <Box
+                      sx={{
+                        mt: 1.5,
+                        p: 2,
+                        borderRadius: 2,
+                        backgroundColor: "#fff3e0",
+                        border: "1px solid #ffcc02",
+                      }}
+                    >
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: "#f57c00", 
+                          fontWeight: 500,
+                          textAlign: "center"
+                        }}
+                      >
+                        💡 ยอดคงเหลือชำระเมื่อมารับสัตว์เลี้ยง
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 3,
+                    borderRadius: 3,
+                    backgroundColor: "#f0f9ff",
+                    border: "2px solid #3b82f630",
+                  }}
+                >
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      textAlign: "center",
+                      color: "#1e40af",
+                      fontWeight: 500
+                    }}
+                  >
+                    ✅ ชำระเต็มจำนวนเลย
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          </Box>
+        </Box>
+      )}
+
       {/* Spacer สำหรับ fixed bottom */}
-      <Box sx={{ height: 120 , mt:5 }} />
+      <Box sx={{ height: 120 , marginTop:'50px' }} />
 
       {/* Order Total - Fixed Bottom */}
       <Box
@@ -1471,30 +1646,68 @@ export default function CheckoutPage() {
           boxShadow: "0 -8px 32px rgba(0,0,0,0.12)",
           borderTop: "1px solid rgba(0,0,0,0.08)",
           zIndex: 1000,
+          
         }}
       >
-        {/* สรุปราคาแบบกระชับ */}
-        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-          <Box>
-            <Typography variant="body2" color="text.secondary">
-              {orderAnalysis?.requiresDeposit ? "ยอดชำระมัดจำ" : "ยอดชำระทั้งหมด"}
-            </Typography>
-            {orderAnalysis?.requiresDeposit && (
-              <Typography variant="caption" color="text.secondary">
-                (ยอดคงเหลือ: ฿{orderAnalysis.remainingAmount?.toLocaleString()})
+        {/* สรุปราคาแบบชัดเจน */}
+        {orderAnalysis?.requiresDeposit ? (
+          <Box sx={{ mb: 2 }}>
+            {/* แสดงยอดมัดจำ */}
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+              <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                ยอดชำระมัดจำ (20%)
               </Typography>
-            )}
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 700, color: colors.primary.main }}
+              >
+                ฿{calculatePaymentAmount(
+                  orderAnalysis, 
+                  selectedShippingOption?.price || 0, 
+                  appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0
+                ).toLocaleString()}
+              </Typography>
+            </Box>
+            
+            {/* แสดงยอดคงเหลือให้เด่น */}
+            <Box 
+              sx={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center",
+                p: 1.5,
+                borderRadius: 2,
+                backgroundColor: "#fff3e0",
+                border: "1px dashed #ff9800"
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500, color: "#f57c00" }}>
+                💰 ยอดคงเหลือ (ชำระเมื่อรับสัตว์)
+              </Typography>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 600, color: "#f57c00" }}
+              >
+                ฿{orderAnalysis.remainingAmount?.toLocaleString()}
+              </Typography>
+            </Box>
           </Box>
-          <Typography
-            variant="h6"
-            sx={{ fontWeight: 700, color: colors.primary.main }}
-          >
-            ฿{orderAnalysis 
-              ? calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()
-              : "0"
-            }
-          </Typography>
-        </Box>
+        ) : (
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+            <Typography variant="body1" sx={{ fontWeight: 500 }}>
+              ยอดชำระทั้งหมด
+            </Typography>
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 700, color: colors.primary.main }}
+            >
+              ฿{orderAnalysis 
+                ? calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()
+                : "0"
+              }
+            </Typography>
+          </Box>
+        )}
         <Button
           fullWidth
           variant="contained"
