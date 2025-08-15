@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Box,
-  Grid,
   Card,
   CardContent,
   Typography,
@@ -188,11 +187,11 @@ export default function AdminDashboard() {
       action: () => handleLiffNavigation(router, "/admin/products/new"),
     },
     {
-      title: "จัดการคำสั่งซื้อ",
-      description: "ดูและจัดการคำสั่งซื้อ",
-      icon: <ShoppingCart />,
+      title: "ดูสินค้าทั้งหมด",
+      description: "จัดการและดูสินค้าในระบบ",
+      icon: <Inventory />,
       color: colors.info,
-      action: () => handleLiffNavigation(router, "/admin/orders"),
+      action: () => handleLiffNavigation(router, "/admin/products"),
     },
     {
       title: "รายงานยอดขาย",
@@ -280,55 +279,46 @@ export default function AdminDashboard() {
       </Box>
 
       {/* Stats Cards */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="จำนวนสินค้า"
-            value={stats.totalProducts}
-            icon={<Inventory />}
-            color={colors.primary.main}
-            change="+5 จากเดือนที่แล้ว"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="คำสั่งซื้อทั้งหมด"
-            value={stats.totalOrders}
-            icon={<ShoppingCart />}
-            color={colors.info}
-            change="+12% จากเดือนที่แล้ว"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="ผู้ใช้ทั้งหมด"
-            value={stats.totalUsers}
-            icon={<People />}
-            color={colors.success}
-            change="+8% จากเดือนที่แล้ว"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="รายได้ทั้งหมด"
-            value={`฿${stats.totalRevenue.toLocaleString()}`}
-            icon={<AttachMoney />}
-            color={colors.warning}
-            change="+15% จากเดือนที่แล้ว"
-          />
-        </Grid>
-      </Grid>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 3, mb: 4 }}>
+        <StatCard
+          title="จำนวนสินค้า"
+          value={stats.totalProducts}
+          icon={<Inventory />}
+          color={colors.primary.main}
+          change="+5 จากเดือนที่แล้ว"
+        />
+        <StatCard
+          title="คำสั่งซื้อทั้งหมด"
+          value={stats.totalOrders}
+          icon={<ShoppingCart />}
+          color={colors.info}
+          change="+12% จากเดือนที่แล้ว"
+        />
+        <StatCard
+          title="ผู้ใช้ทั้งหมด"
+          value={stats.totalUsers}
+          icon={<People />}
+          color={colors.success}
+          change="+8% จากเดือนที่แล้ว"
+        />
+        <StatCard
+          title="รายได้ทั้งหมด"
+          value={`฿${stats.totalRevenue.toLocaleString()}`}
+          icon={<AttachMoney />}
+          color={colors.warning}
+          change="+15% จากเดือนที่แล้ว"
+        />
+      </Box>
 
       {/* Quick Actions */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12}>
-          <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
-            การดำเนินการด่วน
-          </Typography>
-        </Grid>
-        {quickActions.map((action, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
+          การดำเนินการด่วน
+        </Typography>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr 1fr' }, gap: 3 }}>
+          {quickActions.map((action, index) => (
             <Card
+              key={index}
               sx={{
                 cursor: "pointer",
                 transition: "all 0.2s ease",
@@ -364,14 +354,14 @@ export default function AdminDashboard() {
                 </Typography>
               </CardContent>
             </Card>
-          </Grid>
-        ))}
-      </Grid>
+          ))}
+        </Box>
+      </Box>
 
       {/* Recent Orders and Alerts */}
-      <Grid container spacing={3}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
         {/* Recent Orders */}
-        <Grid item xs={12} md={8}>
+        <Box>
           <Card>
             <CardContent>
               <Box
@@ -406,15 +396,8 @@ export default function AdminDashboard() {
                     </ListItemAvatar>
                     <ListItemText
                       primary={
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 1,
-                            mb: 0.5,
-                          }}
-                        >
-                          <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
+                        <React.Fragment>
+                          <Typography component="span" variant="subtitle2" sx={{ fontWeight: "bold", marginRight: 1 }}>
                             {order.orderNumber}
                           </Typography>
                           <Chip
@@ -422,14 +405,12 @@ export default function AdminDashboard() {
                             size="small"
                             color={getStatusColor(order.status) as any}
                           />
-                        </Box>
+                        </React.Fragment>
                       }
                       secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            {order.customerName} • ฿{order.amount.toLocaleString()}
-                          </Typography>
-                        </Box>
+                        <Typography component="span" variant="body2" color="text.secondary">
+                          {order.customerName} • ฿{order.amount.toLocaleString()}
+                        </Typography>
                       }
                     />
                     <ListItemSecondaryAction>
@@ -447,10 +428,10 @@ export default function AdminDashboard() {
               </List>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Alerts & Notifications */}
-        <Grid item xs={12} md={4}>
+        <Box>
           <Card>
             <CardContent>
               <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
@@ -493,8 +474,8 @@ export default function AdminDashboard() {
               </List>
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   );
 }

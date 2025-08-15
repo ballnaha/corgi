@@ -51,9 +51,24 @@ export async function GET(request: NextRequest) {
                 select: {
                   id: true,
                   name: true,
-                  images: true,
-                  category: {
+                  category: true,
+                  breed: true,
+                  gender: true,
+                  age: true,
+                  price: true,
+                  salePrice: true,
+                  discountPercent: true,
+                  images: {
                     select: {
+                      id: true,
+                      imageUrl: true,
+                      altText: true,
+                      isMain: true,
+                    },
+                  },
+                  categoryRef: {
+                    select: {
+                      id: true,
                       name: true,
                       key: true,
                     },

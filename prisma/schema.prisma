@@ -25,6 +25,17 @@ model User {
   @@map("users")
 }
 
+enum ProductType {
+  PET         // สัตว์เลี้ยง
+  FOOD        // อาหารสัตว์
+  TOY         // ของเล่น
+  ACCESSORY   // อุปกรณ์/เครื่องใช้
+  MEDICINE    // ยา/วิตามิน
+  GROOMING    // อุปกรณ์ดูแลขน
+  HOUSING     // บ้าน/กรง
+  OTHER       // อื่นๆ
+}
+
 model Product {
   id              String         @id @default(cuid())
   name            String
@@ -34,16 +45,30 @@ model Product {
   category        String
   stock           Int            @default(0)
   isActive        Boolean        @default(true) @map("is_active")
+  
+  // ประเภทสินค้า - ใหม่
+  productType     ProductType    @default(OTHER) @map("product_type")
+  
+  // ข้อมูลเฉพาะสัตว์เลี้ยง - ทำให้เป็น optional ทั้งหมด
   gender          String?
   age             String?
   weight          String?
   breed           String?
   color           String?
-  vaccinated      Boolean        @default(false)
-  certified       Boolean        @default(false)
+  vaccinated      Boolean?       // เปลี่ยนจาก @default(false) เป็น optional
+  certified       Boolean?       // เปลี่ยนจาก @default(false) เป็น optional
   healthNote      String?        @map("health_note") @db.Text
   location        String?
   contactInfo     String?        @map("contact_info") @db.Text
+  
+  // ข้อมูลทั่วไป - สำหรับสินค้าทุกประเภท
+  brand           String?        // แบรนด์
+  model           String?        // รุ่น/โมเดล
+  size            String?        // ขนาด (S, M, L หรือระบุเป็นตัวเลข)
+  material        String?        // วัสดุ
+  weight_grams    Int?           @map("weight_grams") // น้ำหนักสินค้า (กรัม)
+  dimensions      String?        // ขนาด (กว้าง x ยาว x สูง)
+  
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
   categoryId      String?        @map("category_id")
@@ -55,6 +80,7 @@ model Product {
   categoryRef     Category?      @relation(fields: [categoryId], references: [id])
 
   @@index([categoryId])
+  @@index([productType])
   @@map("products")
 }
 

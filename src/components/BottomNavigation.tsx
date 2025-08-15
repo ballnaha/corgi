@@ -83,13 +83,14 @@ export default function BottomNavigation({
     }
   };
 
-  // Hide bottom navigation on product detail pages, checkout, order-success, and payment-notification
+  // Hide bottom navigation on product detail pages, checkout, order-success, payment-notification, and admin pages
   if (
     pathname &&
     (pathname.startsWith("/product/") ||
       pathname.startsWith("/checkout") ||
       pathname.startsWith("/order-success") ||
-      pathname.startsWith("/payment-notification"))
+      pathname.startsWith("/payment-notification") ||
+      pathname.startsWith("/admin"))
   ) {
     return null;
   }
