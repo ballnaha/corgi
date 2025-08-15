@@ -13,6 +13,7 @@ export default function SignIn() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [clearingCache, setClearingCache] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -30,6 +31,29 @@ export default function SignIn() {
   const handleSignIn = () => {
     setLoading(true);
     signIn("line", { callbackUrl: "/" });
+  };
+
+  const handleClearCache = async () => {
+    setClearingCache(true);
+    try {
+      const response = await fetch("/api/auth/clear-line-cache", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        // Optionally show success message or refresh the page
+        window.location.reload();
+      } else {
+        console.error("Failed to clear cache");
+      }
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+    } finally {
+      setClearingCache(false);
+    }
   };
 
   if (!mounted || status === "loading") {
@@ -85,6 +109,24 @@ export default function SignIn() {
         }}
       >
         {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย LINE"}
+      </Button>
+
+      <Button
+        variant="outlined"
+        size="medium"
+        onClick={handleClearCache}
+        disabled={clearingCache}
+        sx={{
+          borderColor: "#00B900",
+          color: "#00B900",
+          "&:hover": {
+            borderColor: "#009900",
+            backgroundColor: "rgba(0, 185, 0, 0.04)",
+          },
+          minWidth: 200,
+        }}
+      >
+        {clearingCache ? "กำลังล้าง Cache..." : "ล้าง Cache LINE Login"}
       </Button>
 
       {isInLiff && (

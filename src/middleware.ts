@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
   // Skip middleware for API routes, static files, and auth pages
@@ -18,16 +17,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Get the token to check if user is authenticated
-  const token = await getToken({ 
-    req: request, 
-    secret: process.env.NEXTAUTH_SECRET 
-  });
-
-  // If no token and trying to access protected routes, redirect to signin
-  if (!token && request.nextUrl.pathname !== '/') {
-    const signInUrl = new URL('/auth/signin', request.url);
-    return NextResponse.redirect(signInUrl);
+  // Check if request is from LIFF (LINE Front-end Framework)
+  const userAgent = request.headers.get('user-agent') || '';
+  const isLineApp = userAgent.includes('Line/') && 
+                   (userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone'));
+  
+  // Admin routes protection - let client-side handle auth for admin routes
+  // This avoids edge runtime issues with next-auth and Prisma
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    // For admin routes, let the layout handle authentication and authorization
+    // This prevents edge runtime compatibility issues
+    return NextResponse.next();
+  }
+  
+  // For LIFF environment, let client-side handle all auth
+  if (isLineApp) {
+    return NextResponse.next();
   }
 
   return NextResponse.next();

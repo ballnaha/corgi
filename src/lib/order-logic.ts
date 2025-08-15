@@ -23,24 +23,24 @@ export interface DiscountInfo {
  * วิเคราะห์คำสั่งซื้อและกำหนดเงื่อนไขการชำระเงินและจัดส่ง
  */
 export function analyzeOrder(
-  cartItems: CartItem[], 
+  cartItems: CartItem[],
   discount?: DiscountInfo | null
 ): OrderAnalysis {
   // แยกสินค้าตามประเภท
-  const petProducts = cartItems.filter(item => 
+  const petProducts = cartItems.filter((item) =>
     isPetProduct(item.product.category)
   );
-  
-  const nonPetProducts = cartItems.filter(item => 
-    !isPetProduct(item.product.category)
+
+  const nonPetProducts = cartItems.filter(
+    (item) => !isPetProduct(item.product.category)
   );
 
   const hasPets = petProducts.length > 0;
-  
+
   // คำนวณราคารวมก่อนส่วนลด
   const totalAmount = cartItems.reduce((total, item) => {
     const price = item.product.salePrice || item.product.price;
-    return total + (price * item.quantity);
+    return total + price * item.quantity;
   }, 0);
 
   // คำนวณส่วนลด
@@ -62,16 +62,19 @@ export function analyzeOrder(
   let remainingAmount: number | null = null;
   let paymentType: "FULL_PAYMENT" | "DEPOSIT_PAYMENT" = "FULL_PAYMENT";
 
-  // เงื่อนไข: สัตว์เลี้ยงราคาเกิน 10,000 บาท (หลังหักส่วนลด) ต้องชำระมัดจำ 20%
+  // เงื่อนไข: สัตว์เลี้ยงราคาเกิน 10,000 บาท (หลังหักส่วนลด) ต้องชำระมัดจำ 10%
   if (hasPets && totalAmountAfterDiscount > 10000) {
     requiresDeposit = true;
-    depositAmount = Math.round(totalAmountAfterDiscount * 0.2 * 100) / 100; // 20% rounded to 2 decimal places
-    remainingAmount = Math.round((totalAmountAfterDiscount - depositAmount) * 100) / 100;
+    depositAmount = Math.round(totalAmountAfterDiscount * 0.1 * 100) / 100; // 10% rounded to 2 decimal places
+    remainingAmount =
+      Math.round((totalAmountAfterDiscount - depositAmount) * 100) / 100;
     paymentType = "DEPOSIT_PAYMENT";
   }
 
   // กำหนดวิธีการจัดส่ง
-  const suggestedShippingMethod: "pickup" | "delivery" = hasPets ? "pickup" : "delivery";
+  const suggestedShippingMethod: "pickup" | "delivery" = hasPets
+    ? "pickup"
+    : "delivery";
 
   return {
     hasPets,
@@ -83,7 +86,7 @@ export function analyzeOrder(
     paymentType,
     suggestedShippingMethod,
     petProducts,
-    nonPetProducts
+    nonPetProducts,
   };
 }
 
@@ -92,7 +95,7 @@ export function analyzeOrder(
  */
 export function isPetProduct(category: string): boolean {
   const petCategories = ["dogs", "cats", "birds", "สุนัข", "แมว", "นก"];
-  return petCategories.some(petCat => 
+  return petCategories.some((petCat) =>
     category.toLowerCase().includes(petCat.toLowerCase())
   );
 }
@@ -101,15 +104,15 @@ export function isPetProduct(category: string): boolean {
  * กรองตัวเลือกการจัดส่งตามประเภทสินค้า
  */
 export function filterShippingOptions(
-  shippingOptions: any[], 
+  shippingOptions: any[],
   orderAnalysis: OrderAnalysis
 ) {
-  return shippingOptions.filter(option => {
+  return shippingOptions.filter((option) => {
     // ถ้ามีสัตว์เลี้ยง ให้แสดงเฉพาะ pickup options
     if (orderAnalysis.hasPets) {
       return option.method === "pickup";
     }
-    
+
     // ถ้าไม่มีสัตว์เลี้ยง ให้แสดงเฉพาะ delivery options หรือ pickup ทั่วไป
     return !option.forPetsOnly;
   });
@@ -123,10 +126,10 @@ export function calculatePaymentAmount(
   shippingFee: number = 0,
   shippingDiscount: number = 0
 ): number {
-  const baseAmount = orderAnalysis.requiresDeposit 
-    ? (orderAnalysis.depositAmount || 0)
+  const baseAmount = orderAnalysis.requiresDeposit
+    ? orderAnalysis.depositAmount || 0
     : orderAnalysis.totalAmountAfterDiscount;
-    
+
   return baseAmount + shippingFee - shippingDiscount;
 }
 
@@ -135,11 +138,13 @@ export function calculatePaymentAmount(
  */
 export function getPaymentDescription(orderAnalysis: OrderAnalysis): string {
   if (orderAnalysis.requiresDeposit) {
-    return `ชำระมัดจำ ${orderAnalysis.depositAmount?.toLocaleString()} บาท (20%) ` +
-           `ยอดคงเหลือ ${orderAnalysis.remainingAmount?.toLocaleString()} บาท ` +
-           `ชำระเมื่อรับสัตว์เลี้ยง`;
+    return (
+      `ชำระมัดจำ ${orderAnalysis.depositAmount?.toLocaleString()} บาท (10%) ` +
+      `ยอดคงเหลือ ${orderAnalysis.remainingAmount?.toLocaleString()} บาท ` +
+      `ชำระเมื่อรับสัตว์เลี้ยง`
+    );
   }
-  
+
   return `ชำระเต็มจำนวน ${orderAnalysis.totalAmountAfterDiscount.toLocaleString()} บาท`;
 }
 
@@ -148,9 +153,11 @@ export function getPaymentDescription(orderAnalysis: OrderAnalysis): string {
  */
 export function getShippingDescription(orderAnalysis: OrderAnalysis): string {
   if (orderAnalysis.hasPets) {
-    return "เนื่องจากมีสัตว์เลี้ยงในคำสั่งซื้อ ทางเราจะทำการจัดส่งน้องด้วยตัวเอง " +
-           "ตามนัดหมาย";
+    return (
+      "เนื่องจากมีสัตว์เลี้ยงในคำสั่งซื้อ ทางเราจะทำการจัดส่งน้องด้วยตัวเอง " +
+      "ตามนัดหมาย"
+    );
   }
-  
+
   return "จัดส่งด่วน";
 }

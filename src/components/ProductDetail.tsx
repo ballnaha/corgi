@@ -1,13 +1,18 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Box, Typography, IconButton, Button, CardMedia, Badge } from "@mui/material";
+import {
+  Box,
+  Typography,
+  IconButton,
+  Button,
+  CardMedia,
+  Badge,
+} from "@mui/material";
 import {
   ArrowBack,
   Home,
   LocationOn,
-  Phone,
-  Chat,
   FiberManualRecord,
 } from "@mui/icons-material";
 import { colors } from "@/theme/colors";
@@ -34,9 +39,9 @@ export default function ProductDetail({
   // Use product images if available, otherwise use main image
   const productImages = React.useMemo(() => {
     if (product.images && product.images.length > 0) {
-      return product.images.map(img => img.imageUrl);
+      return product.images.map((img) => img.imageUrl);
     }
-    return [product.image || product.imageUrl || ''];
+    return [product.image || product.imageUrl || ""];
   }, [product.images, product.image, product.imageUrl]);
 
   // Get background color based on product category
@@ -104,19 +109,24 @@ export default function ProductDetail({
     return [
       {
         label: "เพศ",
-        value: product.gender 
-          ? (product.gender === 'MALE' ? 'ผู้ชาย' : product.gender === 'FEMALE' ? 'ผู้หญิง' : 'ไม่ระบุ')
-          : 'ไม่ระบุ',
-        bgColor: product.gender === 'MALE' ? colors.cardBg.blue : colors.cardBg.pink,
+        value: product.gender
+          ? product.gender === "MALE"
+            ? "ผู้ชาย"
+            : product.gender === "FEMALE"
+            ? "ผู้หญิง"
+            : "ไม่ระบุ"
+          : "ไม่ระบุ",
+        bgColor:
+          product.gender === "MALE" ? colors.cardBg.blue : colors.cardBg.pink,
       },
       {
         label: "อายุ",
-        value: product.age || 'ไม่ระบุ',
+        value: product.age || "ไม่ระบุ",
         bgColor: colors.cardBg.orange,
       },
       {
         label: "น้ำหนัก",
-        value: product.weight || 'ไม่ระบุ',
+        value: product.weight || "ไม่ระบุ",
         bgColor: colors.cardBg.yellow,
       },
     ];
@@ -137,7 +147,6 @@ export default function ProductDetail({
           top: 20,
           left: 20,
           zIndex: 1100,
-
         }}
       >
         <IconButton
@@ -212,70 +221,70 @@ export default function ProductDetail({
               }}
             />
 
-          {/* Home and Cart Icon Buttons */}
-          <Box
-            sx={{
-              position: "fixed",
-              top: 20,
-              right: 20,
-              display: 'flex',
-              gap: 1
-            }}
-          >
-            <IconButton
-              onClick={onCartClick}
+            {/* Home and Cart Icon Buttons */}
+            <Box
               sx={{
-                backgroundColor: "rgba(0, 0, 0, 0.2)",
-                color: colors.secondary.main,
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  backgroundColor: "rgba(0, 0, 0, 0.1)",
-                  transform: "scale(1.05)",
-                },
-                "&:active": {
-                  transform: "scale(0.95)",
-                },
+                position: "fixed",
+                top: 20,
+                right: 20,
+                display: "flex",
+                gap: 1,
               }}
             >
-              <Badge
-                badgeContent={cartItemCount}
+              <IconButton
+                onClick={onCartClick}
                 sx={{
-                  '& .MuiBadge-badge': {
-                    backgroundColor: colors.primary.main,
-                    color: colors.secondary.main,
-                    fontSize: '0.7rem',
-                    minWidth: 16,
-                    height: 16,
-                  }
+                  backgroundColor: "rgba(0, 0, 0, 0.2)",
+                  color: colors.secondary.main,
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    backgroundColor: "rgba(0, 0, 0, 0.1)",
+                    transform: "scale(1.05)",
+                  },
+                  "&:active": {
+                    transform: "scale(0.95)",
+                  },
                 }}
               >
-                <ShoppingCart fontSize="medium" />
-              </Badge>
-            </IconButton>
-            <IconButton
-              onClick={() => window.location.href = '/'}
-              sx={{
-                backgroundColor: "rgba(0, 0, 0, 0.2)",
-                color: colors.secondary.main,
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  backgroundColor: "rgba(0, 0, 0, 0.1)",
-                  transform: "scale(1.05)",
-                },
-                "&:active": {
-                  transform: "scale(0.95)",
-                },
-              }}
-            >
-              <Home fontSize="medium" />
-            </IconButton>
-          </Box>
+                <Badge
+                  badgeContent={cartItemCount}
+                  sx={{
+                    "& .MuiBadge-badge": {
+                      backgroundColor: colors.primary.main,
+                      color: colors.secondary.main,
+                      fontSize: "0.7rem",
+                      minWidth: 16,
+                      height: 16,
+                    },
+                  }}
+                >
+                  <ShoppingCart fontSize="medium" />
+                </Badge>
+              </IconButton>
+              <IconButton
+                onClick={() => (window.location.href = "/")}
+                sx={{
+                  backgroundColor: "rgba(0, 0, 0, 0.2)",
+                  color: colors.secondary.main,
+                  width: 48,
+                  height: 48,
+                  borderRadius: "50%",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    backgroundColor: "rgba(0, 0, 0, 0.1)",
+                    transform: "scale(1.05)",
+                  },
+                  "&:active": {
+                    transform: "scale(0.95)",
+                  },
+                }}
+              >
+                <Home fontSize="medium" />
+              </IconButton>
+            </Box>
           </Box>
 
           {/* Image Indicators (only show if multiple images) */}
@@ -426,12 +435,22 @@ export default function ProductDetail({
                 fontSize: "0.95rem",
               }}
             >
-              {product.description || 'ไม่มีรายละเอียด'}
+              {product.description || "ไม่มีรายละเอียด"}
             </Typography>
 
             {/* Additional Pet Info */}
-            {(product.breed || product.color || product.vaccinated || product.certified) && (
-              <Box sx={{ mt: 2, p: 2, backgroundColor: colors.background.paper, borderRadius: 2 }}>
+            {(product.breed ||
+              product.color ||
+              product.vaccinated ||
+              product.certified) && (
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 2,
+                  backgroundColor: colors.background.paper,
+                  borderRadius: 2,
+                }}
+              >
                 {product.breed && (
                   <Typography variant="body2" sx={{ mb: 1 }}>
                     <strong>สายพันธุ์:</strong> {product.breed}
@@ -443,17 +462,26 @@ export default function ProductDetail({
                   </Typography>
                 )}
                 {product.vaccinated && (
-                  <Typography variant="body2" sx={{ mb: 1, color: colors.success }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ mb: 1, color: colors.success }}
+                  >
                     ✅ ฉีดวัคซีนแล้ว
                   </Typography>
                 )}
                 {product.certified && (
-                  <Typography variant="body2" sx={{ mb: 1, color: colors.success }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ mb: 1, color: colors.success }}
+                  >
                     ✅ มีใบรับรอง
                   </Typography>
                 )}
                 {product.healthNote && (
-                  <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 1, fontStyle: "italic" }}
+                  >
                     <strong>หมายเหตุสุขภาพ:</strong> {product.healthNote}
                   </Typography>
                 )}
@@ -462,53 +490,17 @@ export default function ProductDetail({
           </Box>
 
           {/* Stock */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
             <Typography variant="body2" sx={{ color: colors.text.secondary }}>
               คงเหลือในสต็อก:
             </Typography>
-            <Typography variant="body2" sx={{ color: colors.text.primary, fontWeight: 'bold' }}>
-              {typeof product.stock === 'number' ? product.stock : 0}
+            <Typography
+              variant="body2"
+              sx={{ color: colors.text.primary, fontWeight: "bold" }}
+            >
+              {typeof product.stock === "number" ? product.stock : 0}
             </Typography>
           </Box>
-
-          {/* Price */}
-          {(() => {
-            const hasSalePrice = product.salePrice != null;
-            const hasDiscountPercent = !hasSalePrice && product.discountPercent != null && product.discountPercent > 0;
-            const finalPrice = hasSalePrice
-              ? (product.salePrice as number)
-              : (hasDiscountPercent
-                ? Math.max(0, product.price - (product.price * ((product.discountPercent as number) / 100)))
-                : product.price);
-
-            return (
-              <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, mb: 3 }}>
-                {(hasSalePrice || hasDiscountPercent) && (
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      color: colors.text.secondary,
-                      textDecoration: 'line-through',
-                      fontWeight: 'normal',
-                      fontSize: '1.1rem'
-                    }}
-                  >
-                    ฿{product.price.toLocaleString()}
-                  </Typography>
-                )}
-                <Typography
-                  variant="h5"
-                  sx={{
-                    color: colors.primary.main,
-                    fontWeight: 'bold',
-                    fontSize: '1.5rem'
-                  }}
-                >
-                  ฿{finalPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                </Typography>
-              </Box>
-            );
-          })()}
         </Box>
       </Box>
 
@@ -524,62 +516,98 @@ export default function ProductDetail({
           display: "flex",
           gap: 2,
           alignItems: "center",
+          justifyContent: "space-between",
           borderRadius: "24px 24px 0 0",
           boxShadow: "0 -2px 12px rgba(0,0,0,0.08)",
         }}
       >
+        {/* Price Section - Left Side */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-start",
+          }}
+        >
+          {(() => {
+            const hasSalePrice = product.salePrice != null;
+            const hasDiscountPercent =
+              !hasSalePrice &&
+              product.discountPercent != null &&
+              product.discountPercent > 0;
+            const finalPrice = hasSalePrice
+              ? (product.salePrice as number)
+              : hasDiscountPercent
+              ? Math.max(
+                  0,
+                  product.price -
+                    product.price * ((product.discountPercent as number) / 100)
+                )
+              : product.price;
+
+            return (
+              <>
+                {(hasSalePrice || hasDiscountPercent) && (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: colors.text.secondary,
+                      textDecoration: "line-through",
+                      fontSize: "0.9rem",
+                    }}
+                  >
+                    ฿{product.price.toLocaleString()}
+                  </Typography>
+                )}
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: colors.primary.main,
+                    fontWeight: "bold",
+                    fontSize: "1.3rem",
+                  }}
+                >
+                  ฿
+                  {finalPrice.toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                  })}
+                </Typography>
+              </>
+            );
+          })()}
+        </Box>
+
+        {/* Add to Cart Button - Right Side */}
         <Button
-          fullWidth
           variant="contained"
           onClick={onAdopt}
-          disabled={typeof product.stock !== 'number' || product.stock <= 0}
+          disabled={typeof product.stock !== "number" || product.stock <= 0}
           sx={{
-            backgroundColor: (typeof product.stock === 'number' && product.stock > 0) ? colors.primary.main : colors.text.disabled,
+            backgroundColor:
+              typeof product.stock === "number" && product.stock > 0
+                ? colors.primary.main
+                : colors.text.disabled,
             color: colors.secondary.main,
             py: 1.5,
+            px: 3,
             fontSize: "1.1rem",
             fontWeight: "500",
             borderRadius: 3,
-            flex: 1,
+            minWidth: "50%",
             "&:hover": {
-              backgroundColor: (typeof product.stock === 'number' && product.stock > 0) ? colors.primary.dark : colors.text.disabled,
+              backgroundColor:
+                typeof product.stock === "number" && product.stock > 0
+                  ? colors.primary.dark
+                  : colors.text.disabled,
             },
           }}
         >
-          {typeof product.stock === 'number' && product.stock > 0 ? 'หยิบใส่ตระกร้า' : 'สินค้าหมด'}
+          {typeof product.stock === "number" && product.stock > 0
+            ? ["dogs", "cats", "birds", "fish"].includes(product.category)
+              ? "รับน้อลไปดูแล"
+              : "หยิบใส่ตระกร้า"
+            : "สินค้าหมด"}
         </Button>
-
-        <IconButton
-          sx={{
-            backgroundColor: colors.background.default,
-            color: colors.primary.main,
-            width: 48,
-            height: 48,
-            border: `2px solid ${colors.primary.main}`,
-            "&:hover": {
-              backgroundColor: colors.primary.light,
-              color: colors.secondary.main,
-            },
-          }}
-        >
-          <Phone fontSize="small" />
-        </IconButton>
-
-        <IconButton
-          sx={{
-            backgroundColor: colors.background.default,
-            color: colors.primary.main,
-            width: 48,
-            height: 48,
-            border: `2px solid ${colors.primary.main}`,
-            "&:hover": {
-              backgroundColor: colors.primary.light,
-              color: colors.secondary.main,
-            },
-          }}
-        >
-          <Chat fontSize="small" />
-        </IconButton>
       </Box>
     </Box>
   );

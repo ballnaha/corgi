@@ -12,6 +12,7 @@ import ProductCard from "@/components/ProductCard";
 import Cart from "@/components/Cart";
 import BannerSection from "@/components/BannerSection";
 import { generateSlug } from "@/lib/products";
+import { handleLiffNavigation } from "@/lib/liff-navigation";
 import { readCartFromStorage, writeCartToStorage, addToCartStorage } from "@/lib/cart";
 import { readFavoriteIds, toggleFavoriteId } from "@/lib/favorites";
 import { Product, CartItem } from "@/types";
@@ -218,13 +219,13 @@ export default function Home() {
     }
     
     setIsCartOpen(false);
-    router.push("/checkout");
+    handleLiffNavigation(router, "/checkout");
   };
 
   const handleProductClick = (product: Product) => {
-    // Navigate to product detail page using Next.js router
+    // Navigate to product detail page using safe LIFF navigation
     const slug = generateSlug(product.name, product.id);
-    router.push(`/product/${slug}`);
+    handleLiffNavigation(router, `/product/${slug}`);
   };
 
 

@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import { colors } from "@/theme/colors";
+import { handleLiffNavigation } from "@/lib/liff-navigation";
 
 export default function Navigation() {
   const { data: session } = useSession();
@@ -31,7 +32,7 @@ export default function Navigation() {
   };
 
   const handleProfileClick = () => {
-    router.push("/profile");
+    handleLiffNavigation(router, "/profile");
     handleMenuClose();
   };
 
@@ -57,14 +58,14 @@ export default function Navigation() {
             fontWeight: "bold",
             cursor: "pointer",
           }}
-          onClick={() => router.push("/")}
+          onClick={() => handleLiffNavigation(router, "/")}
         >
           CorgiShop
         </Typography>
 
         {session ? (
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <IconButton onClick={() => router.push('/favorites')} sx={{ color: colors.error }}>
+            <IconButton onClick={() => handleLiffNavigation(router, '/favorites')} sx={{ color: colors.error }}>
               <FavoriteBorderIcon />
             </IconButton>
             <Typography
@@ -109,7 +110,7 @@ export default function Navigation() {
         ) : (
           <Button
             variant="outlined"
-            onClick={() => router.push("/auth/signin")}
+            onClick={() => handleLiffNavigation(router, "/auth/signin")}
             sx={{
               color: colors.text.primary,
               borderColor: colors.text.disabled,

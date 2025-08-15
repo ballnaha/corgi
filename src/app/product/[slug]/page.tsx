@@ -22,6 +22,7 @@ import {
   updateQuantityInStorage,
   removeFromCartStorage,
 } from "@/lib/cart";
+import { handleLiffNavigation } from "@/lib/liff-navigation";
 
 export default function ProductDetailPage() {
   const SlideUpTransition = React.forwardRef(function SlideUpTransition(
@@ -99,7 +100,7 @@ export default function ProductDetailPage() {
   }, []);
 
   const handleBack = () => {
-    router.push("/");
+    handleLiffNavigation(router, "/");
   };
 
   const handleAdopt = () => {
@@ -213,7 +214,7 @@ export default function ProductDetailPage() {
           }
 
           setIsCartOpen(false);
-          router.push("/checkout");
+          handleLiffNavigation(router, "/checkout");
         }}
       />
 

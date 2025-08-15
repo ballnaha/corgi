@@ -1,4 +1,7 @@
 import { NextAuthOptions } from "next-auth";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 declare module "next-auth" {
   interface Session {
@@ -8,18 +11,26 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       lineUserId?: string;
+      displayName?: string | null;
+      role?: string;
+      isAdmin?: boolean;
     };
   }
 
   interface User {
     id: string;
     lineUserId: string;
+    role?: string;
+    isAdmin?: boolean;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     lineUserId?: string;
+    displayName?: string;
+    role?: string;
+    isAdmin?: boolean;
   }
 }
 
@@ -29,7 +40,15 @@ export const authOptions: NextAuthOptions = {
       id: "line",
       name: "LINE",
       type: "oauth",
-      authorization: "https://access.line.me/oauth2/v2.1/authorize?scope=profile&response_type=code",
+      authorization: {
+        url: "https://access.line.me/oauth2/v2.1/authorize",
+        params: {
+          scope: "profile",
+          response_type: "code",
+          // Add cache busting parameter
+          _t: Date.now().toString()
+        }
+      },
       token: "https://api.line.me/oauth2/v2.1/token",
       userinfo: "https://api.line.me/v2/profile",
       clientId: process.env.LINE_CLIENT_ID,
@@ -46,9 +65,82 @@ export const authOptions: NextAuthOptions = {
     },
   ] : [],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, profile }) {
       if (account && user) {
         token.lineUserId = user.lineUserId;
+        
+        // Create or update user in database after successful LINE login
+        try {
+          let dbUser = await prisma.user.findUnique({
+            where: { lineUserId: user.lineUserId },
+            // @ts-ignore - Prisma types not updated yet
+            select: { displayName: true, id: true, role: true, isAdmin: true, pictureUrl: true }
+          });
+
+          if (!dbUser) {
+            // Create new user if doesn't exist
+            dbUser = await prisma.user.create({
+              data: {
+                lineUserId: user.lineUserId,
+                displayName: user.name || '',
+                pictureUrl: user.image,
+                email: user.email,
+                phoneNumber: null,
+                statusMessage: null,
+                // @ts-ignore - Prisma types not updated yet
+                role: 'USER', // Default role
+                // @ts-ignore - Prisma types not updated yet
+                isAdmin: false, // Default admin status
+              },
+              // @ts-ignore - Prisma types not updated yet
+              select: { displayName: true, id: true, role: true, isAdmin: true, pictureUrl: true }
+            });
+            console.log("✅ Created new user after LINE login:");
+            console.log(`   - User ID: ${dbUser.id}`);
+            console.log(`   - LINE ID: ${user.lineUserId}`);
+            console.log(`   - Name: ${user.name}`);
+            // @ts-ignore - Prisma types not updated yet
+            console.log(`   - Role: ${dbUser.role}`);
+          } else {
+            // Update existing user with latest LINE profile data and login time
+            dbUser = await prisma.user.update({
+              where: { lineUserId: user.lineUserId },
+              data: { 
+                lastLoginAt: new Date(),
+                displayName: user.name || dbUser.displayName, // Update if changed
+                pictureUrl: user.image || dbUser.pictureUrl, // Update profile picture
+                email: user.email || dbUser.email, // Update email if provided
+              },
+              // @ts-ignore - Prisma types not updated yet
+              select: { displayName: true, id: true, role: true, isAdmin: true, pictureUrl: true }
+            });
+            console.log("✅ Updated existing user login:");
+            console.log(`   - User ID: ${dbUser.id}`);
+            console.log(`   - LINE ID: ${user.lineUserId}`);
+            console.log(`   - Name: ${user.name}`);
+            // @ts-ignore - Prisma types not updated yet
+            console.log(`   - Role: ${dbUser.role}`);
+            // @ts-ignore - Prisma types not updated yet
+            console.log(`   - Is Admin: ${dbUser.isAdmin}`);
+          }
+          
+          token.displayName = dbUser?.displayName;
+          // @ts-ignore - Prisma types not updated yet
+          token.role = dbUser?.role;
+          // @ts-ignore - Prisma types not updated yet  
+          token.isAdmin = dbUser?.isAdmin;
+        } catch (error) {
+          console.error("❌ Error creating/updating user after LINE login:", error);
+          console.error("   - LINE User ID:", user.lineUserId);
+          console.error("   - User Name:", user.name);
+          console.error("   - Error Details:", error);
+          
+          // Still allow login even if database operation fails
+          // Use session data as fallback
+          token.displayName = user.name || '';
+          token.role = 'USER';
+          token.isAdmin = false;
+        }
       }
       return token;
     },
@@ -56,6 +148,9 @@ export const authOptions: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.sub!;
         session.user.lineUserId = token.lineUserId;
+        session.user.displayName = token.displayName;
+        session.user.role = token.role;
+        session.user.isAdmin = token.isAdmin;
       }
       return session;
     },
@@ -69,4 +164,18 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
+  // Add headers to prevent caching
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        // Add cache control
+        maxAge: 30 * 24 * 60 * 60 // 30 days
+      }
+    }
+  },
 };

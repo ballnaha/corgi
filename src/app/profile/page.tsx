@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -11,8 +11,6 @@ import {
   Card,
   CardContent,
   IconButton,
-  Tabs,
-  Tab,
   CircularProgress,
   Dialog,
   DialogTitle,
@@ -25,11 +23,18 @@ import {
   Snackbar,
   Alert,
   Slide,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+  Link,
+  Drawer,
+  Divider,
 } from "@mui/material";
 import type { SlideProps } from "@mui/material";
 import {
   ArrowBack,
-  Pets,
   Edit,
   Email,
   Phone,
@@ -37,9 +42,17 @@ import {
   Save,
   Person,
   Message,
+  Payment,
+  Receipt,
+  Info,
+  LocalShipping,
+  Schedule,
+  ClearAll,
 } from "@mui/icons-material";
 import { colors } from "@/theme/colors";
 import { useLiff } from "@/hooks/useLiff";
+import { generateSlug } from "@/lib/products";
+import { handleLiffNavigation } from "@/lib/liff-navigation";
 // Removed unused EditProfileDialog
 
 interface UserData {
@@ -74,6 +87,15 @@ interface Order {
   status: string;
   totalAmount: number;
   createdAt: Date | string;
+  orderNumber?: string | null;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  shippingAddress?: string | null;
+  shippingFee?: number;
+  discountAmount?: number;
+  paymentType?: string;
+  depositAmount?: number | null;
+  remainingAmount?: number | null;
   items: OrderItem[];
 }
 
@@ -92,8 +114,8 @@ export default function ProfilePage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(0);
-  const [categoryTabs, setCategoryTabs] = useState<
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [categories, setCategories] = useState<
     { key: string; name: string; icon?: string }[]
   >([]);
   // Bottom navigation is now global in RootLayout
@@ -113,6 +135,8 @@ export default function ProfilePage() {
     severity: "success" | "error" | "warning" | "info";
   }>({ open: false, message: "", severity: "success" });
   const [snackbarKey, setSnackbarKey] = useState<number>(0);
+  const [orderDetailOpen, setOrderDetailOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -140,26 +164,19 @@ export default function ProfilePage() {
           statusMessage: lineProfile?.statusMessage || data.statusMessage,
         });
       } else {
-        // If user doesn't exist in DB, create them
-        const createResponse = await fetch("/api/user/create", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            lineUserId: session?.user?.lineUserId,
-            displayName: session?.user?.name,
-            pictureUrl: session?.user?.image,
-            email: session?.user?.email,
-            phoneNumber: null, // Will be set later by user
-            statusMessage: lineProfile?.statusMessage,
-          }),
+        console.warn("User not found in database. This should not happen as users are created during login.");
+        // User should already exist from login process, but fallback to session data
+        setUserData({
+          id: session?.user?.id || '',
+          lineUserId: session?.user?.lineUserId || '',
+          displayName: session?.user?.name || '',
+          pictureUrl: session?.user?.image || null,
+          email: session?.user?.email || null,
+          phoneNumber: null,
+          statusMessage: lineProfile?.statusMessage || null,
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
         });
-
-        if (createResponse.ok) {
-          const newUser = await createResponse.json();
-          setUserData(newUser);
-        }
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -195,7 +212,7 @@ export default function ProfilePage() {
       if (!res.ok) return;
       const cats = await res.json();
       // Ensure only needed fields and order stable
-      const tabs = cats
+      const categoryList = cats
         .filter((c: any) =>
           ["dogs", "cats", "birds", "fish", "toys", "food"].includes(c.key)
         )
@@ -205,7 +222,7 @@ export default function ProfilePage() {
           const order = ["dogs", "cats", "birds", "fish", "toys"];
           return order.indexOf(a.key) - order.indexOf(b.key);
         });
-      setCategoryTabs(tabs);
+      setCategories(categoryList);
     } catch (e) {
       // ignore
     } finally {
@@ -217,7 +234,7 @@ export default function ProfilePage() {
     if (!mounted || status === "loading" || dataFetched) return;
 
     if (!session) {
-      router.push("/auth/signin");
+      handleLiffNavigation(router, "/auth/signin");
       return;
     }
 
@@ -290,19 +307,145 @@ export default function ProfilePage() {
     handleUpdateProfile(editForm);
   };
 
+  const handleOrderDetailOpen = (order: Order) => {
+    setSelectedOrder(order);
+    setOrderDetailOpen(true);
+  };
+
+  const handleOrderDetailClose = () => {
+    setOrderDetailOpen(false);
+    setSelectedOrder(null);
+  };
+
+  const handleProductClick = (product: OrderItem["product"]) => {
+    // Use the same generateSlug function as homepage
+    const slug = generateSlug(product.name, product.id);
+    handleLiffNavigation(router, `/product/${slug}`);
+  };
+
+  const handleClearLineCache = async () => {
+    try {
+      setSnackbar({
+        open: true,
+        message: "กำลังล้าง LINE Cache...",
+        severity: "info",
+      });
+      setSnackbarKey((k) => k + 1);
+
+      // Call API to clear LINE cache
+      const response = await fetch("/api/auth/clear-line-cache", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        // Clear LINE-specific localStorage items
+        Object.keys(localStorage).forEach(key => {
+          if (key.includes('line') || key.includes('auth') || key.includes('liff')) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        // Clear LINE-specific sessionStorage items
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.includes('line') || key.includes('auth') || key.includes('liff')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+
+        setSnackbar({
+          open: true,
+          message: "ล้าง LINE Cache สำเร็จ!",
+          severity: "success",
+        });
+        setSnackbarKey((k) => k + 1);
+      } else {
+        throw new Error("Failed to clear LINE cache");
+      }
+    } catch (error) {
+      console.error("Error clearing LINE cache:", error);
+      setSnackbar({
+        open: true,
+        message: "เกิดข้อผิดพลาดในการล้าง LINE Cache",
+        severity: "error",
+      });
+      setSnackbarKey((k) => k + 1);
+    }
+  };
+
+  const handleClearCache = async () => {
+    try {
+      setSnackbar({
+        open: true,
+        message: "กำลังล้าง Cache และ Session...",
+        severity: "info",
+      });
+      setSnackbarKey((k) => k + 1);
+
+      // Clear NextAuth session first
+      await signOut({ redirect: false });
+
+      // Clear browser cache
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames.map(cacheName => caches.delete(cacheName))
+        );
+      }
+
+      // Clear localStorage
+      localStorage.clear();
+
+      // Clear sessionStorage
+      sessionStorage.clear();
+
+      // Clear all cookies by setting them to expire
+      document.cookie.split(";").forEach((c) => {
+        const eqPos = c.indexOf("=");
+        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+      });
+
+      // Show success message before redirect
+      setSnackbar({
+        open: true,
+        message: "ล้าง Cache และ Session สำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...",
+        severity: "success",
+      });
+      setSnackbarKey((k) => k + 1);
+
+      // Wait a moment for user to see the message, then redirect to sign in
+      setTimeout(() => {
+        window.location.href = '/auth/signin';
+      }, 1500);
+
+    } catch (error) {
+      console.error("Error clearing cache and session:", error);
+      setSnackbar({
+        open: true,
+        message: "เกิดข้อผิดพลาดในการล้าง Cache และ Session",
+        severity: "error",
+      });
+      setSnackbarKey((k) => k + 1);
+    }
+  };
+
   // Filter orders by category
   const getFilteredOrders = () => {
-    const dynamicKeys = categoryTabs.map((c) => c.key);
-    const selectedKey = dynamicKeys[selectedCategory] ?? "other";
+    if (selectedCategory === "all") {
+      return orders;
+    }
 
-    if (selectedKey === "other") {
+    const dynamicKeys = categories.map((c) => c.key);
+
+    if (selectedCategory === "other") {
       return orders.filter((order) =>
         order.items.some((item) => !dynamicKeys.includes(item.product.category))
       );
     }
 
     return orders.filter((order) =>
-      order.items.some((item) => item.product.category === selectedKey)
+      order.items.some((item) => item.product.category === selectedCategory)
     );
   };
 
@@ -330,6 +473,49 @@ export default function ProfilePage() {
       month: "long",
       day: "numeric",
     });
+  };
+
+  // Translate order status to Thai
+  const getStatusInThai = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "รอการชำระเงิน";
+      case "PAYMENT_PENDING":
+        return "รอตรวจสอบการชำระเงิน";
+      case "CONFIRMED":
+        return "ยืนยันแล้ว";
+      case "PROCESSING":
+        return "กำลังจัดเตรียมสินค้า";
+      case "SHIPPED":
+        return "จัดส่งแล้ว";
+      case "DELIVERED":
+        return "ได้รับสินค้าเรียบร้อย";
+      case "CANCELLED":
+        return "ยกเลิก";
+      default:
+        return status;
+    }
+  };
+
+  // Get status color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "DELIVERED":
+        return colors.success;
+      case "SHIPPED":
+        return "#2196F3"; // Blue
+      case "PROCESSING":
+      case "CONFIRMED":
+        return colors.warning;
+      case "PAYMENT_PENDING":
+        return "#FF9800"; // Orange
+      case "PENDING":
+        return colors.info;
+      case "CANCELLED":
+        return "#F44336"; // Red
+      default:
+        return colors.info;
+    }
   };
 
   // Only show loading for initial mount and auth loading
@@ -563,13 +749,69 @@ export default function ProfilePage() {
         </Box>
       </Box>
 
+      {/* Clear Cache Buttons */}
+      <Box
+        sx={{
+          px: 3,
+          pb: 2,
+          display: "flex",
+          gap: 2,
+          justifyContent: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <Button
+          variant="outlined"
+          startIcon={<ClearAll />}
+          onClick={handleClearCache}
+          sx={{
+            color: colors.secondary.main,
+            borderColor: colors.secondary.main,
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            "&:hover": {
+              backgroundColor: "rgba(255, 255, 255, 0.2)",
+              borderColor: colors.secondary.main,
+            },
+            borderRadius: 3,
+            px: 3,
+            py: 1,
+            fontSize: "0.9rem",
+            fontWeight: "500",
+          }}
+        >
+          ล้าง Cache & Session
+        </Button>
+        
+        <Button
+          variant="outlined"
+          startIcon={<ClearAll />}
+          onClick={handleClearLineCache}
+          sx={{
+            color: colors.secondary.main,
+            borderColor: colors.secondary.main,
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            "&:hover": {
+              backgroundColor: "rgba(255, 255, 255, 0.2)",
+              borderColor: colors.secondary.main,
+            },
+            borderRadius: 3,
+            px: 3,
+            py: 1,
+            fontSize: "0.9rem",
+            fontWeight: "500",
+          }}
+        >
+          ล้าง LINE Cache
+        </Button>
+      </Box>
+
       {/* Purchase History Section */}
       <Box
         sx={{
           backgroundColor: colors.secondary.main,
-          borderRadius: "32px 32px 0 0",
+          borderRadius: { xs: "24px 24px 0 0", sm: "32px 32px 0 0" },
           minHeight: "60vh",
-          p: 3,
+          p: { xs: 2, sm: 3 },
           mt: 2,
         }}
       >
@@ -578,52 +820,59 @@ export default function ProfilePage() {
           sx={{
             color: colors.text.primary,
             fontWeight: "bold",
-            mb: 3,
-            fontSize: "1.5rem",
+            mb: { xs: 2, sm: 3 },
+            fontSize: { xs: "1.25rem", sm: "1.5rem" },
           }}
         >
           ประวัติการซื้อสินค้า
         </Typography>
 
-        {/* Category Tabs */}
-        <Box sx={{ mb: 3 }}>
-          <Tabs
-            value={selectedCategory}
-            onChange={(_, newValue) => setSelectedCategory(newValue)}
-            variant="scrollable"
-            scrollButtons="auto"
-            sx={{
-              "& .MuiTabs-indicator": {
-                backgroundColor: colors.primary.main,
-              },
-              "& .MuiTab-root": {
-                color: colors.text.secondary,
-                fontWeight: "bold",
-                textTransform: "none",
-                fontSize: "0.9rem",
-                minWidth: "auto",
-                px: 2,
-                "&.Mui-selected": {
-                  color: colors.primary.main,
+        {/* Category Filter */}
+        <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+          <FormControl fullWidth>
+            <InputLabel 
+              id="category-filter-label"
+              sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+            >
+              กรองตามหมวดหมู่
+            </InputLabel>
+            <Select
+              labelId="category-filter-label"
+              value={selectedCategory}
+              label="กรองตามหมวดหมู่"
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              sx={{
+                borderRadius: { xs: 1.5, sm: 2 },
+                fontSize: { xs: "0.875rem", sm: "1rem" },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: { xs: 1.5, sm: 2 },
                 },
-              },
-            }}
-          >
-            {categoryTabs.map((c) => (
-              <Tab
-                key={c.key}
-                label={c.name}
-                icon={
-                  <span style={{ fontSize: "1.2rem" }}>{c.icon ?? "🐾"}</span>
-                }
-              />
-            ))}
-            <Tab label="อื่นๆ" icon={<Pets fontSize="small" />} />
-          </Tabs>
+                "& .MuiSelect-select": {
+                  py: { xs: 1.5, sm: 2 },
+                },
+              }}
+            >
+              <MenuItem value="all">ทั้งหมด</MenuItem>
+              {categories.map((c) => (
+                <MenuItem key={c.key} value={c.key}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                    <span style={{ fontSize: "1.2rem" }}>{c.icon ?? "🐾"}</span>
+                    {c.name}
+                  </Box>
+                </MenuItem>
+              ))}
+              <MenuItem value="other">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: "1.2rem" }}>🐾</span>
+                  อื่นๆ
+                </Box>
+              </MenuItem>
+            </Select>
+          </FormControl>
         </Box>
 
         {/* Purchase History Content */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, sm: 3 } }}>
           {loadingOrders ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
               <CircularProgress color="primary" />
@@ -644,20 +893,99 @@ export default function ProfilePage() {
                   <Card
                     key={order.id}
                     sx={{
-                      borderRadius: 3,
+                      borderRadius: { xs: 2, sm: 3 },
                       boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                       overflow: "hidden",
-                      mx: -3,
+                      mx: { xs: -2, sm: -3 },
+                      width: "100%",
                     }}
                   >
-                    <CardContent sx={{ p: 3 }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                      {/* Order Header with Order Number and Status */}
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          mb: { xs: 1.5, sm: 2 },
+                          pb: { xs: 1.5, sm: 2 },
+                          borderBottom: `1px solid ${colors.background.default}`,
+                          flexWrap: { xs: "wrap", sm: "nowrap" },
+                          gap: { xs: 1, sm: 0 },
+                        }}
+                      >
+                        <Box sx={{ flex: 1, minWidth: { xs: "100%", sm: "auto" } }}>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              color: colors.text.secondary,
+                              fontSize: { xs: "0.75rem", sm: "0.8rem" },
+                              mb: 0.5,
+                            }}
+                          >
+                            หมายเลขคำสั่งซื้อ
+                          </Typography>
+                          <Typography
+                            variant="body1"
+                            sx={{
+                              color: colors.text.primary,
+                              fontWeight: "bold",
+                              fontSize: { xs: "0.85rem", sm: "0.9rem" },
+                            }}
+                          >
+                            #
+                            {order.orderNumber ||
+                              order.id.slice(-8).toUpperCase()}
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{ 
+                            display: "flex", 
+                            gap: { xs: 1, sm: 1.5 }, 
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            justifyContent: { xs: "flex-end", sm: "flex-start" }
+                          }}
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() => handleOrderDetailOpen(order)}
+                            sx={{
+                              backgroundColor: colors.background.paper,
+                              "&:hover": {
+                                backgroundColor: colors.primary.light,
+                              },
+                              border: "1px solid rgba(0,0,0,0.1)",
+                              width: { xs: 32, sm: 36 },
+                              height: { xs: 32, sm: 36 },
+                            }}
+                          >
+                            <Info fontSize="small" />
+                          </IconButton>
+                          <Chip
+                            label={getStatusInThai(order.status)}
+                            size="small"
+                            sx={{
+                              color: getStatusColor(order.status),
+                              backgroundColor: `${getStatusColor(
+                                order.status
+                              )}20`,
+                              fontWeight: "bold",
+                              fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                              height: { xs: 24, sm: 28 },
+                            }}
+                          />
+                        </Box>
+                      </Box>
+
+                      {/* Order Items */}
                       {order.items.map((item, index) => (
                         <Box
                           key={item.id}
                           sx={{
                             display: "flex",
-                            gap: 3,
-                            mb: index < order.items.length - 1 ? 2 : 0,
+                            gap: { xs: 2, sm: 3 },
+                            mb: index < order.items.length - 1 ? { xs: 1.5, sm: 2 } : 0,
                           }}
                         >
                           {item.product.imageUrl ? (
@@ -666,43 +994,67 @@ export default function ProfilePage() {
                               src={item.product.imageUrl}
                               alt={item.product.name}
                               loading="lazy"
+                              onClick={() => handleProductClick(item.product)}
                               sx={{
-                                width: 96,
-                                height: 96,
-                                borderRadius: 2,
+                                width: { xs: 80, sm: 96 },
+                                height: { xs: 80, sm: 96 },
+                                borderRadius: { xs: 1.5, sm: 2 },
                                 objectFit: "cover",
                                 flexShrink: 0,
                                 border: `1px solid ${colors.background.default}`,
                                 backgroundColor: colors.background.default,
+                                cursor: "pointer",
+                                transition: "transform 0.2s ease",
+                                "&:hover": {
+                                  transform: "scale(1.05)",
+                                },
                               }}
                             />
                           ) : (
                             <Box
+                              onClick={() => handleProductClick(item.product)}
                               sx={{
-                                width: 96,
-                                height: 96,
-                                borderRadius: 2,
+                                width: { xs: 80, sm: 96 },
+                                height: { xs: 80, sm: 96 },
+                                borderRadius: { xs: 1.5, sm: 2 },
                                 background:
                                   "linear-gradient(135deg, #FFB74D 0%, #FF9800 100%)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontSize: "2rem",
+                                fontSize: { xs: "1.5rem", sm: "2rem" },
                                 flexShrink: 0,
                                 border: `1px solid ${colors.background.default}`,
+                                cursor: "pointer",
+                                transition: "transform 0.2s ease",
+                                "&:hover": {
+                                  transform: "scale(1.05)",
+                                },
                               }}
                             >
                               {getCategoryIcon(item.product.category)}
                             </Box>
                           )}
-                          <Box sx={{ flex: 1 }}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography
                               variant="h6"
+                              onClick={() => handleProductClick(item.product)}
                               sx={{
                                 color: colors.text.primary,
                                 fontWeight: "bold",
-                                fontSize: "1.2rem",
-                                mb: 1,
+                                fontSize: { xs: "1rem", sm: "1.2rem" },
+                                mb: { xs: 0.5, sm: 1 },
+                                cursor: "pointer",
+                                lineHeight: 1.3,
+                                "&:hover": {
+                                  color: colors.primary.main,
+                                  textDecoration: "underline",
+                                },
+                                // Truncate long text on mobile
+                                display: "-webkit-box",
+                                WebkitLineClamp: { xs: 2, sm: 3 },
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
                               }}
                             >
                               {item.product.name}
@@ -712,8 +1064,8 @@ export default function ProfilePage() {
                               variant="body2"
                               sx={{
                                 color: colors.text.secondary,
-                                mb: 1,
-                                fontSize: "0.85rem",
+                                mb: { xs: 0.5, sm: 1 },
+                                fontSize: { xs: "0.75rem", sm: "0.85rem" },
                               }}
                             >
                               วันที่ซื้อ: {formatDate(order.createdAt)}
@@ -723,8 +1075,8 @@ export default function ProfilePage() {
                                 variant="body2"
                                 sx={{
                                   color: colors.text.secondary,
-                                  mb: 1,
-                                  fontSize: "0.8rem",
+                                  mb: { xs: 0.5, sm: 1 },
+                                  fontSize: { xs: "0.7rem", sm: "0.8rem" },
                                 }}
                               >
                                 เพศ:{" "}
@@ -737,62 +1089,27 @@ export default function ProfilePage() {
                                   ` • อายุ: ${item.product.age}`}
                               </Typography>
                             )}
-                            <Box
+                            <Typography
+                              variant="h6"
                               sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
+                                color: colors.primary.main,
+                                fontWeight: "bold",
+                                fontSize: { xs: "0.95rem", sm: "1.1rem" },
                               }}
                             >
-                              <Typography
-                                variant="h6"
-                                sx={{
-                                  color: colors.primary.main,
-                                  fontWeight: "bold",
-                                  fontSize: "1.1rem",
-                                }}
-                              >
-                                ฿{item.price.toLocaleString()}
-                                {item.quantity > 1 && ` x ${item.quantity}`}
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color:
-                                    order.status === "DELIVERED"
-                                      ? colors.success
-                                      : order.status === "PROCESSING"
-                                      ? colors.warning
-                                      : colors.info,
-                                  fontWeight: "bold",
-                                  px: 1,
-                                  py: 0.5,
-                                  borderRadius: 1,
-                                  backgroundColor:
-                                    order.status === "DELIVERED"
-                                      ? `${colors.success}20`
-                                      : order.status === "PROCESSING"
-                                      ? `${colors.warning}20`
-                                      : `${colors.info}20`,
-                                }}
-                              >
-                                {order.status === "DELIVERED"
-                                  ? "ส่งแล้ว"
-                                  : order.status === "PROCESSING"
-                                  ? "กำลังดำเนินการ"
-                                  : order.status === "PENDING"
-                                  ? "รอดำเนินการ"
-                                  : order.status}
-                              </Typography>
-                            </Box>
+                              ฿{item.price.toLocaleString()}
+                              {item.quantity > 1 && ` x ${item.quantity}`}
+                            </Typography>
                           </Box>
                         </Box>
                       ))}
+
+                      {/* Order Total */}
                       {order.items.length > 1 && (
                         <Box
                           sx={{
-                            mt: 2,
-                            pt: 2,
+                            mt: { xs: 1.5, sm: 2 },
+                            pt: { xs: 1.5, sm: 2 },
                             borderTop: `1px solid ${colors.background.default}`,
                           }}
                         >
@@ -802,12 +1119,54 @@ export default function ProfilePage() {
                               color: colors.text.primary,
                               fontWeight: "bold",
                               textAlign: "right",
+                              fontSize: { xs: "1rem", sm: "1.25rem" },
                             }}
                           >
                             รวม: ฿{order.totalAmount.toLocaleString()}
                           </Typography>
                         </Box>
                       )}
+
+                      {/* Payment Button - Only show for PENDING or PROCESSING orders */}
+                      {(order.status === "PENDING" ||
+                        order.status === "PROCESSING") &&
+                        order.orderNumber && (
+                          <Box
+                            sx={{
+                              mt: { xs: 2, sm: 3 },
+                              pt: { xs: 2, sm: 3 },
+                              borderTop: `1px solid ${colors.background.default}`,
+                            }}
+                          >
+                            <Button
+                              variant="contained"
+                              fullWidth
+                              startIcon={<Payment />}
+                              onClick={() =>
+                                handleLiffNavigation(router,
+                                  `/payment-notification?orderNumber=${order.orderNumber}`
+                                )
+                              }
+                              sx={{
+                                backgroundColor: colors.primary.main,
+                                color: colors.secondary.main,
+                                fontSize: { xs: "0.875rem", sm: "1rem" },
+                                fontWeight: "bold",
+                                py: { xs: 1.5, sm: 2 },
+                                borderRadius: { xs: 2, sm: 3 },
+                                boxShadow: `0 4px 12px ${colors.primary.main}30`,
+                                "&:hover": {
+                                  backgroundColor: colors.primary.dark,
+                                  boxShadow: `0 6px 16px ${colors.primary.main}40`,
+                                  transform: "translateY(-1px)",
+                                },
+                                transition: "all 0.2s ease",
+                              }}
+                            >
+                              แจ้งชำระเงิน
+                            </Button>
+                          </Box>
+                        )}
                     </CardContent>
                   </Card>
                 ))
@@ -1129,6 +1488,521 @@ export default function ProfilePage() {
           />
         </Alert>
       </Snackbar>
+
+      {/* Order Detail Bottom Sheet */}
+      <Drawer
+        anchor="bottom"
+        open={orderDetailOpen}
+        onClose={handleOrderDetailClose}
+        PaperProps={{
+          sx: {
+            borderRadius: "24px 24px 0 0",
+            maxHeight: "80vh",
+            backgroundColor: colors.background.default,
+          },
+        }}
+      >
+        {selectedOrder && (
+          <Box sx={{ p: 3 }}>
+            {/* Header */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 3,
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: "bold",
+                  color: colors.text.primary,
+                }}
+              >
+                รายละเอียดคำสั่งซื้อ
+              </Typography>
+              <IconButton
+                onClick={handleOrderDetailClose}
+                sx={{
+                  backgroundColor: colors.background.paper,
+                  "&:hover": { backgroundColor: colors.primary.light },
+                }}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            {/* Order Info */}
+            <Card sx={{ mb: 3, borderRadius: 3 }}>
+              <CardContent>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 2,
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                    หมายเลขคำสั่งซื้อ
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    sx={{ fontWeight: "bold", color: colors.primary.main }}
+                  >
+                    #
+                    {selectedOrder.orderNumber ||
+                      selectedOrder.id.slice(-8).toUpperCase()}
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 2,
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                    วันที่สั่งซื้อ
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: colors.text.secondary }}
+                  >
+                    {formatDate(selectedOrder.createdAt)}
+                  </Typography>
+                </Box>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 2,
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                    สถานะ
+                  </Typography>
+                  <Chip
+                    label={getStatusInThai(selectedOrder.status)}
+                    size="small"
+                    sx={{
+                      color: getStatusColor(selectedOrder.status),
+                      backgroundColor: `${getStatusColor(
+                        selectedOrder.status
+                      )}20`,
+                      fontWeight: "bold",
+                    }}
+                  />
+                </Box>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                    ยอดรวม
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: "bold", color: colors.primary.main }}
+                  >
+                    ฿{selectedOrder.totalAmount.toLocaleString()}
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+
+            {/* Payment & Shipping Info */}
+            <Card sx={{ mb: 3, borderRadius: 3 }}>
+              <CardContent>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: "bold", mb: 2, color: colors.text.primary }}
+                >
+                  ข้อมูลการชำระเงิน & จัดส่ง
+                </Typography>
+
+                {/* Payment Type & Amount */}
+                {selectedOrder.paymentType === "DEPOSIT_PAYMENT" ? (
+                  <>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: colors.text.secondary }}
+                      >
+                        ประเภทการชำระ
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                        มัดจำ
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 1,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: colors.text.secondary }}
+                      >
+                        ยอดมัดจำ
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: "bold", color: colors.primary.main }}
+                      >
+                        ฿{(selectedOrder.depositAmount || 0).toLocaleString()}
+                      </Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        mb: 2,
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{ color: colors.text.secondary }}
+                      >
+                        ยอดที่ต้องจ่ายเพิ่ม
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontWeight: "bold", color: colors.warning }}
+                      >
+                        ฿{(selectedOrder.remainingAmount || 0).toLocaleString()}
+                      </Typography>
+                    </Box>
+                  </>
+                ) : (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 2,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ color: colors.text.secondary }}
+                    >
+                      ประเภทการชำระ
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                      ชำระเต็มจำนวน
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Shipping Fee */}
+                {selectedOrder.shippingFee !== undefined && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ color: colors.text.secondary }}
+                    >
+                      ค่าจัดส่ง
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                      ฿{selectedOrder.shippingFee.toLocaleString()}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Discount */}
+                {selectedOrder.discountAmount !== undefined && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ color: colors.text.secondary }}
+                    >
+                      ส่วนลด
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: "bold", color: colors.success }}
+                    >
+                      -฿{selectedOrder.discountAmount.toLocaleString()}
+                    </Typography>
+                  </Box>
+                )}
+
+                <Divider sx={{ my: 2 }} />
+
+                {/* Customer Info */}
+                {selectedOrder.customerName && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ color: colors.text.secondary }}
+                    >
+                      ชื่อผู้สั่ง
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                      {selectedOrder.customerName}
+                    </Typography>
+                  </Box>
+                )}
+
+                {selectedOrder.customerPhone && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 1,
+                    }}
+                  >
+                    <Typography
+                      variant="body2"
+                      sx={{ color: colors.text.secondary }}
+                    >
+                      เบอร์โทร
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                      {selectedOrder.customerPhone}
+                    </Typography>
+                  </Box>
+                )}
+
+                {selectedOrder.shippingAddress && (
+                  <Box sx={{ mb: 1 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{ color: colors.text.secondary, mb: 0.5 }}
+                    >
+                      ที่อยู่จัดส่ง
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontWeight: "bold", lineHeight: 1.4 }}
+                    >
+                      {selectedOrder.shippingAddress}
+                    </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Items List */}
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: "bold", mb: 2, color: colors.text.primary }}
+            >
+              รายการสินค้า ({selectedOrder.items.length} รายการ)
+            </Typography>
+
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 3 }}
+            >
+              {selectedOrder.items.map((item, index) => (
+                <Card key={item.id} sx={{ borderRadius: 2 }}>
+                  <CardContent sx={{ p: 2 }}>
+                    <Box sx={{ display: "flex", gap: 2 }}>
+                      {item.product.imageUrl ? (
+                        <Box
+                          component="img"
+                          src={item.product.imageUrl}
+                          alt={item.product.name}
+                          onClick={() => handleProductClick(item.product)}
+                          sx={{
+                            width: 60,
+                            height: 60,
+                            borderRadius: 2,
+                            objectFit: "cover",
+                            flexShrink: 0,
+                            cursor: "pointer",
+                            transition: "transform 0.2s ease",
+                            "&:hover": {
+                              transform: "scale(1.1)",
+                            },
+                          }}
+                        />
+                      ) : (
+                        <Box
+                          onClick={() => handleProductClick(item.product)}
+                          sx={{
+                            width: 60,
+                            height: 60,
+                            borderRadius: 2,
+                            background:
+                              "linear-gradient(135deg, #FFB74D 0%, #FF9800 100%)",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: "1.5rem",
+                            flexShrink: 0,
+                            cursor: "pointer",
+                            transition: "transform 0.2s ease",
+                            "&:hover": {
+                              transform: "scale(1.1)",
+                            },
+                          }}
+                        >
+                          {getCategoryIcon(item.product.category)}
+                        </Box>
+                      )}
+
+                      <Box sx={{ flex: 1 }}>
+                        <Typography
+                          variant="subtitle2"
+                          onClick={() => handleProductClick(item.product)}
+                          sx={{
+                            fontWeight: "bold",
+                            mb: 0.5,
+                            cursor: "pointer",
+                            "&:hover": {
+                              color: colors.primary.main,
+                              textDecoration: "underline",
+                            },
+                          }}
+                        >
+                          {item.product.name}
+                          {item.product.breed && ` - ${item.product.breed}`}
+                        </Typography>
+
+                        {item.product.gender && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: colors.text.secondary,
+                              display: "block",
+                              mb: 0.5,
+                            }}
+                          >
+                            เพศ:{" "}
+                            {item.product.gender === "MALE"
+                              ? "ผู้ชาย"
+                              : item.product.gender === "FEMALE"
+                              ? "ผู้หญิง"
+                              : "ไม่ระบุ"}
+                            {item.product.age && ` • อายุ: ${item.product.age}`}
+                          </Typography>
+                        )}
+
+                        <Box
+                          sx={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            mt: 1,
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{ color: colors.text.secondary }}
+                          >
+                            ฿{item.price.toLocaleString()} x {item.quantity}
+                          </Typography>
+                          <Typography
+                            variant="subtitle2"
+                            sx={{
+                              fontWeight: "bold",
+                              color: colors.primary.main,
+                            }}
+                          >
+                            ฿{(item.price * item.quantity).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              ))}
+            </Box>
+
+            {/* Action Buttons */}
+            <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
+              {(selectedOrder.status === "PENDING" ||
+                selectedOrder.status === "PROCESSING") &&
+                selectedOrder.orderNumber && (
+                  <Button
+                    variant="contained"
+                    fullWidth
+                    startIcon={<Payment />}
+                    onClick={() => {
+                      handleOrderDetailClose();
+                      handleLiffNavigation(router,
+                        `/payment-notification?orderNumber=${selectedOrder.orderNumber}`
+                      );
+                    }}
+                    sx={{
+                      py: 1.5,
+                      borderRadius: 3,
+                      backgroundColor: colors.primary.main,
+                      "&:hover": {
+                        backgroundColor: colors.primary.dark,
+                      },
+                    }}
+                  >
+                    แจ้งชำระเงิน
+                  </Button>
+                )}
+
+              <Button
+                variant="outlined"
+                fullWidth
+                startIcon={<Receipt />}
+                onClick={handleOrderDetailClose}
+                sx={{
+                  py: 1.5,
+                  borderRadius: 3,
+                  borderColor: colors.primary.main,
+                  color: colors.primary.main,
+                  "&:hover": {
+                    borderColor: colors.primary.dark,
+                    backgroundColor: `${colors.primary.main}10`,
+                  },
+                }}
+              >
+                ปิด
+              </Button>
+            </Box>
+          </Box>
+        )}
+      </Drawer>
 
       {/* BottomNavigation is rendered globally in RootLayout */}
     </Box>

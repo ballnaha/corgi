@@ -17,6 +17,8 @@ model User {
   createdAt     DateTime   @default(now()) @map("created_at")
   lastLoginAt   DateTime   @default(now()) @map("last_login_at")
   phoneNumber   String?    @map("phone_number")
+  role          String     @default("USER") // USER, ADMIN, SUPER_ADMIN
+  isAdmin       Boolean    @default(false) @map("is_admin")
   favorites     Favorite[]
   orders        Order[]
 
@@ -92,9 +94,10 @@ model Order {
   discountAmount   Decimal?        @default(0.00) @map("discount_amount") @db.Decimal(10, 2)
   discountCode     String?         @map("discount_code")
   orderNumber      String?         @map("order_number")
-  orderItems       OrderItem[]
-  shippingOption   ShippingOption? @relation(fields: [shippingOptionId], references: [id])
-  user             User            @relation(fields: [userId], references: [id])
+  orderItems           OrderItem[]
+  paymentNotifications PaymentNotification[]
+  shippingOption       ShippingOption?       @relation(fields: [shippingOptionId], references: [id])
+  user                 User                  @relation(fields: [userId], references: [id])
 
   @@index([shippingOptionId], map: "orders_shipping_option_id_fkey")
   @@index([userId], map: "orders_user_id_fkey")
@@ -194,8 +197,38 @@ enum PaymentType {
   REMAINING_PAYMENT
 }
 
+model PaymentNotification {
+  id                   String                     @id @default(cuid())
+  orderId              String                     @map("order_id")
+  transferAmount       Decimal                    @map("transfer_amount") @db.Decimal(10, 2)
+  transferDate         DateTime                   @map("transfer_date")
+  transferTime         String                     @map("transfer_time")
+  note                 String?                    @db.Text
+  paymentSlipData      String?                    @map("payment_slip_data") @db.LongText
+  paymentSlipMimeType  String?                    @map("payment_slip_mime_type")
+  paymentSlipFileName  String?                    @map("payment_slip_file_name")
+  status               PaymentNotificationStatus  @default(PENDING)
+  submittedAt          DateTime                   @default(now()) @map("submitted_at")
+  reviewedAt           DateTime?                  @map("reviewed_at")
+  reviewedBy           String?                    @map("reviewed_by")
+  reviewNote           String?                    @map("review_note") @db.Text
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  updatedAt            DateTime                   @updatedAt @map("updated_at")
+  order                Order                      @relation(fields: [orderId], references: [id])
+
+  @@index([orderId], map: "payment_notifications_order_id_fkey")
+  @@map("payment_notifications")
+}
+
+enum PaymentNotificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum orders_status {
   PENDING
+  PAYMENT_PENDING
   CONFIRMED
   PROCESSING
   SHIPPED

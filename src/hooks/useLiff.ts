@@ -19,6 +19,7 @@ interface LiffObject {
   getProfile: () => Promise<LiffProfile>;
   getIDToken: () => string | null;
   closeWindow: () => void;
+  isInClient: () => boolean;
 }
 
 declare global {
@@ -91,6 +92,11 @@ export const useLiff = () => {
           liffId: process.env.NEXT_PUBLIC_LIFF_ID!,
           withLoginOnExternalBrowser: true
         });
+
+        // Enable LIFF client features for better navigation
+        if (liff.isInClient && liff.isInClient()) {
+          console.log("Running in LIFF client mode");
+        }
 
         setLiffObject(liff);
         setIsLoggedIn(liff.isLoggedIn());

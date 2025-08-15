@@ -9,6 +9,7 @@ type OrderWithItems = {
     status: string;
     totalAmount: any; // Prisma Decimal type
     createdAt: Date;
+    orderNumber: string | null;
     orderItems: {
         id: string;
         quantity: number;
@@ -84,6 +85,15 @@ export async function GET() {
             status: order.status,
             totalAmount: Number(order.totalAmount),
             createdAt: order.createdAt,
+            orderNumber: order.orderNumber,
+            customerName: order.customerName,
+            customerPhone: order.customerPhone,
+            shippingAddress: order.shippingAddress,
+            shippingFee: order.shippingFee ? Number(order.shippingFee) : 0,
+            discountAmount: order.discountAmount ? Number(order.discountAmount) : 0,
+            paymentType: order.paymentType,
+            depositAmount: order.depositAmount ? Number(order.depositAmount) : null,
+            remainingAmount: order.remainingAmount ? Number(order.remainingAmount) : null,
             items: order.orderItems.map((item) => ({
                 id: item.id,
                 quantity: item.quantity,

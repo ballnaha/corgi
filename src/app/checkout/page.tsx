@@ -47,6 +47,7 @@ import {
 import { colors } from "@/theme/colors";
 import { CartItem } from "@/types";
 import { readCartFromStorage, clearCartStorage, updateQuantityInStorage, removeFromCartStorage } from "@/lib/cart";
+import { handleLiffNavigation } from "@/lib/liff-navigation";
 import { 
   analyzeOrder, 
   filterShippingOptions,
@@ -227,7 +228,7 @@ export default function CheckoutPage() {
     // ถ้าตะกร้าว่าง ให้กลับไปหน้าหลัก
     if (updatedItems.length === 0) {
       setTimeout(() => {
-        router.push("/");
+        handleLiffNavigation(router, "/");
       }, 1500);
     }
   };
@@ -397,7 +398,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (status !== "loading" && !session) {
-      router.push("/auth/signin");
+      handleLiffNavigation(router, "/auth/signin");
     }
   }, [session, status, router]);
 
@@ -706,9 +707,16 @@ export default function CheckoutPage() {
       });
       setSnackbarKey((k) => k + 1);
 
-      // Redirect to success page
+      // Redirect to success page with payment information
       setTimeout(() => {
-        router.push("/order-success");
+        const selectedPaymentMethod = paymentMethods.find(method => method.id === selectedPayment);
+        const paymentMethodName = selectedPaymentMethod?.name || "";
+        const queryParams = new URLSearchParams({
+          orderNumber: orderNumber,
+          paymentMethod: paymentMethodName,
+          paymentType: orderAnalysis?.paymentType || "FULL_PAYMENT",
+        });
+        handleLiffNavigation(router, `/order-success?${queryParams.toString()}`);
       }, 2000);
     } catch (error) {
       console.error("Order placement error:", error);
@@ -778,7 +786,7 @@ export default function CheckoutPage() {
             <Typography variant="h6" sx={{ mb: 2 }}>
               ตะกร้าสินค้าว่างเปล่า
             </Typography>
-            <Button variant="contained" onClick={() => router.push("/")}>
+            <Button variant="contained" onClick={() => handleLiffNavigation(router, "/")}>
               กลับไปช้อปปิ้ง
             </Button>
           </CardContent>
@@ -792,8 +800,100 @@ export default function CheckoutPage() {
       sx={{
         minHeight: "100vh",
         backgroundColor: colors.background.default,
+        position: "relative",
       }}
     >
+      {/* Loading Overlay */}
+      {loading && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            zIndex: 9999,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 3,
+          }}
+        >
+          <CircularProgress
+            size={60}
+            sx={{
+              color: colors.primary.main,
+              "& .MuiCircularProgress-circle": {
+                strokeLinecap: "round",
+              },
+            }}
+          />
+          <Box sx={{ textAlign: "center" }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                color: colors.text.primary,
+                mb: 1,
+              }}
+            >
+              กำลังประมวลผลคำสั่งซื้อ
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: colors.text.secondary,
+                maxWidth: 300,
+                lineHeight: 1.6,
+              }}
+            >
+              กรุณารอสักครู่ เรากำลังบันทึกคำสั่งซื้อของคุณ
+              <br />
+              และเตรียมส่งใบเสร็จไปยัง LINE
+            </Typography>
+          </Box>
+          <Box
+            sx={{
+              width: 200,
+              height: 4,
+              backgroundColor: "rgba(0,0,0,0.1)",
+              borderRadius: 2,
+              overflow: "hidden",
+              position: "relative",
+            }}
+          >
+            <Box
+              sx={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                height: "100%",
+                backgroundColor: colors.primary.main,
+                borderRadius: 2,
+                animation: "loadingProgress 2s ease-in-out infinite",
+                "@keyframes loadingProgress": {
+                  "0%": {
+                    width: "0%",
+                    transform: "translateX(0)",
+                  },
+                  "50%": {
+                    width: "70%",
+                    transform: "translateX(0)",
+                  },
+                  "100%": {
+                    width: "100%",
+                    transform: "translateX(0)",
+                  },
+                },
+              }}
+            />
+          </Box>
+        </Box>
+      )}
       {/* Clean Header */}
       <Box
         sx={{
@@ -1545,7 +1645,7 @@ export default function CheckoutPage() {
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        ยอดมัดจำ (20%)
+                        ยอดมัดจำ (10%)
                       </Typography>
                       <Typography 
                         variant="h6" 
@@ -1655,7 +1755,7 @@ export default function CheckoutPage() {
             {/* แสดงยอดมัดจำ */}
             <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
               <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                ยอดชำระมัดจำ (20%)
+                ยอดชำระมัดจำ (10%)
               </Typography>
               <Typography
                 variant="h6"
