@@ -77,7 +77,7 @@ export default function SignIn() {
       }}
     >
       <Typography variant="h4" component="h1" gutterBottom>
-        CorgiShop
+        Oong-Oong Pet Shop
       </Typography>
       <Typography variant="body1" color="text.secondary" textAlign="center">
         เข้าสู่ระบบเพื่อใช้งานร้านขายสัตว์เลี้ยง

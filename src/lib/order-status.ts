@@ -1,7 +1,21 @@
-import { OrderStatus } from "@prisma/client";
+// ประเภทสถานะคำสั่งซื้อ (ตามที่มีใน schema)
+export type OrderStatus = 
+  | "PENDING"
+  | "PAYMENT_PENDING"
+  | "CONFIRMED" 
+  | "PROCESSING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED";
 
-// สถานะของคำสั่งซื้อพร้อมคำอธิบาย
-export const ORDER_STATUS_INFO = {
+// สถานะของคำสั่งซื้อพร้อมคำอธิบาย (ตาม schema)
+export const ORDER_STATUS_INFO: Record<OrderStatus, {
+  label: string;
+  description: string;
+  color: string;
+  icon: string;
+  priority: number;
+}> = {
   PENDING: {
     label: "รอการยืนยัน",
     description: "คำสั่งซื้อถูกสร้างแล้ว รอการยืนยันจากร้านค้า",
@@ -9,68 +23,40 @@ export const ORDER_STATUS_INFO = {
     icon: "⏳",
     priority: 1
   },
-  CONFIRMED: {
-    label: "ยืนยันแล้ว",
-    description: "ร้านค้ายืนยันคำสั่งซื้อแล้ว",
-    color: "#2196F3",
-    icon: "✅",
-    priority: 2
-  },
   PAYMENT_PENDING: {
     label: "รอการชำระเงิน",
     description: "รอการชำระเงินส่วนที่เหลือ (สำหรับกรณีมัดจำ)",
     color: "#F44336",
     icon: "💳",
+    priority: 2
+  },
+  CONFIRMED: {
+    label: "ยืนยันแล้ว",
+    description: "ร้านค้ายืนยันคำสั่งซื้อแล้ว",
+    color: "#2196F3",
+    icon: "✅",
     priority: 3
   },
-  PAID: {
-    label: "ชำระเงินแล้ว",
-    description: "ชำระเงินครบถ้วนแล้ว",
-    color: "#4CAF50",
-    icon: "💰",
-    priority: 4
-  },
-  PREPARING: {
-    label: "กำลังเตรียมสินค้า",
+  PROCESSING: {
+    label: "กำลังดำเนินการ",
     description: "กำลังเตรียมสินค้าหรือสัตว์เลี้ยงสำหรับส่งมอบ",
     color: "#9C27B0",
     icon: "📦",
-    priority: 5
-  },
-  READY_FOR_PICKUP: {
-    label: "พร้อมรับสินค้า",
-    description: "สินค้าพร้อมสำหรับการรับด้วยตัวเอง",
-    color: "#00BCD4",
-    icon: "🏪",
-    priority: 6
+    priority: 4
   },
   SHIPPED: {
     label: "จัดส่งแล้ว",
     description: "สินค้าถูกจัดส่งแล้ว",
     color: "#607D8B",
     icon: "🚚",
-    priority: 7
-  },
-  OUT_FOR_DELIVERY: {
-    label: "กำลังส่งมอบ",
-    description: "สินค้ากำลังอยู่ในขั้นตอนการส่งมอบ",
-    color: "#795548",
-    icon: "🛵",
-    priority: 8
+    priority: 5
   },
   DELIVERED: {
     label: "ส่งมอบแล้ว",
-    description: "สินค้าถูกส่งมอบแล้ว",
-    color: "#8BC34A",
-    icon: "📍",
-    priority: 9
-  },
-  COMPLETED: {
-    label: "เสร็จสิ้น",
-    description: "การสั่งซื้อเสร็จสิ้นสมบูรณ์",
+    description: "สินค้าถูกส่งมอบแล้ว เสร็จสิ้นแล้ว",
     color: "#4CAF50",
-    icon: "🎉",
-    priority: 10
+    icon: "✅",
+    priority: 6
   },
   CANCELLED: {
     label: "ยกเลิก",
@@ -78,30 +64,18 @@ export const ORDER_STATUS_INFO = {
     color: "#F44336",
     icon: "❌",
     priority: 99
-  },
-  REFUNDED: {
-    label: "คืนเงินแล้ว",
-    description: "เงินถูกคืนให้กับลูกค้าแล้ว",
-    color: "#FF5722",
-    icon: "💸",
-    priority: 98
   }
 } as const;
 
-// สถานะที่สามารถเปลี่ยนแปลงได้จากสถานะปัจจุบัน
+// สถานะที่สามารถเปลี่ยนแปลงได้จากสถานะปัจจุบัน (ตาม schema)
 export const STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
-  CONFIRMED: [OrderStatus.PAYMENT_PENDING, OrderStatus.PAID, OrderStatus.PREPARING, OrderStatus.CANCELLED],
-  PAYMENT_PENDING: [OrderStatus.PAID, OrderStatus.CANCELLED],
-  PAID: [OrderStatus.PREPARING, OrderStatus.CANCELLED],
-  PREPARING: [OrderStatus.READY_FOR_PICKUP, OrderStatus.SHIPPED, OrderStatus.CANCELLED],
-  READY_FOR_PICKUP: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-  SHIPPED: [OrderStatus.OUT_FOR_DELIVERY, OrderStatus.DELIVERED],
-  OUT_FOR_DELIVERY: [OrderStatus.DELIVERED, OrderStatus.SHIPPED], // อาจส่งไม่สำเร็จ
-  DELIVERED: [OrderStatus.COMPLETED],
-  COMPLETED: [], // สถานะสุดท้าย
-  CANCELLED: [OrderStatus.REFUNDED],
-  REFUNDED: [] // สถานะสุดท้าย
+  PENDING: ["PAYMENT_PENDING", "CONFIRMED", "CANCELLED"],
+  PAYMENT_PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["PROCESSING", "CANCELLED"],
+  PROCESSING: ["SHIPPED", "CANCELLED"],
+  SHIPPED: ["DELIVERED"],
+  DELIVERED: [], // สถานะสุดท้าย
+  CANCELLED: [] // สถานะสุดท้าย
 };
 
 // ตรวจสอบว่าสามารถเปลี่ยนสถานะได้หรือไม่
@@ -122,37 +96,23 @@ export function getNextRecommendedStatus(
   const { requiresDeposit, shippingMethod, paymentType } = orderDetails;
   
   switch (currentStatus) {
-    case OrderStatus.PENDING:
-      return OrderStatus.CONFIRMED;
-      
-    case OrderStatus.CONFIRMED:
+    case "PENDING":
       if (requiresDeposit && paymentType === "DEPOSIT_PAYMENT") {
-        return OrderStatus.PAYMENT_PENDING;
+        return "PAYMENT_PENDING";
       }
-      return OrderStatus.PAID;
+      return "CONFIRMED";
       
-    case OrderStatus.PAYMENT_PENDING:
-      return OrderStatus.PAID;
+    case "PAYMENT_PENDING":
+      return "CONFIRMED";
       
-    case OrderStatus.PAID:
-      return OrderStatus.PREPARING;
+    case "CONFIRMED":
+      return "PROCESSING";
       
-    case OrderStatus.PREPARING:
-      return shippingMethod.includes("pickup") || shippingMethod.includes("รับด้วยตัวเอง")
-        ? OrderStatus.READY_FOR_PICKUP
-        : OrderStatus.SHIPPED;
+    case "PROCESSING":
+      return "SHIPPED";
         
-    case OrderStatus.READY_FOR_PICKUP:
-      return OrderStatus.COMPLETED;
-      
-    case OrderStatus.SHIPPED:
-      return OrderStatus.OUT_FOR_DELIVERY;
-      
-    case OrderStatus.OUT_FOR_DELIVERY:
-      return OrderStatus.DELIVERED;
-      
-    case OrderStatus.DELIVERED:
-      return OrderStatus.COMPLETED;
+    case "SHIPPED":
+      return "DELIVERED";
       
     default:
       return null;
@@ -180,12 +140,12 @@ export function getAvailableTransitions(currentStatus: OrderStatus): OrderStatus
 
 // ตรวจสอบว่าสถานะเป็นสถานะสุดท้ายหรือไม่
 export function isFinalStatus(status: OrderStatus): boolean {
-  return [OrderStatus.COMPLETED, OrderStatus.REFUNDED].includes(status);
+  return ["DELIVERED", "CANCELLED"].includes(status);
 }
 
 // ตรวจสอบว่าสถานะเป็นสถานะที่ถูกยกเลิกหรือไม่
 export function isCancelledStatus(status: OrderStatus): boolean {
-  return [OrderStatus.CANCELLED, OrderStatus.REFUNDED].includes(status);
+  return ["CANCELLED"].includes(status);
 }
 
 // รับ progress percentage ของสถานะ

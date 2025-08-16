@@ -31,6 +31,7 @@ import {
   Link,
   Drawer,
   Divider,
+  Tooltip,
 } from "@mui/material";
 import type { SlideProps } from "@mui/material";
 import {
@@ -48,6 +49,8 @@ import {
   LocalShipping,
   Schedule,
   ClearAll,
+  LogoutOutlined,
+  PowerSettingsNew,
 } from "@mui/icons-material";
 import { colors } from "@/theme/colors";
 import { useLiff } from "@/hooks/useLiff";
@@ -164,12 +167,14 @@ export default function ProfilePage() {
           statusMessage: lineProfile?.statusMessage || data.statusMessage,
         });
       } else {
-        console.warn("User not found in database. This should not happen as users are created during login.");
+        console.warn(
+          "User not found in database. This should not happen as users are created during login."
+        );
         // User should already exist from login process, but fallback to session data
         setUserData({
-          id: session?.user?.id || '',
-          lineUserId: session?.user?.lineUserId || '',
-          displayName: session?.user?.name || '',
+          id: session?.user?.id || "",
+          lineUserId: session?.user?.lineUserId || "",
+          displayName: session?.user?.name || "",
           pictureUrl: session?.user?.image || null,
           email: session?.user?.email || null,
           phoneNumber: null,
@@ -339,15 +344,23 @@ export default function ProfilePage() {
 
       if (response.ok) {
         // Clear LINE-specific localStorage items
-        Object.keys(localStorage).forEach(key => {
-          if (key.includes('line') || key.includes('auth') || key.includes('liff')) {
+        Object.keys(localStorage).forEach((key) => {
+          if (
+            key.includes("line") ||
+            key.includes("auth") ||
+            key.includes("liff")
+          ) {
             localStorage.removeItem(key);
           }
         });
 
         // Clear LINE-specific sessionStorage items
-        Object.keys(sessionStorage).forEach(key => {
-          if (key.includes('line') || key.includes('auth') || key.includes('liff')) {
+        Object.keys(sessionStorage).forEach((key) => {
+          if (
+            key.includes("line") ||
+            key.includes("auth") ||
+            key.includes("liff")
+          ) {
             sessionStorage.removeItem(key);
           }
         });
@@ -372,23 +385,56 @@ export default function ProfilePage() {
     }
   };
 
-  const handleClearCache = async () => {
+  const handleLogout = async () => {
     try {
       setSnackbar({
         open: true,
-        message: "กำลังล้าง Cache และ Session...",
+        message: "กำลังออกจากระบบและล้างข้อมูล...",
         severity: "info",
       });
       setSnackbarKey((k) => k + 1);
 
-      // Clear NextAuth session first
+      // Clear LINE cache first
+      try {
+        const response = await fetch("/api/auth/clear-line-cache", {
+          method: "POST",
+        });
+
+        if (response.ok) {
+          // Clear LINE-specific localStorage items
+          Object.keys(localStorage).forEach((key) => {
+            if (
+              key.includes("line") ||
+              key.includes("auth") ||
+              key.includes("liff")
+            ) {
+              localStorage.removeItem(key);
+            }
+          });
+
+          // Clear LINE-specific sessionStorage items
+          Object.keys(sessionStorage).forEach((key) => {
+            if (
+              key.includes("line") ||
+              key.includes("auth") ||
+              key.includes("liff")
+            ) {
+              sessionStorage.removeItem(key);
+            }
+          });
+        }
+      } catch (lineError) {
+        console.warn("Could not clear LINE cache:", lineError);
+      }
+
+      // Clear NextAuth session
       await signOut({ redirect: false });
 
       // Clear browser cache
-      if ('caches' in window) {
+      if ("caches" in window) {
         const cacheNames = await caches.keys();
         await Promise.all(
-          cacheNames.map(cacheName => caches.delete(cacheName))
+          cacheNames.map((cacheName) => caches.delete(cacheName))
         );
       }
 
@@ -402,28 +448,31 @@ export default function ProfilePage() {
       document.cookie.split(";").forEach((c) => {
         const eqPos = c.indexOf("=");
         const name = eqPos > -1 ? c.substr(0, eqPos) : c;
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+        document.cookie =
+          name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        document.cookie =
+          name +
+          "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" +
+          window.location.hostname;
       });
 
       // Show success message before redirect
       setSnackbar({
         open: true,
-        message: "ล้าง Cache และ Session สำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...",
+        message: "ออกจากระบบสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...",
         severity: "success",
       });
       setSnackbarKey((k) => k + 1);
 
       // Wait a moment for user to see the message, then redirect to sign in
       setTimeout(() => {
-        window.location.href = '/auth/signin';
+        window.location.href = "/auth/signin";
       }, 1500);
-
     } catch (error) {
-      console.error("Error clearing cache and session:", error);
+      console.error("Error during logout:", error);
       setSnackbar({
         open: true,
-        message: "เกิดข้อผิดพลาดในการล้าง Cache และ Session",
+        message: "เกิดข้อผิดพลาดในการออกจากระบบ",
         severity: "error",
       });
       setSnackbarKey((k) => k + 1);
@@ -603,35 +652,64 @@ export default function ProfilePage() {
         </Box>
       )}
 
-      {/* Header - Transparent with Back and Home Buttons */}
+      {/* Header - Transparent with Back and Logout Buttons */}
       <Box
         sx={{
           position: "absolute",
           top: 20,
           left: 20,
+          right: 20,
           zIndex: 1100,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
         }}
       >
-        <IconButton
-          onClick={() => router.back()}
-          sx={{
-            backgroundColor: "transparent",
-            color: colors.secondary.main,
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            transition: "all 0.3s ease",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.1)",
-              transform: "scale(1.05)",
-            },
-            "&:active": {
-              transform: "scale(0.95)",
-            },
-          }}
-        >
-          <ArrowBack fontSize="medium" />
-        </IconButton>
+        <Tooltip title="กลับ" arrow>
+          <IconButton
+            onClick={() => router.back()}
+            sx={{
+              backgroundColor: "transparent",
+              color: colors.secondary.main,
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                transform: "scale(1.05)",
+              },
+              "&:active": {
+                transform: "scale(0.95)",
+              },
+            }}
+          >
+            <ArrowBack fontSize="medium" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="ออกจากระบบ" arrow>
+          <IconButton
+            onClick={handleLogout}
+            sx={{
+              backgroundColor: "rgba(244, 67, 54, 0.1)",
+              color: "white",
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                backgroundColor: "rgba(244, 67, 54, 0.2)",
+                transform: "scale(1.05)",
+              },
+              "&:active": {
+                transform: "scale(0.95)",
+              },
+            }}
+          >
+            <PowerSettingsNew fontSize="medium" />
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* User Profile Section */}
@@ -749,62 +827,6 @@ export default function ProfilePage() {
         </Box>
       </Box>
 
-      {/* Clear Cache Buttons */}
-      <Box
-        sx={{
-          px: 3,
-          pb: 2,
-          display: "flex",
-          gap: 2,
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <Button
-          variant="outlined"
-          startIcon={<ClearAll />}
-          onClick={handleClearCache}
-          sx={{
-            color: colors.secondary.main,
-            borderColor: colors.secondary.main,
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
-              borderColor: colors.secondary.main,
-            },
-            borderRadius: 3,
-            px: 3,
-            py: 1,
-            fontSize: "0.9rem",
-            fontWeight: "500",
-          }}
-        >
-          ล้าง Cache & Session
-        </Button>
-        
-        <Button
-          variant="outlined"
-          startIcon={<ClearAll />}
-          onClick={handleClearLineCache}
-          sx={{
-            color: colors.secondary.main,
-            borderColor: colors.secondary.main,
-            backgroundColor: "rgba(255, 255, 255, 0.1)",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 0.2)",
-              borderColor: colors.secondary.main,
-            },
-            borderRadius: 3,
-            px: 3,
-            py: 1,
-            fontSize: "0.9rem",
-            fontWeight: "500",
-          }}
-        >
-          ล้าง LINE Cache
-        </Button>
-      </Box>
-
       {/* Purchase History Section */}
       <Box
         sx={{
@@ -830,7 +852,7 @@ export default function ProfilePage() {
         {/* Category Filter */}
         <Box sx={{ mb: { xs: 2, sm: 3 } }}>
           <FormControl fullWidth>
-            <InputLabel 
+            <InputLabel
               id="category-filter-label"
               sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
             >
@@ -872,7 +894,13 @@ export default function ProfilePage() {
         </Box>
 
         {/* Purchase History Content */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2, sm: 3 } }}>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: { xs: 2, sm: 3 },
+          }}
+        >
           {loadingOrders ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
               <CircularProgress color="primary" />
@@ -914,7 +942,9 @@ export default function ProfilePage() {
                           gap: { xs: 1, sm: 0 },
                         }}
                       >
-                        <Box sx={{ flex: 1, minWidth: { xs: "100%", sm: "auto" } }}>
+                        <Box
+                          sx={{ flex: 1, minWidth: { xs: "100%", sm: "auto" } }}
+                        >
                           <Typography
                             variant="subtitle2"
                             sx={{
@@ -939,12 +969,15 @@ export default function ProfilePage() {
                           </Typography>
                         </Box>
                         <Box
-                          sx={{ 
-                            display: "flex", 
-                            gap: { xs: 1, sm: 1.5 }, 
+                          sx={{
+                            display: "flex",
+                            gap: { xs: 1, sm: 1.5 },
                             alignItems: "center",
                             flexWrap: "wrap",
-                            justifyContent: { xs: "flex-end", sm: "flex-start" }
+                            justifyContent: {
+                              xs: "flex-end",
+                              sm: "flex-start",
+                            },
                           }}
                         >
                           <IconButton
@@ -985,7 +1018,10 @@ export default function ProfilePage() {
                           sx={{
                             display: "flex",
                             gap: { xs: 2, sm: 3 },
-                            mb: index < order.items.length - 1 ? { xs: 1.5, sm: 2 } : 0,
+                            mb:
+                              index < order.items.length - 1
+                                ? { xs: 1.5, sm: 2 }
+                                : 0,
                           }}
                         >
                           {item.product.imageUrl ? (
@@ -1143,7 +1179,8 @@ export default function ProfilePage() {
                               fullWidth
                               startIcon={<Payment />}
                               onClick={() =>
-                                handleLiffNavigation(router,
+                                handleLiffNavigation(
+                                  router,
                                   `/payment-notification?orderNumber=${order.orderNumber}`
                                 )
                               }
@@ -1964,7 +2001,8 @@ export default function ProfilePage() {
                     startIcon={<Payment />}
                     onClick={() => {
                       handleOrderDetailClose();
-                      handleLiffNavigation(router,
+                      handleLiffNavigation(
+                        router,
                         `/payment-notification?orderNumber=${selectedOrder.orderNumber}`
                       );
                     }}

@@ -49,14 +49,9 @@ export default function PaymentNotificationPage() {
   // ข้อมูลบัญชีธนาคาร (ตัวอย่าง)
   const bankAccounts = [
     {
-      bank: "ธนาคารกสิกรไทย",
-      accountNumber: "123-4-56789-0",
-      accountName: "CorgiShop Co., Ltd.",
-    },
-    {
       bank: "ธนาคารไทยพาณิชย์",
       accountNumber: "987-6-54321-0",
-      accountName: "CorgiShop Co., Ltd.",
+      accountName: "นายธัญญา รัตนาวงศ์ไชยา",
     },
   ];
 

@@ -55,15 +55,32 @@ export default function FavoritesPage() {
 					age?: string | null;
 					breed?: string | null;
 					location?: string | null;
+					images?: Array<{
+						id: string;
+						imageUrl: string;
+						altText: string | null;
+						isMain: boolean;
+						order: number;
+					}>;
 				};
-				const transformed: Product[] = (data as DbProduct[]).map((p) => ({
-					...p,
-					image: p.imageUrl || '',
-					price: Number(p.price),
-					salePrice: p.salePrice != null ? Number(p.salePrice) : null,
-					discountPercent: p.discountPercent != null ? Number(p.discountPercent) : null,
-					stock: Number(p.stock ?? 0)
-				}));
+				const transformed: Product[] = (data as DbProduct[]).map((p) => {
+					// Get main image from images array, fallback to imageUrl
+					const mainImage = p.images?.find(img => img.isMain)?.imageUrl || 
+									 p.images?.[0]?.imageUrl || 
+									 p.imageUrl || 
+									 '';
+					
+					return {
+						...p,
+						image: mainImage,
+						imageUrl: mainImage,
+						price: Number(p.price),
+						salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+						discountPercent: p.discountPercent != null ? Number(p.discountPercent) : null,
+						stock: Number(p.stock ?? 0),
+						images: p.images || [],
+					};
+				});
 				setProducts(transformed);
 			} finally {
 				setLoading(false);

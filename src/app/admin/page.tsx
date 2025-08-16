@@ -51,6 +51,10 @@ interface RecentOrder {
   amount: number;
   status: string;
   createdAt: string;
+  user?: {
+    pictureUrl?: string;
+    displayName?: string;
+  };
 }
 
 interface QuickAction {
@@ -82,68 +86,85 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       
-      // Fetch real data from APIs
-      const [userResponse, ordersResponse] = await Promise.all([
+      // Fetch real data from all APIs
+      const [userResponse, ordersStatsResponse, ordersResponse, productsResponse] = await Promise.all([
         fetch("/api/admin/users?action=stats"),
-        fetch("/api/orders") // Will create this API later
+        fetch("/api/admin/orders/stats"),
+        fetch("/api/admin/orders?limit=5"), // Recent orders
+        fetch("/api/admin/products?action=stats")
       ]);
 
+      let dashboardStats = {
+        totalProducts: 0,
+        totalOrders: 0,
+        totalUsers: 0,
+        totalRevenue: 0,
+        pendingOrders: 0,
+        lowStockProducts: 0,
+      };
+
+      // Process user stats
       if (userResponse.ok) {
         const userStats = await userResponse.json();
-        
-        // Update stats with real user data and mock data for others
-        setStats(prev => ({
-          ...prev,
-          totalUsers: userStats.totalUsers || 0,
-          // Mock data for other stats until we create their APIs
-          totalProducts: 45,
-          totalOrders: 127,
-          totalRevenue: 85600,
-          pendingOrders: 8,
-          lowStockProducts: 3,
-        }));
+        dashboardStats.totalUsers = userStats.totalUsers || 0;
       }
 
-      // Mock orders data for now
-      setRecentOrders([
-        {
-          id: "1",
-          orderNumber: "ORD-001",
-          customerName: "คุณสมชาย",
-          amount: 2500,
-          status: "PENDING",
-          createdAt: "2024-01-15T10:30:00Z",
-        },
-        {
-          id: "2", 
-          orderNumber: "ORD-002",
-          customerName: "คุณสมหญิง",
-          amount: 3200,
-          status: "CONFIRMED",
-          createdAt: "2024-01-15T09:15:00Z",
-        },
-        {
-          id: "3",
-          orderNumber: "ORD-003", 
-          customerName: "คุณสมศรี",
-          amount: 1800,
-          status: "SHIPPED",
-          createdAt: "2024-01-14T16:45:00Z",
-        },
-      ]);
-      
+      // Process orders stats
+      if (ordersStatsResponse.ok) {
+        const orderStats = await ordersStatsResponse.json();
+        if (orderStats.success && orderStats.stats) {
+          dashboardStats.totalOrders = orderStats.stats.totalOrders || 0;
+          dashboardStats.totalRevenue = orderStats.stats.totalRevenue || 0;
+          dashboardStats.pendingOrders = 
+            (orderStats.stats.statusCounts?.pending || 0) +
+            (orderStats.stats.statusCounts?.paymentPending || 0) +
+            (orderStats.stats.statusCounts?.confirmed || 0);
+        }
+      }
+
+      // Process products stats  
+      if (productsResponse.ok) {
+        const productStats = await productsResponse.json();
+        if (productStats.success) {
+          dashboardStats.totalProducts = productStats.totalProducts || 0;
+          dashboardStats.lowStockProducts = productStats.lowStockCount || 0;
+        }
+      }
+
+      // Process recent orders
+      if (ordersResponse.ok) {
+        const ordersData = await ordersResponse.json();
+        if (ordersData.success && ordersData.orders) {
+          const formattedOrders = ordersData.orders.slice(0, 5).map((order: any) => ({
+            id: order.id,
+            orderNumber: order.orderNumber || `#${order.id.slice(-8)}`,
+            customerName: order.user?.displayName || order.customerName || "ลูกค้า",
+            amount: Number(order.totalAmount) || 0,
+            status: order.status,
+            createdAt: order.createdAt,
+            user: {
+              pictureUrl: order.user?.pictureUrl,
+              displayName: order.user?.displayName,
+            },
+          }));
+          setRecentOrders(formattedOrders);
+        }
+      }
+
+      setStats(dashboardStats);
       setLoading(false);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
-      // Use mock data as fallback
+      // Use minimal fallback data
       setStats({
-        totalProducts: 45,
-        totalOrders: 127,
-        totalUsers: 1, // At least test admin
-        totalRevenue: 85600,
-        pendingOrders: 8,
-        lowStockProducts: 3,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalUsers: 0,
+        totalRevenue: 0,
+        pendingOrders: 0,
+        lowStockProducts: 0,
       });
+      setRecentOrders([]);
       setLoading(false);
     }
   };
@@ -152,12 +173,18 @@ export default function AdminDashboard() {
     switch (status) {
       case "PENDING":
         return "warning";
+      case "PAYMENT_PENDING":
+        return "error";
       case "CONFIRMED":
         return "info";
-      case "SHIPPED":
+      case "PROCESSING":
         return "primary";
+      case "SHIPPED":
+        return "secondary";
       case "DELIVERED":
         return "success";
+      case "CANCELLED":
+        return "error";
       default:
         return "default";
     }
@@ -166,13 +193,19 @@ export default function AdminDashboard() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "รอชำระ";
+        return "รอการยืนยัน";
+      case "PAYMENT_PENDING":
+        return "รอการชำระเงิน";
       case "CONFIRMED":
         return "ยืนยันแล้ว";
+      case "PROCESSING":
+        return "กำลังดำเนินการ";
       case "SHIPPED":
         return "จัดส่งแล้ว";
       case "DELIVERED":
-        return "ส่งถึงแล้ว";
+        return "ส่งมอบแล้ว";
+      case "CANCELLED":
+        return "ยกเลิก";
       default:
         return status;
     }
@@ -187,18 +220,18 @@ export default function AdminDashboard() {
       action: () => handleLiffNavigation(router, "/admin/products/new"),
     },
     {
+      title: "จัดการคำสั่งซื้อ",
+      description: "ดูและจัดการคำสั่งซื้อ",
+      icon: <ShoppingCart />,
+      color: colors.info,
+      action: () => handleLiffNavigation(router, "/admin/orders"),
+    },
+    {
       title: "ดูสินค้าทั้งหมด",
       description: "จัดการและดูสินค้าในระบบ",
       icon: <Inventory />,
-      color: colors.info,
-      action: () => handleLiffNavigation(router, "/admin/products"),
-    },
-    {
-      title: "รายงานยอดขาย",
-      description: "ดูสถิติและรายงาน",
-      icon: <TrendingUp />,
       color: colors.success,
-      action: () => handleLiffNavigation(router, "/admin/reports"),
+      action: () => handleLiffNavigation(router, "/admin/products"),
     },
     {
       title: "จัดการผู้ใช้",
@@ -269,13 +302,27 @@ export default function AdminDashboard() {
   return (
     <Box>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: "bold", mb: 1 }}>
-          Dashboard
-        </Typography>
-        <Typography color="text.secondary">
-          ภาพรวมของระบบจัดการร้านค้า
-        </Typography>
+      <Box sx={{ mb: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: "bold", mb: 1 }}>
+            Dashboard
+          </Typography>
+          <Typography color="text.secondary">
+            ภาพรวมของระบบจัดการร้านค้า
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          onClick={fetchDashboardData}
+          disabled={loading}
+          sx={{
+            borderRadius: 2,
+            textTransform: "none",
+            fontWeight: 600,
+          }}
+        >
+          รีเฟรช
+        </Button>
       </Box>
 
       {/* Stats Cards */}
@@ -285,28 +332,24 @@ export default function AdminDashboard() {
           value={stats.totalProducts}
           icon={<Inventory />}
           color={colors.primary.main}
-          change="+5 จากเดือนที่แล้ว"
         />
         <StatCard
           title="คำสั่งซื้อทั้งหมด"
           value={stats.totalOrders}
           icon={<ShoppingCart />}
           color={colors.info}
-          change="+12% จากเดือนที่แล้ว"
         />
         <StatCard
           title="ผู้ใช้ทั้งหมด"
           value={stats.totalUsers}
           icon={<People />}
           color={colors.success}
-          change="+8% จากเดือนที่แล้ว"
         />
         <StatCard
           title="รายได้ทั้งหมด"
           value={`฿${stats.totalRevenue.toLocaleString()}`}
           icon={<AttachMoney />}
           color={colors.warning}
-          change="+15% จากเดือนที่แล้ว"
         />
       </Box>
 
@@ -383,49 +426,72 @@ export default function AdminDashboard() {
                   ดูทั้งหมด
                 </Button>
               </Box>
-              <List>
-                {recentOrders.map((order, index) => (
-                  <ListItem
-                    key={order.id}
-                    divider={index < recentOrders.length - 1}
-                  >
-                    <ListItemAvatar>
-                      <Avatar sx={{ backgroundColor: colors.primary.light }}>
-                        <ShoppingCart />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <React.Fragment>
-                          <Typography component="span" variant="subtitle2" sx={{ fontWeight: "bold", marginRight: 1 }}>
-                            {order.orderNumber}
-                          </Typography>
-                          <Chip
-                            label={getStatusText(order.status)}
-                            size="small"
-                            color={getStatusColor(order.status) as any}
-                          />
-                        </React.Fragment>
-                      }
-                      secondary={
-                        <Typography component="span" variant="body2" color="text.secondary">
-                          {order.customerName} • ฿{order.amount.toLocaleString()}
-                        </Typography>
-                      }
-                    />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        size="small"
-                        onClick={() =>
-                          handleLiffNavigation(router, `/admin/orders/${order.id}`)
+              {recentOrders.length > 0 ? (
+                <List>
+                  {recentOrders.map((order, index) => (
+                    <ListItem
+                      key={order.id}
+                      divider={index < recentOrders.length - 1}
+                    >
+                      <ListItemAvatar>
+                        <Avatar 
+                          src={order.user?.pictureUrl} 
+                          sx={{ 
+                            backgroundColor: colors.primary.light,
+                            width: 40,
+                            height: 40
+                          }}
+                        >
+                          {!order.user?.pictureUrl && <ShoppingCart />}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={
+                          <React.Fragment>
+                            <Typography component="span" variant="subtitle2" sx={{ fontWeight: "bold", marginRight: 1 }}>
+                              {order.orderNumber}
+                            </Typography>
+                            <Chip
+                              label={getStatusText(order.status)}
+                              size="small"
+                              color={getStatusColor(order.status) as any}
+                            />
+                          </React.Fragment>
                         }
-                      >
-                        <Visibility />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </ListItem>
-                ))}
-              </List>
+                        secondary={
+                          <Typography component="span" variant="body2" color="text.secondary">
+                            {order.customerName} • ฿{order.amount.toLocaleString()}
+                          </Typography>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          size="small"
+                          onClick={() =>
+                            handleLiffNavigation(router, "/admin/orders")
+                          }
+                        >
+                          <Visibility />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                  ))}
+                </List>
+              ) : (
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    ยังไม่มีคำสั่งซื้อ
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => handleLiffNavigation(router, "/admin/orders")}
+                    sx={{ mt: 2 }}
+                  >
+                    ดูรายการคำสั่งซื้อ
+                  </Button>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Box>

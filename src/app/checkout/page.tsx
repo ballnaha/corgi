@@ -103,6 +103,20 @@ export default function CheckoutPage() {
     }
   );
 
+  const getMainImage = (product: CartItem['product']) => {
+    // ลองหารูปหลักจาก images array ก่อน
+    if (product.images && product.images.length > 0) {
+      const mainImage = product.images.find(img => img.isMain);
+      if (mainImage?.imageUrl) return mainImage.imageUrl;
+      
+      // ถ้าไม่มีรูปหลัก ใช้รูปแรก
+      if (product.images[0]?.imageUrl) return product.images[0].imageUrl;
+    }
+    
+    // fallback ไปยัง imageUrl หรือ image
+    return product.imageUrl || product.image || "/images/icon-corgi.png";
+  };
+
   const router = useRouter();
   const { data: session, status } = useSession();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -974,9 +988,12 @@ export default function CheckoutPage() {
               }}
             >
               <Avatar
-                src={item.product.image || item.product.imageUrl || ""}
+                src={getMainImage(item.product)}
                 alt={item.product.name}
                 sx={{ width: 64, height: 64, borderRadius: 3 }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "/images/icon-corgi.png";
+                }}
               />
               <Box sx={{ flex: 1 }}>
                 <Typography

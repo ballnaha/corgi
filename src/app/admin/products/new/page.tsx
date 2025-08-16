@@ -21,6 +21,8 @@ import {
   InputAdornment,
   Chip,
   IconButton,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -116,8 +118,8 @@ const productTypes = [
 
 
 const genderOptions = [
-  { value: "ผู้", label: "ผู้ (เพศผู้)" },
-  { value: "เมีย", label: "เมีย (เพศเมีย)" },
+  { value: "MALE", label: "ผู้ (เพศผู้)" },
+  { value: "FEMALE", label: "เมีย (เพศเมีย)" },
 ];
 
 const sizeOptions = [
@@ -140,6 +142,9 @@ interface Category {
 
 export default function NewProductPage() {
   const router = useRouter();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
   const [formData, setFormData] = useState<ProductFormData>(initialFormData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -386,7 +391,7 @@ export default function NewProductPage() {
         dimensions: formData.productType !== 'PET' ? formData.dimensions.trim() || null : null,
         
         isActive: formData.isActive,
-        images: uploadedImages.filter(img => img.size === 'medium').map((img, index) => ({
+        images: uploadedImages.filter(img => img.size === 'large').map((img, index) => ({
           imageUrl: img.url,
           altText: `${formData.name} - รูปที่ ${index + 1}`,
           isMain: index === 0, // First image is main
@@ -457,9 +462,15 @@ export default function NewProductPage() {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+    <Box sx={{ 
+      p: { xs: 1, md: 3 }, 
+      maxWidth: { xs: "100%", md: 1200 }, 
+      mx: "auto",
+      minHeight: "100vh",
+      width: "100%"
+    }}>
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: { xs: 2, md: 3 } }}>
         <Button
           startIcon={<ArrowBack />}
           onClick={handleCancel}
@@ -467,10 +478,10 @@ export default function NewProductPage() {
         >
           กลับ
         </Button>
-        <Typography variant="h4" sx={{ fontWeight: "bold", mb: 1 }}>
+        <Typography variant={isMobile ? "h5" : "h4"} sx={{ fontWeight: "bold", mb: 1 }}>
           เพิ่มสินค้าใหม่
         </Typography>
-        <Typography color="text.secondary">
+        <Typography color="text.secondary" variant={isMobile ? "body2" : "body1"}>
           กรอกข้อมูลสินค้าที่ต้องการเพิ่มเข้าสู่ระบบ
         </Typography>
       </Box>
@@ -483,10 +494,20 @@ export default function NewProductPage() {
       )}
 
       <form onSubmit={handleSubmit}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 3 }}>
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, 
+          gap: { xs: 1, md: 3 },
+          width: "100%"
+        }}>
           {/* Main Form */}
-          <Card>
-            <CardContent sx={{ p: 3 }}>
+          <Card sx={{ 
+            width: "100%",
+            order: { xs: 1, md: 1 },
+            borderRadius: { xs: 0, md: 1 },
+            boxShadow: { xs: 0, md: 1 }
+          }}>
+            <CardContent sx={{ p: { xs: 1.5, md: 3 } }}>
               <Typography variant="h6" sx={{ fontWeight: "bold", mb: 3 }}>
                 ข้อมูลสินค้า
               </Typography>
@@ -752,10 +773,17 @@ export default function NewProductPage() {
           </Card>
 
           {/* Sidebar */}
-          <Box>
+          <Box sx={{ 
+            width: "100%",
+            order: { xs: 2, md: 2 }
+          }}>
             {/* Image Upload */}
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
+            <Card sx={{ 
+              mb: { xs: 1, md: 3 },
+              borderRadius: { xs: 0, md: 1 },
+              boxShadow: { xs: 0, md: 1 }
+            }}>
+              <CardContent sx={{ p: { xs: 1.5, md: 3 } }}>
                 <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
                   รูปภาพ
                 </Typography>
@@ -884,8 +912,12 @@ export default function NewProductPage() {
             </Card>
 
             {/* Options */}
-            <Card sx={{ mb: 3 }}>
-              <CardContent>
+            <Card sx={{ 
+              mb: { xs: 1, md: 3 },
+              borderRadius: { xs: 0, md: 1 },
+              boxShadow: { xs: 0, md: 1 }
+            }}>
+              <CardContent sx={{ p: { xs: 1.5, md: 3 } }}>
                 <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
                   ตัวเลือก
                 </Typography>
@@ -922,23 +954,28 @@ export default function NewProductPage() {
             </Card>
 
             {/* Actions */}
-            <Card>
-              <CardContent>
+            <Card sx={{
+              borderRadius: { xs: 0, md: 1 },
+              boxShadow: { xs: 0, md: 1 }
+            }}>
+              <CardContent sx={{ p: { xs: 1.5, md: 3 } }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Button
                     type="submit"
                     variant="contained"
-                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : <Save />}
+                    startIcon={!isMobile && (loading ? <CircularProgress size={20} color="inherit" /> : <Save />)}
                     disabled={loading}
                     fullWidth
+                    size={isMobile ? "large" : "medium"}
                     sx={{
                       backgroundColor: colors.primary.main,
                       "&:hover": { backgroundColor: colors.primary.dark },
+                      minHeight: { xs: 48, md: "auto" },
                     }}
                   >
                     {loading 
                       ? selectedImages.length > 0 
-                        ? "กำลังอัปโหลดรูปภาพและบันทึกสินค้า..." 
+                        ? isMobile ? "กำลังอัปโหลดรูปภาพ..." : "กำลังอัปโหลดรูปภาพและบันทึกสินค้า..." 
                         : "กำลังบันทึกสินค้า..."
                       : "บันทึกสินค้า"
                     }
@@ -948,6 +985,10 @@ export default function NewProductPage() {
                     onClick={handleCancel}
                     disabled={loading}
                     fullWidth
+                    size={isMobile ? "large" : "medium"}
+                    sx={{
+                      minHeight: { xs: 48, md: "auto" },
+                    }}
                   >
                     ยกเลิก
                   </Button>

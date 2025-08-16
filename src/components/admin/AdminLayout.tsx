@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Drawer,
@@ -54,7 +54,7 @@ interface NavigationItem {
   children?: NavigationItem[];
 }
 
-const navigationItems: NavigationItem[] = [
+const getNavigationItems = (orderStats: { actionRequiredCount: number }): NavigationItem[] => [
   {
     title: "Dashboard",
     path: "/admin",
@@ -81,7 +81,7 @@ const navigationItems: NavigationItem[] = [
     title: "จัดการคำสั่งซื้อ",
     path: "/admin/orders",
     icon: <ShoppingCart />,
-    badge: 5, // จำนวน pending orders
+    badge: orderStats.actionRequiredCount > 0 ? orderStats.actionRequiredCount : undefined,
   },
   {
     title: "จัดการผู้ใช้",
@@ -105,6 +105,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
+  const [orderStats, setOrderStats] = useState({ actionRequiredCount: 0 });
   
   const { data: session } = useSession();
   const router = useRouter();
@@ -135,6 +136,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     handleUserMenuClose();
   };
 
+  // โหลดสถิติคำสั่งซื้อ
+  const fetchOrderStats = async () => {
+    try {
+      const response = await fetch("/api/admin/orders/stats");
+      if (response.ok) {
+        const data = await response.json();
+        setOrderStats(data.stats);
+      }
+    } catch (error) {
+      console.error("Error fetching order stats:", error);
+    }
+  };
+
+  // โหลดสถิติเมื่อ component mount
+  useEffect(() => {
+    if (session?.user?.isAdmin || session?.user?.role?.includes("ADMIN")) {
+      fetchOrderStats();
+    }
+  }, [session]);
+
   const isActivePath = (path: string) => {
     if (path === "/admin") {
       return pathname === "/admin";
@@ -157,8 +178,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       >
         <Box
           sx={{
-            width: 40,
-            height: 40,
+            width: 60,
+            height: 60,
             borderRadius: "50%",
             backgroundColor: colors.secondary.main,
             display: "flex",
@@ -167,11 +188,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             fontSize: "1.5rem",
           }}
         >
-          🐕
+          <img src="/images/logo_nobg.png" alt="Oong-Oong Pet Shop" width={60} height={60} />
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>
-            CorgiShop
+            Oong-Oong Pet Shop
           </Typography>
           <Typography variant="caption" sx={{ opacity: 0.8 }}>
             Admin Panel
@@ -182,7 +203,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Navigation */}
       <Box sx={{ flex: 1, overflow: "auto" }}>
         <List sx={{ p: 1 }}>
-          {navigationItems.map((item) => (
+          {getNavigationItems(orderStats).map((item) => (
             <React.Fragment key={item.path}>
               <ListItem disablePadding>
                 <ListItemButton
@@ -337,7 +358,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
             {pathname === "/admin"
               ? "Dashboard"
-              : navigationItems.find((item) => isActivePath(item.path))?.title ||
+              : getNavigationItems(orderStats).find((item) => isActivePath(item.path))?.title ||
                 "Admin Panel"}
           </Typography>
 

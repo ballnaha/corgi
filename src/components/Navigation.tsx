@@ -60,7 +60,7 @@ export default function Navigation() {
           }}
           onClick={() => handleLiffNavigation(router, "/")}
         >
-          CorgiShop
+          Oong-Oong Pet Shop
         </Typography>
 
         {session ? (

@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
-import sharp from 'sharp';
-import { requireAdmin } from '@/lib/admin-utils';
+import { NextRequest, NextResponse } from "next/server";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
+import sharp from "sharp";
+import { requireAdmin } from "@/lib/admin-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,19 +10,16 @@ export async function POST(request: NextRequest) {
     await requireAdmin();
 
     const formData = await request.formData();
-    const file = formData.get('image') as File;
+    const file = formData.get("image") as File;
 
     if (!file) {
-      return NextResponse.json(
-        { error: 'ไม่พบไฟล์รูปภาพ' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "ไม่พบไฟล์รูปภาพ" }, { status: 400 });
     }
 
     // Check file type
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith("image/")) {
       return NextResponse.json(
-        { error: 'ไฟล์ต้องเป็นรูปภาพเท่านั้น' },
+        { error: "ไฟล์ต้องเป็นรูปภาพเท่านั้น" },
         { status: 400 }
       );
     }
@@ -30,7 +27,7 @@ export async function POST(request: NextRequest) {
     // Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'ไฟล์รูปภาพต้องมีขนาดไม่เกิน 10MB' },
+        { error: "ไฟล์รูปภาพต้องมีขนาดไม่เกิน 10MB" },
         { status: 400 }
       );
     }
@@ -40,19 +37,16 @@ export async function POST(request: NextRequest) {
 
     // Create unique filename
     const timestamp = Date.now();
-    const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const filename = `${timestamp}_${originalName}`;
-    
+
     // Create upload directory if it doesn't exist
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'products');
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
     await mkdir(uploadDir, { recursive: true });
 
-    // Process and save multiple sizes
+    // Process and save only large size with 3:4 aspect ratio
     const sizes = [
-      { name: 'original', width: null, height: null },
-      { name: 'large', width: 800, height: 600 },
-      { name: 'medium', width: 400, height: 300 },
-      { name: 'thumbnail', width: 150, height: 150 },
+      { name: "large", width: 1200, height: 1200 }, 
     ];
 
     const savedImages = [];
@@ -65,21 +59,19 @@ export async function POST(request: NextRequest) {
         // Resize image using sharp
         processedBuffer = await sharp(buffer)
           .resize(size.width, size.height, {
-            fit: 'cover',
-            position: 'center',
+            fit: "cover",
+            position: "center",
           })
           .jpeg({ quality: 85 })
           .toBuffer();
 
         // Add size suffix to filename
         const ext = path.extname(filename);
-        const nameWithoutExt = filename.replace(ext, '');
+        const nameWithoutExt = filename.replace(ext, "");
         sizeFilename = `${nameWithoutExt}_${size.name}${ext}`;
       } else {
         // For original, just optimize without resizing
-        processedBuffer = await sharp(buffer)
-          .jpeg({ quality: 90 })
-          .toBuffer();
+        processedBuffer = await sharp(buffer).jpeg({ quality: 90 }).toBuffer();
       }
 
       const filePath = path.join(uploadDir, sizeFilename);
@@ -97,22 +89,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       images: savedImages,
-      message: 'อัปโหลดรูปภาพสำเร็จ',
+      message: "อัปโหลดรูปภาพสำเร็จ",
     });
-
   } catch (error: any) {
-    console.error('Error uploading image:', error);
+    console.error("Error uploading image:", error);
 
     // Handle admin authorization error
-    if (error.message === 'Unauthorized: Admin access required') {
+    if (error.message === "Unauthorized: Admin access required") {
       return NextResponse.json(
-        { error: 'ไม่มีสิทธิ์ในการอัปโหลดรูปภาพ' },
+        { error: "ไม่มีสิทธิ์ในการอัปโหลดรูปภาพ" },
         { status: 403 }
       );
     }
 
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ' },
+      { error: "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ" },
       { status: 500 }
     );
   }

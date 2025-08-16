@@ -41,6 +41,20 @@ export default function Cart({
   onRemoveItem,
   onCheckout
 }: CartProps) {
+  const getMainImage = (product: CartItem['product']) => {
+    // ลองหารูปหลักจาก images array ก่อน
+    if (product.images && product.images.length > 0) {
+      const mainImage = product.images.find(img => img.isMain);
+      if (mainImage?.imageUrl) return mainImage.imageUrl;
+      
+      // ถ้าไม่มีรูปหลัก ใช้รูปแรก
+      if (product.images[0]?.imageUrl) return product.images[0].imageUrl;
+    }
+    
+    // fallback ไปยัง imageUrl หรือ image
+    return product.imageUrl || product.image || "/images/icon-corgi.png";
+  };
+
   const calculateUnitPrice = (p: CartItem['product']) => {
     const hasSalePrice = p.salePrice != null;
     const hasDiscountPercent = !hasSalePrice && p.discountPercent != null && p.discountPercent > 0;
@@ -130,9 +144,12 @@ export default function Cart({
                   }}
                 >
                   <Avatar
-                    src={item.product.image}
+                    src={getMainImage(item.product)}
                     alt={item.product.name}
                     sx={{ width: 60, height: 60, mr: 2, borderRadius: 2 }}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/images/icon-corgi.png";
+                    }}
                   />
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="subtitle2" sx={{ color: colors.text.primary, mb: 0.25 }}>

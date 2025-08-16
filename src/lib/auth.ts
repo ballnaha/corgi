@@ -35,46 +35,56 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  providers: process.env.LINE_CLIENT_ID && process.env.LINE_CLIENT_SECRET ? [
-    {
-      id: "line",
-      name: "LINE",
-      type: "oauth",
-      authorization: {
-        url: "https://access.line.me/oauth2/v2.1/authorize",
-        params: {
-          scope: "profile",
-          response_type: "code",
-          // Add cache busting parameter
-          _t: Date.now().toString()
-        }
-      },
-      token: "https://api.line.me/oauth2/v2.1/token",
-      userinfo: "https://api.line.me/v2/profile",
-      clientId: process.env.LINE_CLIENT_ID,
-      clientSecret: process.env.LINE_CLIENT_SECRET,
-      profile(profile) {
-        return {
-          id: profile.userId,
-          lineUserId: profile.userId,
-          name: profile.displayName,
-          email: profile.email || null,
-          image: profile.pictureUrl,
-        };
-      },
-    },
-  ] : [],
+  providers:
+    process.env.LINE_CLIENT_ID && process.env.LINE_CLIENT_SECRET
+      ? [
+          {
+            id: "line",
+            name: "LINE",
+            type: "oauth",
+            authorization: {
+              url: "https://access.line.me/oauth2/v2.1/authorize",
+              params: {
+                scope: "profile",
+                response_type: "code",
+                // Add cache busting parameter
+                _t: Date.now().toString(),
+              },
+            },
+            token: "https://api.line.me/oauth2/v2.1/token",
+            userinfo: "https://api.line.me/v2/profile",
+            clientId: process.env.LINE_CLIENT_ID,
+            clientSecret: process.env.LINE_CLIENT_SECRET,
+            profile(profile) {
+              return {
+                id: profile.userId,
+                lineUserId: profile.userId,
+                name: profile.displayName,
+                email: profile.email || null,
+                image: profile.pictureUrl,
+              };
+            },
+          },
+        ]
+      : [],
   callbacks: {
     async jwt({ token, user, account, profile }) {
       if (account && user) {
         token.lineUserId = user.lineUserId;
-        
+
         // Create or update user in database after successful LINE login
         try {
           let dbUser = await prisma.user.findUnique({
             where: { lineUserId: user.lineUserId },
             // @ts-ignore - Prisma types not updated yet
-            select: { displayName: true, id: true, role: true, isAdmin: true, pictureUrl: true }
+            select: {
+              displayName: true,
+              id: true,
+              role: true,
+              isAdmin: true,
+              pictureUrl: true,
+              email: true,
+            },
           });
 
           if (!dbUser) {
@@ -82,18 +92,25 @@ export const authOptions: NextAuthOptions = {
             dbUser = await prisma.user.create({
               data: {
                 lineUserId: user.lineUserId,
-                displayName: user.name || '',
+                displayName: user.name || "",
                 pictureUrl: user.image,
                 email: user.email,
                 phoneNumber: null,
                 statusMessage: null,
                 // @ts-ignore - Prisma types not updated yet
-                role: 'USER', // Default role
+                role: "USER", // Default role
                 // @ts-ignore - Prisma types not updated yet
                 isAdmin: false, // Default admin status
               },
               // @ts-ignore - Prisma types not updated yet
-              select: { displayName: true, id: true, role: true, isAdmin: true, pictureUrl: true }
+              select: {
+                displayName: true,
+                id: true,
+                role: true,
+                isAdmin: true,
+                pictureUrl: true,
+                email: true,
+              },
             });
             console.log("✅ Created new user after LINE login:");
             console.log(`   - User ID: ${dbUser.id}`);
@@ -105,14 +122,21 @@ export const authOptions: NextAuthOptions = {
             // Update existing user with latest LINE profile data and login time
             dbUser = await prisma.user.update({
               where: { lineUserId: user.lineUserId },
-              data: { 
+              data: {
                 lastLoginAt: new Date(),
                 displayName: user.name || dbUser.displayName, // Update if changed
                 pictureUrl: user.image || dbUser.pictureUrl, // Update profile picture
                 email: user.email || dbUser.email, // Update email if provided
               },
               // @ts-ignore - Prisma types not updated yet
-              select: { displayName: true, id: true, role: true, isAdmin: true, pictureUrl: true }
+              select: {
+                displayName: true,
+                id: true,
+                role: true,
+                isAdmin: true,
+                pictureUrl: true,
+                email: true,
+              },
             });
             console.log("✅ Updated existing user login:");
             console.log(`   - User ID: ${dbUser.id}`);
@@ -123,22 +147,25 @@ export const authOptions: NextAuthOptions = {
             // @ts-ignore - Prisma types not updated yet
             console.log(`   - Is Admin: ${dbUser.isAdmin}`);
           }
-          
+
           token.displayName = dbUser?.displayName;
           // @ts-ignore - Prisma types not updated yet
           token.role = dbUser?.role;
-          // @ts-ignore - Prisma types not updated yet  
+          // @ts-ignore - Prisma types not updated yet
           token.isAdmin = dbUser?.isAdmin;
         } catch (error) {
-          console.error("❌ Error creating/updating user after LINE login:", error);
+          console.error(
+            "❌ Error creating/updating user after LINE login:",
+            error
+          );
           console.error("   - LINE User ID:", user.lineUserId);
           console.error("   - User Name:", user.name);
           console.error("   - Error Details:", error);
-          
+
           // Still allow login even if database operation fails
           // Use session data as fallback
-          token.displayName = user.name || '';
-          token.role = 'USER';
+          token.displayName = user.name || "";
+          token.role = "USER";
           token.isAdmin = false;
         }
       }
@@ -170,12 +197,12 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
         // Add cache control
-        maxAge: 30 * 24 * 60 * 60 // 30 days
-      }
-    }
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      },
+    },
   },
 };

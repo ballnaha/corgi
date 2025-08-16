@@ -76,25 +76,41 @@ export default function Home() {
             age?: string | null;
             breed?: string | null;
             location?: string | null;
+            images?: Array<{
+              id: string;
+              imageUrl: string;
+              altText: string | null;
+              isMain: boolean;
+              order: number;
+            }>;
           };
           const data: DbProduct[] = await response.json();
           // Transform database products to match component expectations
-          const transformedProducts: Product[] = data.map((p) => ({
-            id: p.id,
-            name: p.name,
-            category: p.category,
-            price: Number(p.price),
-            salePrice: p.salePrice != null ? Number(p.salePrice) : null,
-            discountPercent: p.discountPercent != null ? Number(p.discountPercent) : null,
-            description: p.description ?? '',
-            imageUrl: p.imageUrl ?? null,
-            image: p.imageUrl ?? '',
-            stock: Number(p.stock ?? 0),
-            gender: p.gender ?? null,
-            age: p.age ?? null,
-            breed: p.breed ?? null,
-            location: p.location ?? null,
-          }));
+          const transformedProducts: Product[] = data.map((p) => {
+            // Get main image from images array, fallback to imageUrl
+            const mainImage = p.images?.find(img => img.isMain)?.imageUrl || 
+                             p.images?.[0]?.imageUrl || 
+                             p.imageUrl || 
+                             '';
+            
+            return {
+              id: p.id,
+              name: p.name,
+              category: p.category,
+              price: Number(p.price),
+              salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+              discountPercent: p.discountPercent != null ? Number(p.discountPercent) : null,
+              description: p.description ?? '',
+              imageUrl: mainImage,
+              image: mainImage,
+              stock: Number(p.stock ?? 0),
+              gender: p.gender ?? null,
+              age: p.age ?? null,
+              breed: p.breed ?? null,
+              location: p.location ?? null,
+              images: p.images || [],
+            };
+          });
           setProducts(transformedProducts);
         } else {
           console.error('Failed to fetch products');

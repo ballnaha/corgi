@@ -1,7 +1,7 @@
-import { prisma } from './prisma'
-import type { User } from '@prisma/client'
+import { prisma } from "./prisma";
+import type { User } from "@prisma/client";
 
-export type { User } from '@prisma/client'
+export type { User } from "@prisma/client";
 
 // Get user by LINE User ID
 export async function getUserById(lineUserId: string): Promise<User | null> {
@@ -10,11 +10,11 @@ export async function getUserById(lineUserId: string): Promise<User | null> {
       where: {
         lineUserId: lineUserId,
       },
-    })
-    return user
+    });
+    return user;
   } catch (error) {
-    console.error('Error getting user by ID:', error)
-    return null
+    console.error("Error getting user by ID:", error);
+    return null;
   }
 }
 
@@ -37,11 +37,11 @@ export async function createUser(userData: {
         phoneNumber: userData.phoneNumber,
         statusMessage: userData.statusMessage,
       },
-    })
-    return user
+    });
+    return user;
   } catch (error) {
-    console.error('Error creating user:', error)
-    throw error
+    console.error("Error creating user:", error);
+    throw error;
   }
 }
 
@@ -55,9 +55,9 @@ export async function updateUserLastLogin(lineUserId: string): Promise<void> {
       data: {
         lastLoginAt: new Date(),
       },
-    })
+    });
   } catch (error) {
-    console.error('Error updating last login:', error)
+    console.error("Error updating last login:", error);
   }
 }
 
@@ -78,11 +78,11 @@ export async function updateUser(
         lineUserId: lineUserId,
       },
       data: updates,
-    })
-    return user
+    });
+    return user;
   } catch (error) {
-    console.error('Error updating user:', error)
-    return null
+    console.error("Error updating user:", error);
+    return null;
   }
 }
 
@@ -91,13 +91,13 @@ export async function getAllUsers(): Promise<User[]> {
   try {
     const users = await prisma.user.findMany({
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
-    })
-    return users
+    });
+    return users;
   } catch (error) {
-    console.error('Error getting all users:', error)
-    return []
+    console.error("Error getting all users:", error);
+    return [];
   }
 }
 
@@ -108,35 +108,35 @@ export async function deleteUser(lineUserId: string): Promise<boolean> {
       where: {
         lineUserId: lineUserId,
       },
-    })
-    return true
+    });
+    return true;
   } catch (error) {
-    console.error('Error deleting user:', error)
-    return false
+    console.error("Error deleting user:", error);
+    return false;
   }
 }
 
 // Get user stats
 export async function getUserStats() {
   try {
-    const totalUsers = await prisma.user.count()
+    const totalUsers = await prisma.user.count();
     const recentUsers = await prisma.user.count({
       where: {
         createdAt: {
           gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
         },
       },
-    })
+    });
 
     return {
       totalUsers,
       recentUsers,
-    }
+    };
   } catch (error) {
-    console.error('Error getting user stats:', error)
+    console.error("Error getting user stats:", error);
     return {
       totalUsers: 0,
       recentUsers: 0,
-    }
+    };
   }
 }

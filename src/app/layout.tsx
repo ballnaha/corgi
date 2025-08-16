@@ -17,13 +17,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "CorgiShop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
+  title: "Oong-Oong Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
   description: "ร้านขายสัตว์เลี้ยงและอุปกรณ์สัตว์เลี้ยงครบครัน ด้วยความรักและใส่ใจในทุกรายละเอียด สุนัข แมว นก อาหารสัตว์ ของเล่น",
   keywords: "สัตว์เลี้ยง, สุนัข, แมว, นก, อาหารสัตว์, ของเล่นสัตว์, คอร์กี้, pet shop",
-  authors: [{ name: "CorgiShop Team" }],
+  authors: [{ name: "Oong-Oong Team" }],
   robots: "index, follow",
   openGraph: {
-    title: "CorgiShop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
+    title: "Oong-Oong Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
     description: "ร้านขายสัตว์เลี้ยงและอุปกรณ์สัตว์เลี้ยงครบครัน ด้วยความรักและใส่ใจในทุกรายละเอียด",
     type: "website",
     locale: "th_TH",

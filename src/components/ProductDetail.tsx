@@ -8,6 +8,7 @@ import {
   Button,
   CardMedia,
   Badge,
+  Chip,
 } from "@mui/material";
 import {
   ArrowBack,
@@ -35,6 +36,19 @@ export default function ProductDetail({
   cartItemCount = 0,
 }: ProductDetailProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Calculate discount percentage
+  const getDiscountPercent = () => {
+    if (product.discountPercent != null && product.discountPercent > 0) {
+      return product.discountPercent;
+    }
+    if (product.salePrice != null && product.salePrice < product.price) {
+      return Math.round(((product.price - product.salePrice) / product.price) * 100);
+    }
+    return 0;
+  };
+
+  const discountPercent = getDiscountPercent();
 
   // Use product images if available, otherwise use main image
   const productImages = React.useMemo(() => {
@@ -220,6 +234,27 @@ export default function ProductDetail({
                 pointerEvents: "none",
               }}
             />
+
+            {/* Discount Badge */}
+            {discountPercent > 0 && (
+              <Chip
+                label={`-${discountPercent}%`}
+                size="medium"
+                sx={{
+                  position: "absolute",
+                  top: 20,
+                  left: 20,
+                  backgroundColor: colors.error,
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "0.9rem",
+                  height: 32,
+                  "& .MuiChip-label": {
+                    px: 1.5,
+                  },
+                }}
+              />
+            )}
 
             {/* Home and Cart Icon Buttons */}
             <Box

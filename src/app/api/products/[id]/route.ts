@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { requireAdmin } from '@/lib/admin-utils';
+import { NextRequest, NextResponse } from "next/server";
+import { PrismaClient } from "@prisma/client";
+import { requireAdmin } from "@/lib/admin-utils";
+import { unlink } from "fs/promises";
+import path from "path";
 
 const prisma = new PrismaClient();
 
@@ -16,24 +18,21 @@ export async function GET(
       include: {
         images: {
           orderBy: {
-            order: 'asc',
+            order: "asc",
           },
         },
       },
     });
 
     if (!product) {
-      return NextResponse.json(
-        { error: 'ไม่พบสินค้า' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "ไม่พบสินค้า" }, { status: 404 });
     }
 
     return NextResponse.json(product);
   } catch (error) {
-    console.error('Error fetching product:', error);
+    console.error("Error fetching product:", error);
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการดึงข้อมูลสินค้า' },
+      { error: "เกิดข้อผิดพลาดในการดึงข้อมูลสินค้า" },
       { status: 500 }
     );
   }
@@ -50,60 +49,159 @@ export async function PATCH(
     const { id } = params;
     const body = await request.json();
 
-    // Check if product exists
+    // Check if product exists with current images
     const existingProduct = await prisma.product.findUnique({
       where: { id },
-    });
-
-    if (!existingProduct) {
-      return NextResponse.json(
-        { error: 'ไม่พบสินค้า' },
-        { status: 404 }
-      );
-    }
-
-    // Update the product
-    const updatedProduct = await prisma.product.update({
-      where: { id },
-      data: {
-        name: body.name?.trim(),
-        description: body.description?.trim() || null,
-        price: body.price,
-        salePrice: body.salePrice || null,
-        discountPercent: body.discountPercent || null,
-        category: body.category,
-        stock: body.stock,
-        gender: body.gender || null,
-        age: body.age || null,
-        weight: body.weight || null,
-        breed: body.breed || null,
-        color: body.color || null,
-        location: body.location || null,
-        contactInfo: body.contactInfo || null,
-        healthNote: body.healthNote || null,
-        vaccinated: body.vaccinated,
-        certified: body.certified,
-        isActive: body.isActive,
-      },
       include: {
         images: true,
       },
     });
 
+    if (!existingProduct) {
+      return NextResponse.json({ error: "ไม่พบสินค้า" }, { status: 404 });
+    }
+
+    // Handle image updates if provided
+    if (body.existingImages !== undefined || body.newImages !== undefined) {
+      // Get current image IDs
+      const currentImageIds = existingProduct.images.map((img) => img.id);
+
+      // Get remaining image IDs from request
+      const remainingImageIds = (body.existingImages || []).map(
+        (img: any) => img.id
+      );
+
+      // Find images to delete (current images not in remaining list)
+      const imagesToDelete = existingProduct.images.filter(
+        (img) => !remainingImageIds.includes(img.id)
+      );
+
+      // Delete image files from filesystem
+      for (const image of imagesToDelete) {
+        try {
+          const filename = image.imageUrl.split("/").pop();
+          if (filename) {
+            const filePath = path.join(
+              process.cwd(),
+              "public",
+              "uploads",
+              "products",
+              filename
+            );
+            await unlink(filePath);
+            console.log(`Deleted image file: ${filename}`);
+          }
+        } catch (fileError) {
+          console.warn(
+            `Failed to delete image file: ${image.imageUrl}`,
+            fileError
+          );
+        }
+      }
+
+      // Delete removed images from database
+      if (imagesToDelete.length > 0) {
+        await prisma.productImage.deleteMany({
+          where: {
+            id: { in: imagesToDelete.map((img) => img.id) },
+          },
+        });
+      }
+
+      // Update existing images
+      if (body.existingImages && body.existingImages.length > 0) {
+        for (const imgData of body.existingImages) {
+          await prisma.productImage.update({
+            where: { id: imgData.id },
+            data: {
+              altText: imgData.altText,
+              isMain: imgData.isMain,
+              order: imgData.order,
+            },
+          });
+        }
+      }
+
+      // Add new images
+      if (body.newImages && body.newImages.length > 0) {
+        await prisma.productImage.createMany({
+          data: body.newImages.map((img: any) => ({
+            productId: id,
+            imageUrl: img.imageUrl,
+            altText: img.altText,
+            isMain: img.isMain,
+            order: img.order,
+          })),
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      name: body.name?.trim(),
+      description: body.description?.trim() || null,
+      price: body.price,
+      salePrice: body.salePrice || null,
+      discountPercent: body.discountPercent || null,
+      category: body.category,
+      categoryId: body.categoryId || null,
+      stock: body.stock,
+
+      // Pet-specific fields
+      gender: body.gender || null,
+      age: body.age || null,
+      weight: body.weight || null,
+      breed: body.breed || null,
+      color: body.color || null,
+      location: body.location || null,
+      contactInfo: body.contactInfo || null,
+      healthNote: body.healthNote || null,
+      vaccinated: body.vaccinated,
+      certified: body.certified,
+
+      // General product fields
+      brand: body.brand || null,
+      model: body.model || null,
+      size: body.size || null,
+      material: body.material || null,
+      weight_grams: body.weightGrams || null,
+      dimensions: body.dimensions || null,
+
+      isActive: body.isActive,
+    };
+
+    // Add productType if provided
+    if (body.productType) {
+      updateData.productType = body.productType;
+    }
+
+    // Update the product
+    const updatedProduct = await prisma.product.update({
+      where: { id },
+      data: updateData,
+      include: {
+        images: {
+          orderBy: {
+            order: "asc",
+          },
+        },
+      },
+    });
+
     return NextResponse.json(updatedProduct);
   } catch (error: any) {
-    console.error('Error updating product:', error);
+    console.error("Error updating product:", error);
 
     // Handle admin authorization error
-    if (error.message === 'Unauthorized: Admin access required') {
+    if (error.message === "Unauthorized: Admin access required") {
       return NextResponse.json(
-        { error: 'ไม่มีสิทธิ์ในการแก้ไขสินค้า' },
+        { error: "ไม่มีสิทธิ์ในการแก้ไขสินค้า" },
         { status: 403 }
       );
     }
 
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการแก้ไขสินค้า' },
+      { error: "เกิดข้อผิดพลาดในการแก้ไขสินค้า" },
       { status: 500 }
     );
   }
@@ -128,13 +226,35 @@ export async function DELETE(
     });
 
     if (!existingProduct) {
-      return NextResponse.json(
-        { error: 'ไม่พบสินค้า' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "ไม่พบสินค้า" }, { status: 404 });
     }
 
-    // Delete related images first
+    // Delete image files from filesystem
+    for (const image of existingProduct.images) {
+      try {
+        // Extract filename from URL (e.g., /uploads/products/filename.jpg -> filename.jpg)
+        const filename = image.imageUrl.split("/").pop();
+        if (filename) {
+          const filePath = path.join(
+            process.cwd(),
+            "public",
+            "uploads",
+            "products",
+            filename
+          );
+          await unlink(filePath);
+          console.log(`Deleted image file: ${filename}`);
+        }
+      } catch (fileError) {
+        // Log error but don't fail the deletion if file doesn't exist
+        console.warn(
+          `Failed to delete image file: ${image.imageUrl}`,
+          fileError
+        );
+      }
+    }
+
+    // Delete related images from database
     await prisma.productImage.deleteMany({
       where: { productId: id },
     });
@@ -144,23 +264,23 @@ export async function DELETE(
       where: { id },
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'ลบสินค้าเรียบร้อยแล้ว' 
+    return NextResponse.json({
+      success: true,
+      message: "ลบสินค้าเรียบร้อยแล้ว",
     });
   } catch (error: any) {
-    console.error('Error deleting product:', error);
+    console.error("Error deleting product:", error);
 
     // Handle admin authorization error
-    if (error.message === 'Unauthorized: Admin access required') {
+    if (error.message === "Unauthorized: Admin access required") {
       return NextResponse.json(
-        { error: 'ไม่มีสิทธิ์ในการลบสินค้า' },
+        { error: "ไม่มีสิทธิ์ในการลบสินค้า" },
         { status: 403 }
       );
     }
 
     return NextResponse.json(
-      { error: 'เกิดข้อผิดพลาดในการลบสินค้า' },
+      { error: "เกิดข้อผิดพลาดในการลบสินค้า" },
       { status: 500 }
     );
   }

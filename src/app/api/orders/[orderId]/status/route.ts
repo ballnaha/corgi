@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { OrderStatus } from "@prisma/client";
+import type { OrderStatus } from "@/lib/order-status";
 import { 
   getStatusInfo, 
   getAvailableTransitions, 
@@ -17,7 +17,7 @@ interface RouteParams {
   };
 }
 
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
 
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const { orderId } = params;
+    const { orderId } = context.params;
 
     if (!orderId) {
       return NextResponse.json(

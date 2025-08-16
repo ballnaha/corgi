@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card, CardMedia, Typography, Box, IconButton } from "@mui/material";
+import { Card, CardMedia, Typography, Box, IconButton, Chip } from "@mui/material";
 import { Pets } from "@mui/icons-material";
 import { colors } from "@/theme/colors";
 import { Product } from "@/types";
@@ -49,6 +49,19 @@ export default function ProductCard({
   const isOutOfStock =
     typeof product.stock === "number" ? product.stock <= 0 : true;
 
+  // Calculate discount percentage
+  const getDiscountPercent = () => {
+    if (product.discountPercent != null && product.discountPercent > 0) {
+      return product.discountPercent;
+    }
+    if (product.salePrice != null && product.salePrice < product.price) {
+      return Math.round(((product.price - product.salePrice) / product.price) * 100);
+    }
+    return 0;
+  };
+
+  const discountPercent = getDiscountPercent();
+
   return (
     <Card
       onClick={handleProductClick}
@@ -89,6 +102,27 @@ export default function ProductCard({
             display: "block",
           }}
         />
+        {/* Discount Badge */}
+        {discountPercent > 0 && (
+          <Chip
+            label={`-${discountPercent}%`}
+            size="small"
+            sx={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              backgroundColor: colors.error,
+              color: "white",
+              fontWeight: "bold",
+              fontSize: "0.75rem",
+              height: 24,
+              "& .MuiChip-label": {
+                px: 1,
+              },
+            }}
+          />
+        )}
+
         {isOutOfStock && (
           <Box
             sx={{
