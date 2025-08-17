@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 import { requireAdmin } from "@/lib/admin-utils";
-import { unlink } from "fs/promises";
+import { unlink, access } from "fs/promises";
 import path from "path";
+import { constants } from "fs";
 
 const prisma = new PrismaClient();
 
@@ -11,7 +12,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const product = await prisma.product.findUnique({
       where: { id },
@@ -46,7 +47,7 @@ export async function PATCH(
     // Check admin authorization
     await requireAdmin();
 
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Check if product exists with current images
@@ -88,8 +89,18 @@ export async function PATCH(
               "products",
               filename
             );
-            await unlink(filePath);
-            console.log(`Deleted image file: ${filename}`);
+            // Check if file exists before attempting to delete
+            try {
+              await access(filePath, constants.F_OK);
+              await unlink(filePath);
+              console.log(`Deleted image file: ${filename}`);
+            } catch (accessError: any) {
+              if (accessError.code === 'ENOENT') {
+                console.warn(`Image file not found, skipping deletion: ${filename}`);
+              } else {
+                throw accessError;
+              }
+            }
           }
         } catch (fileError) {
           console.warn(
@@ -215,7 +226,7 @@ export async function DELETE(
     // Check admin authorization
     await requireAdmin();
 
-    const { id } = params;
+    const { id } = await params;
 
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
@@ -242,8 +253,18 @@ export async function DELETE(
             "products",
             filename
           );
-          await unlink(filePath);
-          console.log(`Deleted image file: ${filename}`);
+          // Check if file exists before attempting to delete
+          try {
+            await access(filePath, constants.F_OK);
+            await unlink(filePath);
+            console.log(`Deleted image file: ${filename}`);
+          } catch (accessError: any) {
+            if (accessError.code === 'ENOENT') {
+              console.warn(`Image file not found, skipping deletion: ${filename}`);
+            } else {
+              throw accessError;
+            }
+          }
         }
       } catch (fileError) {
         // Log error but don't fail the deletion if file doesn't exist

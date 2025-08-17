@@ -47,10 +47,11 @@ export const authOptions: NextAuthOptions = {
               params: {
                 scope: "profile",
                 response_type: "code",
-                // Add cache busting parameter
-                _t: Date.now().toString(),
+                // Ensure state parameter is properly handled
+                state: true,
               },
             },
+            checks: ["state"], // เพิ่มการตรวจสอบ state parameter
             token: "https://api.line.me/oauth2/v2.1/token",
             userinfo: "https://api.line.me/v2/profile",
             clientId: process.env.LINE_CLIENT_ID,
@@ -189,6 +190,23 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  useSecureCookies: process.env.NODE_ENV === "production",
+  // Add events to debug OAuth flow
+  events: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "line") {
+        console.log("✅ LINE OAuth sign-in successful", {
+          userId: user.id,
+          provider: account.provider,
+          accountId: account.providerAccountId
+        });
+      }
+    },
+    async signOut({ session, token }) {
+      console.log("👋 User signed out", { sessionId: session?.user?.id });
+    },
   },
   secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
   // Add headers to prevent caching
@@ -197,11 +215,50 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
+        sameSite: "lax", 
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        // Add cache control
-        maxAge: 30 * 24 * 60 * 60, // 30 days
+        maxAge: 10 * 60, // 10 minutes
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 10 * 60, // 10 minutes
+      },
+    },
+    state: {
+      name: `next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 10 * 60, // 10 minutes
+      },
+    },
+    pkceCodeVerifier: {
+      name: `next-auth.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 10 * 60, // 10 minutes
       },
     },
   },

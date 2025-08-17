@@ -143,6 +143,8 @@ export default function CheckoutPage() {
   });
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [isProcessingOrder, setIsProcessingOrder] = useState(false);
+  const [orderSuccessful, setOrderSuccessful] = useState(false);
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
@@ -504,6 +506,11 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    // ป้องกันการกดซ้ำ
+    if (isProcessingOrder) {
+      return;
+    }
+
     if (
       !customerInfo.name ||
       !customerInfo.phone ||
@@ -551,6 +558,7 @@ export default function CheckoutPage() {
     }
 
     setLoading(true);
+    setIsProcessingOrder(true);
 
     try {
       // สร้างเลขที่คำสั่งซื้อ
@@ -720,6 +728,9 @@ export default function CheckoutPage() {
         severity: "success",
       });
       setSnackbarKey((k) => k + 1);
+      
+      // ทำให้ปุ่มชำระเงิน disabled ทันทีหลังจากสำเร็จ
+      setOrderSuccessful(true);
 
       // Redirect to success page with payment information
       setTimeout(() => {
@@ -758,8 +769,13 @@ export default function CheckoutPage() {
         severity: "error",
       });
       setSnackbarKey((k) => k + 1);
+      
+      // รีเซ็ต isProcessingOrder เมื่อเกิด error เพื่อให้สามารถลองใหม่ได้
+      setIsProcessingOrder(false);
     } finally {
       setLoading(false);
+      // จะ reset isProcessingOrder ใน catch block เฉพาะเมื่อเกิด error
+      // สำหรับกรณีสำเร็จ จะคง disabled จนกว่าจะไปหน้า order-success
     }
   };
 
@@ -1496,14 +1512,29 @@ export default function CheckoutPage() {
             <TextField
               fullWidth
               label="เบอร์โทรศัพท์"
+              type="tel"
+              inputMode="numeric"
               value={customerInfo.phone}
-              onChange={(e) =>
+              onChange={(e) => {
+                // อนุญาตเฉพาะตัวเลข และจำกัดความยาวไม่เกิน 15 หลัก
+                const numericValue = e.target.value.replace(/\D/g, '').slice(0, 15);
                 setCustomerInfo((prev) => ({
                   ...prev,
-                  phone: e.target.value,
-                }))
-              }
-              placeholder={!customerInfo.phone ? "หมายเลขโทรศัพท์" : ""}
+                  phone: numericValue,
+                }));
+              }}
+              onKeyDown={(e) => {
+                // อนุญาตให้กด: ตัวเลข, Backspace, Delete, Tab, Arrow keys, Home, End
+                const allowedKeys = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'];
+                const isNumber = /[0-9]/.test(e.key);
+                const isAllowedKey = allowedKeys.includes(e.key);
+                
+                if (!isNumber && !isAllowedKey) {
+                  e.preventDefault();
+                }
+              }}
+              placeholder={!customerInfo.phone ? "0812345678" : ""}
+              helperText="กรอกเฉพาะตัวเลข เช่น 0812345678"
               required
               sx={{
                 "& .MuiOutlinedInput-root": {
@@ -1830,7 +1861,7 @@ export default function CheckoutPage() {
           variant="contained"
           size="large"
           onClick={handlePlaceOrder}
-          disabled={loading}
+          disabled={loading || isProcessingOrder || orderSuccessful}
           sx={{
             py: 2,
             fontSize: "1.1rem",
@@ -1848,11 +1879,14 @@ export default function CheckoutPage() {
             },
           }}
         >
-          {loading ? "กำลังดำเนินการ..." : orderAnalysis ? (
-            orderAnalysis.requiresDeposit 
-              ? `ชำระมัดจำ (฿${calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()})`
-              : `ชำระเงิน (฿${calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()})`
-          ) : "ชำระเงิน"}
+          {orderSuccessful ? "สั่งซื้อสำเร็จ - กำลังเปลี่ยนหน้า..." :
+            loading || isProcessingOrder ? 
+            (isProcessingOrder ? "กำลังประมวลผล..." : "กำลังดำเนินการ...") : 
+            orderAnalysis ? (
+              orderAnalysis.requiresDeposit 
+                ? `ชำระมัดจำ (฿${calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()})`
+                : `ชำระเงิน (฿${calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()})`
+            ) : "ชำระเงิน"}
         </Button>
       </Box>
 

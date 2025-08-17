@@ -17,13 +17,15 @@ export default function AuthError() {
   const getErrorMessage = (error: string | null) => {
     switch (error) {
       case "OAuthCallback":
-        return "เกิดข้อผิดพลาดในการเชื่อมต่อกับ LINE กรุณาลองใหม่อีกครั้ง";
+        return "เกิดข้อผิดพลาดในการเชื่อมต่อกับ LINE อาจเป็นเพราะ state cookie หายไป กรุณาล้างแคชและลองใหม่";
+      case "OAuthCallbackError":
+        return "เกิดข้อผิดพลาดในการ callback จาก LINE (state cookie missing) กรุณาล้างแคชเบราว์เซอร์และลองใหม่";
       case "OAuthAccountNotLinked":
         return "บัญชีนี้ไม่ได้เชื่อมโยงกับ LINE";
       case "EmailCreateAccount":
         return "ไม่สามารถสร้างบัญชีด้วยอีเมลนี้ได้";
       case "Callback":
-        return "เกิดข้อผิดพลาดในการ callback";
+        return "เกิดข้อผิดพลาดในการ callback อาจเป็นเพราะ cookies ถูกบล็อก";
       case "OAuthCreateAccount":
         return "ไม่สามารถสร้างบัญชีได้";
       case "EmailSignin":
@@ -34,6 +36,28 @@ export default function AuthError() {
         return "จำเป็นต้องเข้าสู่ระบบ";
       default:
         return "เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง";
+    }
+  };
+
+  const handleClearCacheAndRetry = async () => {
+    try {
+      // ล้าง NextAuth cookies
+      const response = await fetch("/api/auth/clear-line-cache", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        // รีเฟรชหน้าเพื่อล้างแคช
+        window.location.href = "/auth/signin";
+      } else {
+        handleRetry();
+      }
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      handleRetry();
     }
   };
 
@@ -74,19 +98,53 @@ export default function AuthError() {
       )}
 
       <Box sx={{ display: "flex", gap: 2, flexDirection: "column", width: "100%" }}>
-        <Button
-          variant="contained"
-          size="large"
-          onClick={handleRetry}
-          sx={{
-            backgroundColor: "#00B900",
-            "&:hover": {
-              backgroundColor: "#009900",
-            },
-          }}
-        >
-          ลองเข้าสู่ระบบอีกครั้ง
-        </Button>
+        {(error === "OAuthCallback" || error === "OAuthCallbackError" || error === "Callback") ? (
+          <>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={handleClearCacheAndRetry}
+              sx={{
+                backgroundColor: "#ff9800",
+                "&:hover": {
+                  backgroundColor: "#f57c00",
+                },
+              }}
+            >
+              🧹 ล้างแคชและลองใหม่
+            </Button>
+            
+            <Button
+              variant="outlined"
+              size="large"
+              onClick={handleRetry}
+              sx={{
+                borderColor: "#00B900",
+                color: "#00B900",
+                "&:hover": {
+                  backgroundColor: "#00B90020",
+                  borderColor: "#009900",
+                },
+              }}
+            >
+              ลองเข้าสู่ระบบอีกครั้ง
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleRetry}
+            sx={{
+              backgroundColor: "#00B900",
+              "&:hover": {
+                backgroundColor: "#009900",
+              },
+            }}
+          >
+            ลองเข้าสู่ระบบอีกครั้ง
+          </Button>
+        )}
         
         <Button
           variant="outlined"
