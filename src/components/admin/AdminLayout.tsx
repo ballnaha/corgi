@@ -34,6 +34,7 @@ import {
   Add,
   Edit,
   Assessment,
+  ViewCarousel,
 } from "@mui/icons-material";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -87,6 +88,11 @@ const getNavigationItems = (orderStats: { actionRequiredCount: number }): Naviga
     title: "จัดการผู้ใช้",
     path: "/admin/users",
     icon: <People />,
+  },
+  {
+    title: "จัดการ Banner",
+    path: "/admin/banners",
+    icon: <ViewCarousel />,
   },
   {
     title: "รายงาน",
@@ -188,7 +194,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             fontSize: "1.5rem",
           }}
         >
-          <img src="/images/logo_nobg.png" alt="Oong-Oong Pet Shop" width={60} height={60} />
+          <img src="/images/oong_logo8.png" alt="Oong-Oong Pet Shop" width={60} height={60} />
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>

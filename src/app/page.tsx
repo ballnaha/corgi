@@ -108,7 +108,11 @@ export default function Home() {
               age: p.age ?? null,
               breed: p.breed ?? null,
               location: p.location ?? null,
-              images: p.images || [],
+              images: p.images?.map(img => ({
+                ...img,
+                productId: p.id,
+                createdAt: new Date()
+              })) || [],
             };
           });
           setProducts(transformedProducts);
@@ -305,7 +309,7 @@ export default function Home() {
                   fontSize: "1.1rem",
                 }}
               >
-                All Pets
+                สินค้า
               </Typography>
               <Typography
                 variant="body2"

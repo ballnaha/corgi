@@ -19,17 +19,31 @@ function AuthGuard({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  
+  // Minimal LIFF environment detection to avoid redirect loop
+  const isLikelyInLiffEnvironment = typeof window !== "undefined" && (() => {
+    const userAgent = window.navigator.userAgent;
+    const isLineApp = userAgent.includes("Line/") && (userAgent.includes("Mobile") || userAgent.includes("Android") || userAgent.includes("iPhone"));
+    const url = window.location.href;
+    const isLiffUrl = url.includes("liff.line.me") || url.includes("liff-web.line.me");
+    return isLineApp || isLiffUrl;
+  })();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (mounted && status === "unauthenticated" && pathname !== "/auth/signin" && pathname !== "/liff" && !isRedirecting) {
+    if (!mounted || isRedirecting) return;
+    
+    // Avoid redirecting to signin when inside LIFF environment to prevent loops
+    if (status === "unauthenticated") {
+      if (pathname === "/auth/signin" || pathname === "/liff") return;
+      if (isLikelyInLiffEnvironment) return;
       setIsRedirecting(true);
       router.push("/auth/signin");
     }
-  }, [status, router, pathname, mounted, isRedirecting]);
+  }, [status, router, pathname, mounted, isRedirecting, isLikelyInLiffEnvironment]);
 
   // Show loading until mounted and session is determined
   if (!mounted || status === "loading") {
@@ -56,9 +70,10 @@ function AuthGuard({ children }: { children: ReactNode }) {
 }
 
 function LiffWrapper({ children }: { children: ReactNode }) {
-  const { isReady, isInLiff, liffError, closeWindow, liff } = useLiff();
+  const { isReady, isInLiff, liffError, closeWindow, liff, isLoggedIn } = useLiff();
   const [showLiffLoading, setShowLiffLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     setMounted(true);
@@ -69,9 +84,14 @@ function LiffWrapper({ children }: { children: ReactNode }) {
     if (!isInLiff) {
       setShowLiffLoading(false);
     } else if (isReady) {
-      setShowLiffLoading(false);
+      // For LIFF environment, wait for both LIFF ready and session authenticated
+      if (isLoggedIn && status === "authenticated") {
+        setShowLiffLoading(false);
+      } else if (!isLoggedIn) {
+        setShowLiffLoading(false);
+      }
     }
-  }, [isInLiff, isReady]);
+  }, [isInLiff, isReady, isLoggedIn, status]);
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
@@ -118,8 +138,11 @@ function LiffWrapper({ children }: { children: ReactNode }) {
     );
   }
 
-  // Only show LIFF loading if we're in LIFF environment and not ready
+  // Show different loading messages based on LIFF state
   if (isInLiff && showLiffLoading) {
+    if (isLoggedIn && status === "loading") {
+      return <LoadingScreen message="กำลังเข้าสู่ระบบ..." fullScreen={false} />;
+    }
     return <LoadingScreen message="กำลังเชื่อมต่อ LINE..." fullScreen={false} />;
   }
 

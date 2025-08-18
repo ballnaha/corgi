@@ -76,22 +76,9 @@ export default function CategoryFilter({
             fontSize: "1.1rem",
           }}
         >
-          Categories
+          หมวดหมู่
         </Typography>
 
-        <Typography
-          variant="body2"
-          sx={{
-            color: colors.text.secondary,
-            fontWeight: "500",
-            cursor: "pointer",
-            "&:hover": {
-              color: colors.primary.main,
-            },
-          }}
-        >
-          See more
-        </Typography>
       </Box>
 
       <Box

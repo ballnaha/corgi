@@ -47,11 +47,8 @@ export const authOptions: NextAuthOptions = {
               params: {
                 scope: "profile",
                 response_type: "code",
-                // Ensure state parameter is properly handled
-                state: true,
               },
             },
-            checks: ["state"], // เพิ่มการตรวจสอบ state parameter
             token: "https://api.line.me/oauth2/v2.1/token",
             userinfo: "https://api.line.me/v2/profile",
             clientId: process.env.LINE_CLIENT_ID,
@@ -69,6 +66,14 @@ export const authOptions: NextAuthOptions = {
         ]
       : [],
   callbacks: {
+    async signIn({ user, account, profile, email, credentials }) {
+      // รองรับ LIFF login ที่อาจไม่มี state parameter
+      if (account?.provider === "line") {
+        console.log("✅ LINE OAuth sign in successful");
+        return true;
+      }
+      return true;
+    },
     async jwt({ token, user, account, profile }) {
       if (account && user) {
         token.lineUserId = user.lineUserId;
@@ -188,6 +193,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/auth/signin",
     error: "/auth/error",
   },
+
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days

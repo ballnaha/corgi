@@ -3,6 +3,7 @@
 import React from "react";
 import { Card, CardMedia, Typography, Box, IconButton, Chip } from "@mui/material";
 import { Pets } from "@mui/icons-material";
+import Image from "next/image";
 import { colors } from "@/theme/colors";
 import { Product } from "@/types";
 
@@ -30,20 +31,20 @@ export default function ProductCard({
     onProductClick?.(product);
   };
 
-  // Get background color based on product category
+  // Get background color based on product category (using pastel colors like in the design)
   const getCardBgColor = (category: string) => {
-    switch (category) {
-      case "dogs":
-        return colors.cardBg.orange;
-      case "cats":
-        return colors.cardBg.blue;
-      case "birds":
-        return colors.cardBg.yellow;
-      case "fish":
-        return colors.cardBg.pink;
-      default:
-        return colors.cardBg.green;
-    }
+    const pastelColors = [
+      colors.cardBg.pink,     // Soft pink
+      colors.cardBg.mint,     // Soft mint  
+      colors.cardBg.purple,   // Soft lavender
+      colors.cardBg.coral,    // Soft coral
+      colors.cardBg.blue,     // Soft blue
+      colors.cardBg.green,    // Soft green
+    ];
+    
+    // Use product id or name to get consistent color for each product
+    const colorIndex = Math.abs(product.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % pastelColors.length;
+    return pastelColors[colorIndex];
   };
 
   const isOutOfStock =
@@ -69,39 +70,121 @@ export default function ProductCard({
         height: "100%",
         display: "flex",
         flexDirection: "column",
-        borderRadius: 2,
-        boxShadow: "none",
+        borderRadius: 3,
+        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
         border: "none",
-        overflow: "hidden",
-        backgroundColor: "transparent",
+        overflow: "visible",
+        backgroundColor: colors.secondary.main,
         cursor: "pointer",
-        transition: "transform 0.2s ease",
+        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        position: "relative",
         "&:hover": {
-          transform: "translateY(-2px)",
+          transform: "translateY(-8px) scale(1.02)",
+          boxShadow: "0 16px 40px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+        },
+        "&:active": {
+          transform: "translateY(-4px) scale(1.01)",
         },
       }}
     >
       <Box
         sx={{
           position: "relative",
-          backgroundColor: getCardBgColor(product.category),
-          borderRadius: 2,
-          overflow: "hidden",
+          background: `linear-gradient(135deg, ${getCardBgColor(product.category)} 0%, ${getCardBgColor(product.category)}DD 100%)`,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
+          borderBottomLeftRadius: 0,
+          borderBottomRightRadius: 0,
+          overflow: "visible",
           mb: 1,
+          height: 120,
+          display: "flex",
+          alignItems: "flex-end",
+          justifyContent: "center",
+          boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 50%)",
+            borderRadius: 2,
+            pointerEvents: "none",
+          },
         }}
       >
-        <CardMedia
+                 <CardMedia
           component="img"
-          height="150"
           image={product.image || product.imageUrl || ""}
           alt={product.name}
           sx={{
-            objectFit: "cover",
+            objectFit: "contain",
             backgroundColor: "transparent",
-            width: "100%",
-            display: "block",
+            width: "auto",
+            height: 160,
+            maxWidth: "85%",
+            position: "relative",
+            bottom: -20,
+            filter: "drop-shadow(0 8px 20px rgba(0, 0, 0, 0.15)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))",
+            zIndex: 2,
+            transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            // Ensure PNG transparency is preserved
+            mixBlendMode: "normal",
+            isolation: "isolate",
+            "&:hover": {
+              filter: "drop-shadow(0 12px 28px rgba(0, 0, 0, 0.2)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15))",
+              transform: "scale(1.05) translateY(-5px)",
+            },
           }}
         />
+
+        {/* Surprise/Shock Effect - OHO Icon for all products */}
+        <Box
+          sx={{
+            position: "absolute",
+            bottom: 0,
+            right: -20,
+            width: 50,
+            height: 50,
+            zIndex: 4,
+            animation: "surpriseEffect 1.5s ease-in-out infinite",
+            "@keyframes surpriseEffect": {
+              "0%": {
+                transform: "scale(1) rotate(0deg)",
+                opacity: 1,
+              },
+              "25%": {
+                transform: "scale(1.1) rotate(-8deg)",
+                opacity: 0.9,
+              },
+              "50%": {
+                transform: "scale(1.2) rotate(8deg)",
+                opacity: 1,
+              },
+              "75%": {
+                transform: "scale(1.1) rotate(-4deg)",
+                opacity: 0.9,
+              },
+              "100%": {
+                transform: "scale(1) rotate(0deg)",
+                opacity: 1,
+              },
+            },
+          }}
+        >
+          <Image
+            src="/images/oho.png"
+            alt="Surprise effect!"
+            width={20}
+            height={20}
+            style={{
+              objectFit: "contain",
+              filter: "drop-shadow(0 6px 12px rgba(255, 165, 0, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))",
+            }}
+          />
+        </Box>
         {/* Discount Badge */}
         {discountPercent > 0 && (
           <Chip
@@ -157,9 +240,16 @@ export default function ProductCard({
             color: isFavorite ? colors.primary.main : colors.text.secondary,
             width: 32,
             height: 32,
-            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15), 0 1px 3px rgba(0,0,0,0.1)",
+            zIndex: 3,
+            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            backdropFilter: "blur(8px)",
             "&:hover": {
               backgroundColor: colors.secondary.main,
+              transform: "scale(1.1) translateY(-1px)",
+              boxShadow: "0 6px 16px rgba(0,0,0,0.2), 0 2px 6px rgba(0,0,0,0.15)",
+            },
+            "&:active": {
               transform: "scale(1.05)",
             },
           }}
@@ -169,7 +259,24 @@ export default function ProductCard({
         </IconButton>
       </Box>
 
-      <Box sx={{ px: 1 }}>
+      <Box 
+        sx={{ 
+          px: 2, 
+          pb: 2,
+          pt: 1,
+          position: "relative",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            top: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "80%",
+            height: "1px",
+            background: "linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.05) 50%, transparent 100%)",
+          },
+        }}
+      >
         <Typography
           variant="h6"
           component="h3"

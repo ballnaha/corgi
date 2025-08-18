@@ -55,23 +55,47 @@ export async function POST(request: NextRequest) {
       let processedBuffer = buffer;
       let sizeFilename = filename;
 
+      // Determine if the original file is PNG to preserve transparency
+      const isPNG = file.type === 'image/png';
+      const outputExt = isPNG ? '.png' : '.jpg';
+
       if (size.width && size.height) {
         // Resize image using sharp
-        processedBuffer = await sharp(buffer)
+        const sharpInstance = sharp(buffer)
           .resize(size.width, size.height, {
             fit: "cover",
             position: "center",
-          })
-          .jpeg({ quality: 85 })
-          .toBuffer();
+          });
 
-        // Add size suffix to filename
-        const ext = path.extname(filename);
-        const nameWithoutExt = filename.replace(ext, "");
-        sizeFilename = `${nameWithoutExt}_${size.name}${ext}`;
+        if (isPNG) {
+          // Preserve PNG format and transparency
+          processedBuffer = await sharpInstance
+            .png({ quality: 85, compressionLevel: 6 })
+            .toBuffer();
+        } else {
+          // Convert to JPEG for other formats
+          processedBuffer = await sharpInstance
+            .jpeg({ quality: 85 })
+            .toBuffer();
+        }
+
+        // Add size suffix to filename with correct extension
+        const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+        sizeFilename = `${nameWithoutExt}_${size.name}${outputExt}`;
       } else {
         // For original, just optimize without resizing
-        processedBuffer = await sharp(buffer).jpeg({ quality: 90 }).toBuffer();
+        if (isPNG) {
+          processedBuffer = await sharp(buffer)
+            .png({ quality: 90, compressionLevel: 6 })
+            .toBuffer();
+        } else {
+          processedBuffer = await sharp(buffer)
+            .jpeg({ quality: 90 })
+            .toBuffer();
+        }
+        
+        // Update filename extension if needed
+        sizeFilename = filename.replace(/\.[^/.]+$/, outputExt);
       }
 
       const filePath = path.join(uploadDir, sizeFilename);

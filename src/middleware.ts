@@ -22,6 +22,13 @@ export async function middleware(request: NextRequest) {
   const isLineApp = userAgent.includes('Line/') && 
                    (userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone'));
   
+  // Check if URL contains LIFF parameters
+  const isLiffUrl = request.nextUrl.href.includes('liff.line.me') || 
+                   request.nextUrl.href.includes('liff-web.line.me') ||
+                   request.nextUrl.searchParams.has('liff');
+  
+  const isFromLiff = isLineApp || isLiffUrl;
+  
   // Admin routes protection - let client-side handle auth for admin routes
   // This avoids edge runtime issues with next-auth and Prisma
   if (request.nextUrl.pathname.startsWith('/admin')) {
@@ -31,8 +38,11 @@ export async function middleware(request: NextRequest) {
   }
   
   // For LIFF environment, let client-side handle all auth
-  if (isLineApp) {
-    return NextResponse.next();
+  if (isFromLiff) {
+    // Add LIFF detection header for client-side use
+    const response = NextResponse.next();
+    response.headers.set('x-liff-environment', 'true');
+    return response;
   }
 
   return NextResponse.next();

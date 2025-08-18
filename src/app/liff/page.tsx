@@ -1,7 +1,48 @@
 "use client";
 
-import LiffRedirect from "@/components/LiffRedirect";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useLiff } from "@/hooks/useLiff";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export default function LiffPage() {
-  return <LiffRedirect />;
+  const { data: session, status } = useSession();
+  const { isReady, isInLiff, isLoggedIn, liffError } = useLiff();
+  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    // If authenticated, redirect to home
+    if (status === "authenticated") {
+      router.push("/");
+      return;
+    }
+
+    // If LIFF is ready and user is logged in to LIFF, auto login should happen
+    // Otherwise, redirect to signin page
+    if (isReady && !isLoggedIn && !liffError) {
+      router.push("/auth/signin");
+    }
+  }, [mounted, status, isReady, isLoggedIn, liffError, router]);
+
+  if (!mounted || !isReady) {
+    return <LoadingScreen message="กำลังเชื่อมต่อ LINE..." fullScreen={false} />;
+  }
+
+  if (liffError) {
+    return <LoadingScreen message={`เกิดข้อผิดพลาด: ${liffError}`} fullScreen={false} />;
+  }
+
+  if (status === "loading" || (isLoggedIn && status === "unauthenticated")) {
+    return <LoadingScreen message="กำลังเข้าสู่ระบบ..." fullScreen={false} />;
+  }
+
+  return <LoadingScreen message="กำลังโหลด..." fullScreen={false} />;
 }

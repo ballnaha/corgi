@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Box, Typography } from "@mui/material";
-import { Home, ChatBubbleOutline, Pets, Person } from "@mui/icons-material";
+import { ChatBubbleOutline, Pets, Person } from "@mui/icons-material";
+import Image from "next/image";
 import { colors } from "@/theme/colors";
 import { handleLiffNavigation, isInLiffEnvironment } from "@/lib/liff-navigation";
 
@@ -42,10 +43,10 @@ export default function BottomNavigation({
   }, [pathname]);
 
   const tabs = [
-    { id: "home", icon: Home, label: "Home" },
-    { id: "favorites", icon: Pets, label: "Favorites" },
-    { id: "calendar", icon: ChatBubbleOutline, label: "Calendar" },
-    { id: "profile", icon: Person, label: "Profile" },
+    { id: "home", icon: "custom", label: "หน้าหลัก" },
+    { id: "favorites", icon: Pets, label: "รายการโปรด" },
+    //{ id: "calendar", icon: ChatBubbleOutline, label: "ปฏิทิน" },
+    { id: "profile", icon: Person, label: "ข้อมูลส่วนตัว" },
   ];
 
   const getHrefForTab = (tabId: string) => {
@@ -158,13 +159,29 @@ export default function BottomNavigation({
               height: 48,
             }}
           >
-            <Icon
-              fontSize="small"
-              sx={{
-                color: isActive ? colors.secondary.main : colors.text.secondary,
-                mb: isActive ? 0 : 0.5,
-              }}
-            />
+            {tab.id === "home" ? (
+              <Image
+                src="/images/icon-home.png"
+                alt="Home"
+                width={20}
+                height={20}
+                style={{
+                  filter: isActive 
+                    ? "brightness(0) saturate(100%) invert(100%)" 
+                    : "brightness(0) saturate(100%) invert(60%)",
+                  marginBottom: isActive ? 0 : 4,
+                  transition: "all 0.3s ease",
+                }}
+              />
+            ) : (
+              <Icon
+                fontSize="small"
+                sx={{
+                  color: isActive ? colors.secondary.main : colors.text.secondary,
+                  mb: isActive ? 0 : 0.5,
+                }}
+              />
+            )}
             <Typography
               variant="caption"
               sx={{

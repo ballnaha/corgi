@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
+import { usePathname } from "next/navigation";
+import { signIn, useSession } from "next-auth/react";
 
 // LIFF SDK type definitions
 interface LiffProfile {
@@ -12,12 +13,13 @@ interface LiffProfile {
 }
 
 interface LiffObject {
-  init: (config: { liffId: string }) => Promise<void>;
+  init: (config: { liffId: string; withLoginOnExternalBrowser?: boolean }) => Promise<void>;
   isLoggedIn: () => boolean;
   login: () => void;
   logout: () => void;
   getProfile: () => Promise<LiffProfile>;
   getIDToken: () => string | null;
+  getAccessToken: () => string | null;
   closeWindow: () => void;
   isInClient: () => boolean;
 }
@@ -35,6 +37,43 @@ export const useLiff = () => {
   const [isReady, setIsReady] = useState(false);
   const [isInLiff, setIsInLiff] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
+  const { data: session, status } = useSession();
+  const pathname = typeof window !== "undefined" ? window.location.pathname : "";
+  const isOnSigninPage = pathname === "/auth/signin";
+
+  // Handle auto login to NextAuth using LIFF
+  const handleAutoLogin = async (liff: LiffObject) => {
+    try {
+      console.log("🔄 Starting LIFF auto login process...");
+      
+      // If user is already logged in to NextAuth, no need to auto login
+      if (status === "authenticated") {
+        console.log("✅ User already authenticated via NextAuth");
+        return;
+      }
+
+      // Avoid auto login loop on signin page
+      if (isOnSigninPage) {
+        console.log("⏭️ Skip auto login on /auth/signin to avoid loop");
+        return;
+      }
+
+      // Wait a bit to ensure LIFF is fully initialized
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      console.log("🔗 Triggering NextAuth LINE login for LIFF user...");
+      
+      // Trigger NextAuth LINE login
+      await signIn('line', {
+        callbackUrl: '/',
+        redirect: true, // Redirect to homepage to avoid loops
+      });
+
+    } catch (error) {
+      console.error("❌ Error during LIFF auto login:", error);
+    }
+  };
 
   // Check if running in LIFF environment
   const checkLiffEnvironment = () => {
@@ -99,12 +138,26 @@ export const useLiff = () => {
         }
 
         setLiffObject(liff);
-        setIsLoggedIn(liff.isLoggedIn());
+        const liffLoggedIn = liff.isLoggedIn();
+        setIsLoggedIn(liffLoggedIn);
         setIsReady(true);
 
-        // Handle LIFF login - only trigger login if not logged in
-        if (!liff.isLoggedIn()) {
-          liff.login();
+        // Auto login to NextAuth if LIFF is logged in but NextAuth session doesn't exist
+        if (liffLoggedIn && !autoLoginAttempted && !isOnSigninPage) {
+          // Prevent repeated auto login attempts within this session/tab
+          const hasAutoLoginFlag = typeof window !== "undefined" && sessionStorage.getItem("liff_auto_login_done") === "1";
+          if (!hasAutoLoginFlag) {
+            sessionStorage.setItem("liff_auto_login_done", "1");
+            setAutoLoginAttempted(true);
+            await handleAutoLogin(liff);
+          } else {
+            console.log("⏭️ Skip auto login (already attempted in this session)");
+          }
+        } else if (!liffLoggedIn) {
+          // Handle LIFF login - only trigger login if not logged in
+          if (!isOnSigninPage) {
+            liff.login();
+          }
         }
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "LIFF initialization failed";

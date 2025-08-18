@@ -12,10 +12,10 @@ import {
 } from "@mui/material";
 import {
   ArrowBack,
-  Home,
   LocationOn,
   FiberManualRecord,
 } from "@mui/icons-material";
+import Image from "next/image";
 import { colors } from "@/theme/colors";
 import { ShoppingCart } from "@mui/icons-material";
 import { Product } from "@/types";
@@ -317,7 +317,15 @@ export default function ProductDetail({
                   },
                 }}
               >
-                <Home fontSize="medium" />
+                <Image
+                  src="/images/icon-home.png"
+                  alt="Home"
+                  width={24}
+                  height={24}
+                  style={{
+                    filter: "brightness(0) saturate(100%) invert(100%)",
+                  }}
+                />
               </IconButton>
             </Box>
           </Box>
@@ -446,20 +454,9 @@ export default function ProductDetail({
                   fontSize: "1.2rem",
                 }}
               >
-                Description
+                รายละเอียด
               </Typography>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: colors.text.secondary,
-                  cursor: "pointer",
-                  "&:hover": {
-                    color: colors.primary.main,
-                  },
-                }}
-              >
-                See more
-              </Typography>
+  
             </Box>
 
             <Typography
