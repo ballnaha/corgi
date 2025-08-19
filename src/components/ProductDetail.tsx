@@ -14,10 +14,10 @@ import {
   ArrowBack,
   LocationOn,
   FiberManualRecord,
+  Pets,
 } from "@mui/icons-material";
 import Image from "next/image";
 import { colors } from "@/theme/colors";
-import { ShoppingCart } from "@mui/icons-material";
 import { Product } from "@/types";
 
 interface ProductDetailProps {
@@ -296,7 +296,15 @@ export default function ProductDetail({
                     },
                   }}
                 >
-                  <ShoppingCart fontSize="medium" />
+                  <Image
+                    src="/images/icon-cart.png"
+                    alt="Shopping Cart"
+                    width={24}
+                    height={24}
+                    style={{
+                      filter: "brightness(0) saturate(100%) invert(100%)",
+                    }}
+                  />
                 </Badge>
               </IconButton>
               <IconButton
@@ -609,7 +617,7 @@ export default function ProductDetail({
           })()}
         </Box>
 
-        {/* Add to Cart Button - Right Side */}
+        {/* Add to Cart Button - Right Side with Paw Icon */}
         <Button
           variant="contained"
           onClick={onAdopt}
@@ -617,28 +625,69 @@ export default function ProductDetail({
           sx={{
             backgroundColor:
               typeof product.stock === "number" && product.stock > 0
-                ? colors.primary.main
+                ? colors.primary.light // Orange background
                 : colors.text.disabled,
-            color: colors.secondary.main,
+            color: colors.secondary.main, // White text
             py: 1.5,
-            px: 3,
+            px: 0, // Remove horizontal padding to control spacing manually
             fontSize: "1.1rem",
-            fontWeight: "500",
-            borderRadius: 3,
-            minWidth: "50%",
+            fontWeight: "600",
+            borderRadius: "50px", // More rounded for modern look
+            border: "2px solid #2C2C2C", // Black border
+            minWidth: "60%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-start",
+            textTransform: "none",
+            boxShadow: "0 4px 12px rgba(255, 107, 53, 0.3)",
+            position: "relative",
+            height: 56, // Fixed height for button
             "&:hover": {
               backgroundColor:
                 typeof product.stock === "number" && product.stock > 0
                   ? colors.primary.dark
                   : colors.text.disabled,
+              transform: "translateY(-2px)",
+              boxShadow: "0 6px 20px rgba(255, 107, 53, 0.4)",
+              borderColor: "#1A1A1A", // Darker border on hover
+            },
+            "&:active": {
+              transform: "translateY(0px)",
             },
           }}
         >
-          {typeof product.stock === "number" && product.stock > 0
-            ? ["dogs", "cats", "birds", "fish"].includes(product.category)
-              ? "รับน้อลไปดูแล"
-              : "หยิบใส่ตระกร้า"
-            : "สินค้าหมด"}
+          {/* Paw Circle - Left Side */}
+          <Box
+            sx={{
+              backgroundColor: "#2C2C2C", // Black circle
+              borderRadius: "50%",
+              width: 52, // Same as button height
+              height: 52, // Same as button height
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              position: "absolute",
+              left: 0,
+              top: 0,
+              
+            }}
+          >
+            <Pets 
+              sx={{ 
+                color: colors.secondary.main, // White paw icon
+                fontSize: "1.4rem" 
+              }} 
+            />
+          </Box>
+          
+          {/* Button Text */}
+          <Box sx={{ ml: 8, flex: 1, textAlign: "center", color: "white" }}>
+            {typeof product.stock === "number" && product.stock > 0
+              ? ["dogs", "cats", "birds", "fish"].includes(product.category)
+                ? "รับน้อลไปดูแล"
+                : "หยิบใส่ตระกร้า"
+              : "สินค้าหมด"}
+          </Box>
         </Button>
       </Box>
     </Box>

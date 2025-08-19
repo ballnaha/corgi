@@ -86,6 +86,16 @@ interface OrderItem {
   };
 }
 
+interface PaymentNotification {
+  id: string;
+  transferAmount: number;
+  transferDate: string;
+  paymentSlipData?: string | null;
+  paymentSlipMimeType?: string | null;
+  paymentSlipFileName?: string | null;
+  submittedAt: string;
+}
+
 interface Order {
   id: string;
   orderNumber?: string;
@@ -105,9 +115,11 @@ interface Order {
   shippingMethod?: string;
   hasPets: boolean;
   requiresDeposit: boolean;
+  adminComment?: string;
   createdAt: string;
   updatedAt: string;
   orderItems: OrderItem[];
+  paymentNotifications?: PaymentNotification[];
   shippingOption?: {
     id: string;
     name: string;
@@ -156,6 +168,8 @@ export default function AdminOrdersPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [newStatus, setNewStatus] = useState("");
+  const [adminComment, setAdminComment] = useState("");
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
   // Menu states
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -200,13 +214,19 @@ export default function AdminOrdersPage() {
 
   // อัปเดตสถานะคำสั่งซื้อ
   const updateOrderStatus = async (orderId: string, status: string) => {
+    if (isUpdatingStatus) return; // ป้องกันการกดซ้ำ
+    
+    setIsUpdatingStatus(true);
     try {
       const response = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ 
+          status,
+          adminComment: adminComment.trim() || undefined
+        }),
       });
 
       if (!response.ok) {
@@ -215,20 +235,26 @@ export default function AdminOrdersPage() {
 
       setSnackbar({
         open: true,
-        message: "อัปเดตสถานะคำสั่งซื้อสำเร็จ",
+        message: "🎉 อัปเดตสถานะคำสั่งซื้อสำเร็จแล้ว!",
         severity: "success",
       });
 
       // รีเฟรชข้อมูล
       fetchOrders();
+      
+      // ปิด modal และรีเซ็ต state
       setStatusDialogOpen(false);
       setSelectedOrder(null);
+      setAdminComment(""); // รีเซ็ต comment
+      setNewStatus(""); // รีเซ็ต status
     } catch (err) {
       setSnackbar({
         open: true,
-        message: "เกิดข้อผิดพลาดในการอัปเดตสถานะ",
+        message: "❌ เกิดข้อผิดพลาดในการอัปเดตสถานะ กรุณาลองใหม่อีกครั้ง",
         severity: "error",
       });
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -256,6 +282,7 @@ export default function AdminOrdersPage() {
   const handleStatusChange = (order: Order) => {
     setSelectedOrder(order);
     setNewStatus(order.status);
+    setAdminComment(""); // รีเซ็ต comment เมื่อเปิด dialog
     setStatusDialogOpen(true);
     handleMenuClose();
   };
@@ -320,7 +347,7 @@ export default function AdminOrdersPage() {
               {formatDate(order.createdAt)}
             </Typography>
           </Box>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, flexWrap: "wrap" }}>
             <Chip
               label={getStatusInfo(order.status).label}
               size="small"
@@ -332,6 +359,27 @@ export default function AdminOrdersPage() {
               }}
               icon={<span style={{ fontSize: "0.8rem" }}>{getStatusInfo(order.status).icon}</span>}
             />
+            {/* Payment Notification Alert for Mobile */}
+            {order.paymentNotifications && order.paymentNotifications.length > 0 && (
+              <Chip
+                label="💳"
+                size="small"
+                sx={{
+                  backgroundColor: "#ff9800",
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "0.6rem",
+                  height: 18,
+                  minWidth: 30,
+                  animation: "pulse 2s infinite",
+                  "@keyframes pulse": {
+                    "0%": { opacity: 1 },
+                    "50%": { opacity: 0.7 },
+                    "100%": { opacity: 1 },
+                  },
+                }}
+              />
+            )}
             <IconButton
               size="small"
               onClick={(e) => {
@@ -463,16 +511,34 @@ export default function AdminOrdersPage() {
       </TableCell>
 
       <TableCell>
-        <Chip
-          label={getStatusInfo(order.status).label}
-          size="small"
-          sx={{
-            backgroundColor: `${getStatusInfo(order.status).color}20`,
-            color: getStatusInfo(order.status).color,
-            fontWeight: 600,
-          }}
-          icon={<span>{getStatusInfo(order.status).icon}</span>}
-        />
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+          <Chip
+            label={getStatusInfo(order.status).label}
+            size="small"
+            sx={{
+              backgroundColor: `${getStatusInfo(order.status).color}20`,
+              color: getStatusInfo(order.status).color,
+              fontWeight: 600,
+            }}
+            icon={<span>{getStatusInfo(order.status).icon}</span>}
+          />
+          {/* Payment Notification Alert */}
+          {order.paymentNotifications && order.paymentNotifications.length > 0 && (
+            <Chip
+              label="💳 มีแจ้งชำระ"
+              size="medium"
+              variant="outlined"
+              sx={{
+                backgroundColor: "#ff9800",
+                color: "white",
+                fontWeight: "normal",
+                fontSize: "0.75rem",
+                height: 25,
+
+              }}
+            />
+          )}
+        </Box>
       </TableCell>
 
       <TableCell>
@@ -1101,6 +1167,180 @@ export default function AdminOrdersPage() {
                     </Box>
                   </CardContent>
                 </Card>
+
+                {/* Admin Comment */}
+                {selectedOrder.adminComment && (
+                  <Card 
+                    variant="outlined" 
+                    sx={{ 
+                      borderRadius: 3,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      boxShadow: 1,
+                      width: "100%",
+                      mb: 2,
+                      mt: 2,
+                    }}
+                  >
+                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+                        <Edit color="action" />
+                        <Typography variant="h6" fontWeight="bold">
+                          💬 ข้อความจากผู้ดูแลระบบ
+                        </Typography>
+                      </Box>
+                      
+                      <Box
+                        sx={{
+                          p: 2,
+                          backgroundColor: "#f3f4f6",
+                          borderRadius: 2,
+                          borderLeft: `4px solid ${colors.info}`,
+                        }}
+                      >
+                        <Typography
+                          variant="body1"
+                          sx={{
+                            color: colors.text.primary,
+                            lineHeight: 1.6,
+                            whiteSpace: "pre-wrap", // Preserve line breaks
+                          }}
+                        >
+                          {selectedOrder.adminComment}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Payment Notifications */}
+                {selectedOrder.paymentNotifications && selectedOrder.paymentNotifications.length > 0 && (
+                  <Card 
+                    variant="outlined" 
+                    sx={{ 
+                      borderRadius: 3,
+                      border: "1px solid",
+                      borderColor: "divider",
+                      boxShadow: 1,
+                      width: "100%",
+                    }}
+                  >
+                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3 }}>
+                        <Payment color="action" />
+                        <Typography variant="h6" fontWeight="bold">
+                          การแจ้งชำระเงิน ({selectedOrder.paymentNotifications.length} รายการ)
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        {selectedOrder.paymentNotifications.map((notification, index) => (
+                          <Box
+                            key={notification.id}
+                            sx={{
+                              p: { xs: 2, sm: 3 },
+                              borderRadius: 2,
+                              backgroundColor: index % 2 === 0 ? "background.default" : "transparent",
+                              border: "1px solid",
+                              borderColor: "divider",
+                            }}
+                          >
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                              <Typography variant="subtitle1" fontWeight="bold">
+                                การแจ้งชำระ #{index + 1}
+                              </Typography>
+
+                            </Box>
+
+                            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mb: 2 }}>
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                  จำนวนเงิน
+                                </Typography>
+                                <Typography variant="body1" fontWeight="bold">
+                                  ฿{notification.transferAmount.toLocaleString()}
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                  วันที่โอน
+                                </Typography>
+                                <Typography variant="body1" fontWeight="bold">
+                                  {formatDate(notification.transferDate)}
+                                </Typography>
+                              </Box>
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                  วันที่แจ้ง
+                                </Typography>
+                                <Typography variant="body1" fontWeight="bold">
+                                  {formatDate(notification.submittedAt)}
+                                </Typography>
+                              </Box>
+                            </Box>
+
+                            {/* Payment Slip */}
+                            {notification.paymentSlipData && (
+                              <Box sx={{ mt: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                  หลักฐานการโอนเงิน
+                                </Typography>
+                                <Box
+                                  component="img"
+                                  src={notification.paymentSlipData?.startsWith('data:') 
+                                    ? notification.paymentSlipData 
+                                    : notification.paymentSlipData || ''}
+                                  alt="Payment Slip"
+                                  onError={(e) => {
+                                    console.error("Failed to load payment slip image:", notification.paymentSlipData);
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                  sx={{
+                                    width: "100%",
+                                    maxWidth: 300,
+                                    height: "auto",
+                                    borderRadius: 2,
+                                    border: "1px solid",
+                                    borderColor: "divider",
+                                    cursor: "pointer",
+                                    "&:hover": {
+                                      transform: "scale(1.02)",
+                                      boxShadow: 2,
+                                    },
+                                    transition: "all 0.2s ease",
+                                  }}
+                                  onClick={() => {
+                                    // Open image in new tab for full view
+                                    const imageUrl = notification.paymentSlipData?.startsWith('data:') 
+                                      ? notification.paymentSlipData 
+                                      : notification.paymentSlipData || '';
+                                      
+                                    const newWindow = window.open();
+                                    if (newWindow) {
+                                      newWindow.document.write(`
+                                        <html>
+                                          <head><title>หลักฐานการโอนเงิน - ${selectedOrder.orderNumber}</title></head>
+                                          <body style="margin:0;padding:20px;background:#f5f5f5;display:flex;justify-content:center;align-items:center;min-height:100vh;">
+                                            <img src="${imageUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.1);" />
+                                          </body>
+                                        </html>
+                                      `);
+                                      newWindow.document.close();
+                                    }
+                                  }}
+                                />
+                              </Box>
+                            )}
+
+                            {index < selectedOrder.paymentNotifications!.length - 1 && (
+                              <Divider sx={{ mt: 2 }} />
+                            )}
+                          </Box>
+                        ))}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                )}
               </Box>
             </Box>
           )}
@@ -1168,7 +1408,7 @@ export default function AdminOrdersPage() {
       >
         <DialogTitle>เปลี่ยนสถานะคำสั่งซื้อ</DialogTitle>
         <DialogContent>
-          <Box sx={{ pt: 1 }}>
+          <Box sx={{ pt: 1, display: "flex", flexDirection: "column", gap: 3 }}>
             <FormControl fullWidth>
               <InputLabel>สถานะใหม่</InputLabel>
               <Select
@@ -1186,37 +1426,104 @@ export default function AdminOrdersPage() {
                 ))}
               </Select>
             </FormControl>
+
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              label="ข้อความถึงลูกค้า (ไม่บังคับ)"
+              placeholder="เช่น เหตุผลการยกเลิก, ข้อมูลการจัดส่ง, หรือข้อความอื่นๆ"
+              value={adminComment}
+              onChange={(e) => setAdminComment(e.target.value)}
+              variant="outlined"
+              helperText=""
+            />
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setStatusDialogOpen(false)}>
+          <Button 
+            onClick={() => setStatusDialogOpen(false)}
+            disabled={isUpdatingStatus}
+          >
             ยกเลิก
           </Button>
           <Button
             variant="contained"
             onClick={() => selectedOrder && updateOrderStatus(selectedOrder.id, newStatus)}
-            disabled={!newStatus || newStatus === selectedOrder?.status}
+            disabled={!newStatus || newStatus === selectedOrder?.status || isUpdatingStatus}
             sx={{
               backgroundColor: colors.primary.main,
               "&:hover": { backgroundColor: colors.primary.dark },
+              minWidth: 100, // ป้องกันการเปลี่ยนขนาดปุ่ม
             }}
+            startIcon={isUpdatingStatus ? <CircularProgress size={16} color="inherit" /> : null}
           >
-            บันทึก
+            {isUpdatingStatus ? "กำลังบันทึก..." : "บันทึก"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Snackbar */}
+      {/* Beautiful Snackbar */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={4000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{
+          "& .MuiSnackbarContent-root": {
+            borderRadius: 3,
+            minWidth: 300,
+          }
+        }}
       >
         <Alert
           severity={snackbar.severity}
           onClose={() => setSnackbar({ ...snackbar, open: false })}
+          variant="filled"
+          sx={{
+            borderRadius: 3,
+            fontWeight: 500,
+            fontSize: "0.95rem",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.12)",
+            backdropFilter: "blur(8px)",
+            "& .MuiAlert-icon": {
+              fontSize: "1.2rem",
+            },
+            "& .MuiAlert-message": {
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+            },
+            ...(snackbar.severity === 'success' && {
+              background: `linear-gradient(135deg, ${colors.success}, #43A047)`,
+              "& .MuiAlert-icon": {
+                color: "white",
+              },
+            }),
+            ...(snackbar.severity === 'error' && {
+              background: `linear-gradient(135deg, ${colors.error}, #D32F2F)`,
+              "& .MuiAlert-icon": {
+                color: "white",
+              },
+            }),
+            ...(snackbar.severity === 'warning' && {
+              background: `linear-gradient(135deg, ${colors.warning}, #F57C00)`,
+              "& .MuiAlert-icon": {
+                color: "white",
+              },
+            }),
+            ...(snackbar.severity === 'info' && {
+              background: `linear-gradient(135deg, ${colors.info}, #1976D2)`,
+              "& .MuiAlert-icon": {
+                color: "white",
+              },
+            }),
+          }}
         >
-          {snackbar.message}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            
+            <span>{snackbar.message}</span>
+          </Box>
         </Alert>
       </Snackbar>
     </Box>

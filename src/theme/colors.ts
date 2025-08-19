@@ -3,7 +3,7 @@ export const colors = {
   // Primary colors (Orange from the design)
   primary: {
     main: '#FF6B35',      // Orange from the design
-    light: '#FF8A65',     // Lighter orange
+    light: '#F7A940',     // Lighter orange
     dark: '#E64A19',      // Darker orange
     contrastText: '#FFFFFF'
   },

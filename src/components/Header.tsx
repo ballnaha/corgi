@@ -10,12 +10,13 @@ import {
   Skeleton,
   Avatar,
 } from "@mui/material";
-import { ShoppingCart, Search, Tune } from "@mui/icons-material";
+import { Search, Tune } from "@mui/icons-material";
 import { styled, alpha } from "@mui/material/styles";
 import { colors } from "@/theme/colors";
 import { useSession } from "next-auth/react";
 import { useUserDisplayName } from "@/hooks/useUserDisplayName";
 import Link from "next/link";
+import Image from "next/image";
 
 const MobileHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -212,7 +213,15 @@ export default function Header({
                   },
                 }}
               >
-                <ShoppingCart fontSize="small" />
+                <Image
+                  src="/images/icon-cart.png"
+                  alt="Shopping Cart"
+                  width={20}
+                  height={20}
+                  style={{
+                    filter: "brightness(0) saturate(100%) invert(44%) sepia(5%) saturate(629%) hue-rotate(314deg) brightness(92%) contrast(95%)",
+                  }}
+                />
               </Badge>
             </IconButton>
           </Box>

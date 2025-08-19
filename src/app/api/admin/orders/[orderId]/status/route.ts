@@ -32,7 +32,7 @@ export async function PATCH(request: NextRequest, context: RouteParams) {
 
     const { orderId } = context.params;
     const body = await request.json();
-    const { status } = body;
+    const { status, adminComment } = body;
 
     // ตรวจสอบว่า status ที่ส่งมาถูกต้อง (ตาม schema)
     const validStatuses: OrderStatus[] = [
@@ -60,13 +60,14 @@ export async function PATCH(request: NextRequest, context: RouteParams) {
       );
     }
 
-    // อัปเดตสถานะคำสั่งซื้อ
+    // อัปเดตสถานะคำสั่งซื้อ และบันทึก admin comment
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: {
         status: status as any, // ใช้ any เพื่อหลีกเลี่ยงปัญหา type ชั่วคราว
+        adminComment: adminComment?.trim() || null, // บันทึก admin comment
         updatedAt: new Date(),
-      },
+      } as any,
       include: {
         orderItems: {
           include: {
@@ -115,8 +116,8 @@ export async function PATCH(request: NextRequest, context: RouteParams) {
       },
     });
 
-    // TODO: ส่งการแจ้งเตือนไปยังลูกค้าผ่าน Line หรือ Email เมื่อสถานะเปลี่ยน
-    // await sendOrderStatusNotification(updatedOrder, status);
+    // Admin comment จะถูกบันทึกไว้ใน order แล้ว
+    console.log("✅ Order status updated successfully with admin comment");
 
     return NextResponse.json({
       success: true,

@@ -117,6 +117,38 @@ export default function CheckoutPage() {
     return product.imageUrl || product.image || "/images/icon-corgi.png";
   };
 
+  // Get background color based on product ID (same as ProductCard)
+  const getCardBgColor = (productId: string) => {
+    const pastelColors = [
+      colors.cardBg.pink,     // Soft pink
+      colors.cardBg.mint,     // Soft mint  
+      colors.cardBg.purple,   // Soft lavender
+      colors.cardBg.coral,    // Soft coral
+      colors.cardBg.blue,     // Soft blue
+      colors.cardBg.green,    // Soft green
+    ];
+    
+    // Use product id to get consistent color for each product
+    const colorIndex = Math.abs(productId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % pastelColors.length;
+    return pastelColors[colorIndex];
+  };
+
+  // Get category icon
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "dogs":
+        return "🐕";
+      case "cats":
+        return "🐱";
+      case "birds":
+        return "🐦";
+      case "fish":
+        return "🐠";
+      default:
+        return "🐾";
+    }
+  };
+
   const router = useRouter();
   const { data: session, status } = useSession();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -1003,14 +1035,45 @@ export default function CheckoutPage() {
                 borderTop: index > 0 ? "1px solid rgba(0,0,0,0.05)" : "none",
               }}
             >
-              <Avatar
-                src={getMainImage(item.product)}
-                alt={item.product.name}
-                sx={{ width: 64, height: 64, borderRadius: 3 }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/images/icon-corgi.png";
+              <Box
+                sx={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 2,
+                  background: `linear-gradient(135deg, ${getCardBgColor(item.product.id)} 0%, ${getCardBgColor(item.product.id)}DD 100%)`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  overflow: "hidden",
                 }}
-              />
+              >
+                {getMainImage(item.product) && getMainImage(item.product) !== "/images/icon-corgi.png" ? (
+                  <Box
+                    component="img"
+                    src={getMainImage(item.product)}
+                    alt={item.product.name}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/images/icon-corgi.png";
+                    }}
+                    sx={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      borderRadius: 3,
+                    }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      fontSize: "1.5rem",
+                      textAlign: "center",
+                    }}
+                  >
+                    {getCategoryIcon(item.product.category)}
+                  </Box>
+                )}
+              </Box>
               <Box sx={{ flex: 1 }}>
                 <Typography
                   variant="subtitle1"
@@ -1746,7 +1809,7 @@ export default function CheckoutPage() {
                           textAlign: "center"
                         }}
                       >
-                        💡 ยอดคงเหลือชำระเมื่อมารับสัตว์เลี้ยง
+                        💡 ยอดคงเหลือชำระเมื่อรับสัตว์เลี้ยง
                       </Typography>
                     </Box>
                   </Box>
@@ -1769,7 +1832,7 @@ export default function CheckoutPage() {
                       fontWeight: 500
                     }}
                   >
-                    ✅ ชำระเต็มจำนวนเลย
+                    ชำระเต็มจำนวน
                   </Typography>
                 </Box>
               )}

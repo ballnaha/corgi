@@ -193,13 +193,13 @@ export default function AdminDashboard() {
   const getStatusText = (status: string) => {
     switch (status) {
       case "PENDING":
-        return "รอการยืนยัน";
-      case "PAYMENT_PENDING":
         return "รอการชำระเงิน";
+      case "PAYMENT_PENDING":
+        return "รอตรวจสอบการชำระเงิน";
       case "CONFIRMED":
-        return "ยืนยันแล้ว";
+        return "ยืนยันการชำระเงิน";
       case "PROCESSING":
-        return "กำลังดำเนินการ";
+        return "กำลังจัดเตรียมสินค้า";
       case "SHIPPED":
         return "จัดส่งแล้ว";
       case "DELIVERED":

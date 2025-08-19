@@ -85,6 +85,16 @@ interface OrderItem {
   };
 }
 
+interface PaymentNotification {
+  id: string;
+  transferAmount: number;
+  transferDate: Date | string;
+  paymentSlipData?: string | null;
+  paymentSlipMimeType?: string | null;
+  paymentSlipFileName?: string | null;
+  submittedAt: Date | string;
+}
+
 interface Order {
   id: string;
   status: string;
@@ -99,6 +109,8 @@ interface Order {
   paymentType?: string;
   depositAmount?: number | null;
   remainingAmount?: number | null;
+  adminComment?: string | null;
+  paymentNotifications?: PaymentNotification[];
   items: OrderItem[];
 }
 
@@ -121,6 +133,7 @@ export default function ProfilePage() {
   const [categories, setCategories] = useState<
     { key: string; name: string; icon?: string }[]
   >([]);
+  const [statusFilter, setStatusFilter] = useState("all");
   // Bottom navigation is now global in RootLayout
   const [dataFetched, setDataFetched] = useState(false);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -479,23 +492,31 @@ export default function ProfilePage() {
     }
   };
 
-  // Filter orders by category
+  // Filter orders by category and status
   const getFilteredOrders = () => {
-    if (selectedCategory === "all") {
-      return orders;
+    let filteredOrders = orders;
+
+    // Filter by category
+    if (selectedCategory !== "all") {
+      const dynamicKeys = categories.map((c) => c.key);
+
+      if (selectedCategory === "other") {
+        filteredOrders = filteredOrders.filter((order) =>
+          order.items.some((item) => !dynamicKeys.includes(item.product.category))
+        );
+      } else {
+        filteredOrders = filteredOrders.filter((order) =>
+          order.items.some((item) => item.product.category === selectedCategory)
+        );
+      }
     }
 
-    const dynamicKeys = categories.map((c) => c.key);
-
-    if (selectedCategory === "other") {
-      return orders.filter((order) =>
-        order.items.some((item) => !dynamicKeys.includes(item.product.category))
-      );
+    // Filter by status
+    if (statusFilter !== "all") {
+      filteredOrders = filteredOrders.filter((order) => order.status === statusFilter);
     }
 
-    return orders.filter((order) =>
-      order.items.some((item) => item.product.category === selectedCategory)
-    );
+    return filteredOrders;
   };
 
   // Get category icon
@@ -512,6 +533,22 @@ export default function ProfilePage() {
       default:
         return "🐾";
     }
+  };
+
+  // Get background color based on product ID (same as ProductCard)
+  const getCardBgColor = (productId: string) => {
+    const pastelColors = [
+      colors.cardBg.pink,     // Soft pink
+      colors.cardBg.mint,     // Soft mint  
+      colors.cardBg.purple,   // Soft lavender
+      colors.cardBg.coral,    // Soft coral
+      colors.cardBg.blue,     // Soft blue
+      colors.cardBg.green,    // Soft green
+    ];
+    
+    // Use product id to get consistent color for each product
+    const colorIndex = Math.abs(productId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % pastelColors.length;
+    return pastelColors[colorIndex];
   };
 
   // Format date
@@ -532,7 +569,7 @@ export default function ProfilePage() {
       case "PAYMENT_PENDING":
         return "รอตรวจสอบการชำระเงิน";
       case "CONFIRMED":
-        return "ยืนยันแล้ว";
+        return "ยืนยันการชำระเงิน";
       case "PROCESSING":
         return "กำลังจัดเตรียมสินค้า";
       case "SHIPPED":
@@ -850,7 +887,7 @@ export default function ProfilePage() {
         </Typography>
 
         {/* Category Filter */}
-        <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+        <Box sx={{ mb: { xs: 2, sm: 3 }, display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 2 }}>
           <FormControl fullWidth>
             <InputLabel
               id="category-filter-label"
@@ -891,6 +928,75 @@ export default function ProfilePage() {
               </MenuItem>
             </Select>
           </FormControl>
+
+          <FormControl fullWidth>
+            <InputLabel
+              id="status-filter-label"
+              sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
+            >
+              กรองตามสถานะ
+            </InputLabel>
+            <Select
+              labelId="status-filter-label"
+              value={statusFilter}
+              label="กรองตามสถานะ"
+              onChange={(e) => setStatusFilter(e.target.value)}
+              sx={{
+                borderRadius: { xs: 1.5, sm: 2 },
+                fontSize: { xs: "0.875rem", sm: "1rem" },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: { xs: 1.5, sm: 2 },
+                },
+                "& .MuiSelect-select": {
+                  py: { xs: 1.5, sm: 2 },
+                },
+              }}
+            >
+              <MenuItem value="all">ทุกสถานะ</MenuItem>
+              <MenuItem value="PENDING">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: "1rem" }}>⏳</span>
+                  รอการชำระเงิน
+                </Box>
+              </MenuItem>
+              <MenuItem value="PAYMENT_PENDING">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: "1rem" }}>🔍</span>
+                  รอตรวจสอบการชำระเงิน
+                </Box>
+              </MenuItem>
+              <MenuItem value="CONFIRMED">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: "1rem" }}>✅</span>
+                  ยืนยันการชำระเงิน
+                </Box>
+              </MenuItem>
+              <MenuItem value="PROCESSING">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: "1rem" }}>📦</span>
+                  กำลังเตรียมสินค้า
+                </Box>
+              </MenuItem>
+              <MenuItem value="SHIPPED">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: "1rem" }}>🚚</span>
+                  จัดส่งแล้ว
+                </Box>
+              </MenuItem>
+              <MenuItem value="DELIVERED">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: "1rem" }}>📬</span>
+                  ส่งมอบสำเร็จ
+                </Box>
+              </MenuItem>
+              <MenuItem value="CANCELLED">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: "1rem" }}>❌</span>
+                  ยกเลิกคำสั่งซื้อ
+                </Box>
+              </MenuItem>
+            </Select>
+          </FormControl>
         </Box>
 
         {/* Purchase History Content */}
@@ -913,8 +1019,18 @@ export default function ProfilePage() {
                     variant="h6"
                     sx={{ mb: 2, color: colors.text.secondary }}
                   >
-                    ยังไม่มีประวัติการซื้อในหมวดนี้
+                    {orders.length === 0 
+                      ? "ยังไม่มีประวัติการซื้อ" 
+                      : "ไม่พบคำสั่งซื้อที่ตรงกับเงื่อนไขการกรอง"}
                   </Typography>
+                  {orders.length > 0 && (
+                    <Typography
+                      variant="body2"
+                      sx={{ color: colors.text.secondary }}
+                    >
+                      ลองเปลี่ยนหมวดหมู่หรือสถานะการกรอง
+                    </Typography>
+                  )}
                 </Box>
               ) : (
                 getFilteredOrders().map((order) => (
@@ -924,7 +1040,7 @@ export default function ProfilePage() {
                       borderRadius: { xs: 2, sm: 3 },
                       boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
                       overflow: "hidden",
-                      mx: { xs: -2, sm: -3 },
+                      
                       width: "100%",
                     }}
                   >
@@ -980,21 +1096,35 @@ export default function ProfilePage() {
                             },
                           }}
                         >
-                          <IconButton
-                            size="small"
+                          {/* Payment Notification Status */}
+                          {order.paymentNotifications && order.paymentNotifications.length > 0 && (
+                            <Chip
+                              label="💳 แจ้งชำระแล้ว"
+                              size="small"
+                              sx={{
+                                color: colors.success,
+                                backgroundColor: `${colors.success}20`,
+                                fontWeight: "bold",
+                                fontSize: { xs: "0.65rem", sm: "0.7rem" },
+                                height: { xs: 22, sm: 26 },
+                                border: `1px solid ${colors.success}40`,
+                              }}
+                            />
+                          )}
+
+                          <Chip
                             onClick={() => handleOrderDetailOpen(order)}
+                            label="ดูรายละเอียด"
+                            size="small"
                             sx={{
+                              color: colors.text.primary,
                               backgroundColor: colors.background.paper,
-                              "&:hover": {
-                                backgroundColor: colors.primary.light,
-                              },
                               border: "1px solid rgba(0,0,0,0.1)",
-                              width: { xs: 32, sm: 36 },
-                              height: { xs: 32, sm: 36 },
+                              cursor: "pointer",
+                              
                             }}
-                          >
-                            <Info fontSize="small" />
-                          </IconButton>
+                          />
+
                           <Chip
                             label={getStatusInThai(order.status)}
                             size="small"
@@ -1003,7 +1133,7 @@ export default function ProfilePage() {
                               backgroundColor: `${getStatusColor(
                                 order.status
                               )}20`,
-                              fontWeight: "bold",
+                              fontWeight: "500",
                               fontSize: { xs: "0.7rem", sm: "0.75rem" },
                               height: { xs: 24, sm: 28 },
                             }}
@@ -1026,35 +1156,49 @@ export default function ProfilePage() {
                         >
                           {item.product.imageUrl ? (
                             <Box
-                              component="img"
-                              src={item.product.imageUrl}
-                              alt={item.product.name}
-                              loading="lazy"
-                              onClick={() => handleProductClick(item.product)}
                               sx={{
                                 width: { xs: 80, sm: 96 },
                                 height: { xs: 80, sm: 96 },
                                 borderRadius: { xs: 1.5, sm: 2 },
-                                objectFit: "cover",
+                                background: `linear-gradient(135deg, ${getCardBgColor(item.product.id)} 0%, ${getCardBgColor(item.product.id)}DD 100%)`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
                                 flexShrink: 0,
                                 border: `1px solid ${colors.background.default}`,
-                                backgroundColor: colors.background.default,
                                 cursor: "pointer",
                                 transition: "transform 0.2s ease",
                                 "&:hover": {
                                   transform: "scale(1.05)",
                                 },
+                                overflow: "hidden",
                               }}
-                            />
-                          ) : (
+                            >
+                              <Box
+                                component="img"
+                                src={item.product.imageUrl}
+                                alt={item.product.name}
+                                loading="lazy"
+                                onClick={() => handleProductClick(item.product)}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = "/images/icon-corgi.png";
+                                }}
+                                sx={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                  borderRadius: { xs: 1.5, sm: 2 },
+                                }}
+                              />
+                            </Box>
+                                                ) : (
                             <Box
                               onClick={() => handleProductClick(item.product)}
                               sx={{
                                 width: { xs: 80, sm: 96 },
                                 height: { xs: 80, sm: 96 },
                                 borderRadius: { xs: 1.5, sm: 2 },
-                                background:
-                                  "linear-gradient(135deg, #FFB74D 0%, #FF9800 100%)",
+                                background: `linear-gradient(135deg, ${getCardBgColor(item.product.id)} 0%, ${getCardBgColor(item.product.id)}DD 100%)`,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
@@ -1141,31 +1285,184 @@ export default function ProfilePage() {
                       ))}
 
                       {/* Order Total */}
-                      {order.items.length > 1 && (
+                      <Box
+                        sx={{
+                          mt: { xs: 1.5, sm: 2 },
+                          pt: { xs: 1.5, sm: 2 },
+                          borderTop: `1px solid ${colors.background.default}`,
+                        }}
+                      >
+                        {/* Deposit Information */}
+                        {order.paymentType === "DEPOSIT_PAYMENT" ? (
+                          <Box sx={{ mb: 2 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 1,
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{ color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
+                              >
+                                ราคาเต็ม
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{ fontWeight: "bold", fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
+                              >
+                                ฿{((order.depositAmount || 0) + (order.remainingAmount || 0)).toLocaleString()}
+                              </Typography>
+                            </Box>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 1,
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{ color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
+                              >
+                                ยอดมัดจำ
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{ fontWeight: "bold", color: colors.primary.main, fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
+                              >
+                                ฿{(order.depositAmount || 0).toLocaleString()}
+                              </Typography>
+                            </Box>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                mb: 1,
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                sx={{ color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
+                              >
+                                คงเหลือ
+                              </Typography>
+                              <Typography
+                                variant="body2"
+                                sx={{ fontWeight: "bold", color: colors.warning, fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
+                              >
+                                ฿{(order.remainingAmount || 0).toLocaleString()}
+                              </Typography>
+                            </Box>
+                            {/* Shipping Fee */}
+                            {order.shippingFee !== undefined && order.shippingFee > 0 && (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  mb: 1,
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{ color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
+                                >
+                                  ค่าจัดส่ง
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: "bold", color: colors.info, fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
+                                >
+                                  ฿{order.shippingFee.toLocaleString()}
+                                </Typography>
+                              </Box>
+                            )}
+                          </Box>
+                        ) : (
+                          <Box>
+                            {/* Shipping Fee for full payment */}
+                            {order.shippingFee !== undefined && order.shippingFee > 0 && (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  mb: 1,
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{ color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
+                                >
+                                  ค่าจัดส่ง
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: "bold", color: colors.info, fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
+                                >
+                                  ฿{order.shippingFee.toLocaleString()}
+                                </Typography>
+                              </Box>
+                            )}
+                            <Typography
+                              variant="h6"
+                              sx={{
+                                color: colors.text.primary,
+                                fontWeight: "bold",
+                                textAlign: "right",
+                                fontSize: { xs: "1rem", sm: "1.25rem" },
+                              }}
+                            >
+                              รวม: ฿{order.totalAmount.toLocaleString()}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+
+                      {/* Admin Comment */}
+                      {order.adminComment && (
                         <Box
                           sx={{
-                            mt: { xs: 1.5, sm: 2 },
-                            pt: { xs: 1.5, sm: 2 },
-                            borderTop: `1px solid ${colors.background.default}`,
+                            mt: 2,
+                            p: 2,
+                            backgroundColor: "#f3f4f6",
+                            borderRadius: 2,
+                            borderLeft: `4px solid ${colors.info}`,
                           }}
                         >
                           <Typography
-                            variant="h6"
+                            variant="body2"
                             sx={{
-                              color: colors.text.primary,
+                              color: colors.info,
                               fontWeight: "bold",
-                              textAlign: "right",
-                              fontSize: { xs: "1rem", sm: "1.25rem" },
+                              mb: 1,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
                             }}
                           >
-                            รวม: ฿{order.totalAmount.toLocaleString()}
+                            💬 ข้อความจากผู้ดูแลระบบ
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: colors.text.primary,
+                              lineHeight: 1.6,
+                            }}
+                          >
+                            {order.adminComment}
                           </Typography>
                         </Box>
                       )}
 
-                      {/* Payment Button - Only show for PENDING or PROCESSING orders */}
+                      {/* Payment Button - Only show for PENDING or PAYMENT_PENDING orders */}
                       {(order.status === "PENDING" ||
-                        order.status === "PROCESSING") &&
+                        order.status === "PAYMENT_PENDING") &&
                         order.orderNumber && (
                           <Box
                             sx={{
@@ -1645,13 +1942,15 @@ export default function ProfilePage() {
                   }}
                 >
                   <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
-                    ยอดรวม
+                    {selectedOrder.paymentType === "DEPOSIT_PAYMENT" ? "ราคาเต็ม" : "ยอดรวม"}
                   </Typography>
                   <Typography
                     variant="h6"
                     sx={{ fontWeight: "bold", color: colors.primary.main }}
                   >
-                    ฿{selectedOrder.totalAmount.toLocaleString()}
+                    ฿{selectedOrder.paymentType === "DEPOSIT_PAYMENT" 
+                      ? ((selectedOrder.depositAmount || 0) + (selectedOrder.remainingAmount || 0)).toLocaleString()
+                      : selectedOrder.totalAmount.toLocaleString()}
                   </Typography>
                 </Box>
               </CardContent>
@@ -1863,6 +2162,145 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
+            {/* Admin Comment */}
+            {selectedOrder.adminComment && (
+              <Card sx={{ mb: 3, borderRadius: 3 }}>
+                <CardContent>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: "bold", mb: 2, color: colors.text.primary }}
+                  >
+                    💬 ข้อความจากผู้ดูแลระบบ
+                  </Typography>
+                  <Box
+                    sx={{
+                      p: 2,
+                      backgroundColor: "#f3f4f6",
+                      borderRadius: 2,
+                      borderLeft: `4px solid ${colors.info}`,
+                    }}
+                  >
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color: colors.text.primary,
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {selectedOrder.adminComment}
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Payment Notifications */}
+            {selectedOrder.paymentNotifications && selectedOrder.paymentNotifications.length > 0 && (
+              <Card sx={{ mb: 3, borderRadius: 3 }}>
+                <CardContent>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: "bold", mb: 2, color: colors.text.primary }}
+                  >
+                    การแจ้งชำระเงิน
+                  </Typography>
+
+                  {selectedOrder.paymentNotifications.map((notification, index) => (
+                    <Box key={notification.id} sx={{ mb: index < selectedOrder.paymentNotifications!.length - 1 ? 3 : 0 }}>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                        <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
+                          การแจ้งชำระ #{index + 1}
+                        </Typography>
+ 
+                      </Box>
+
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.text.secondary }}>
+                          จำนวนเงิน
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                          ฿{notification.transferAmount.toLocaleString()}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                        <Typography variant="body2" sx={{ color: colors.text.secondary }}>
+                          วันที่โอน
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                          {formatDate(notification.transferDate)}
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+                        <Typography variant="body2" sx={{ color: colors.text.secondary }}>
+                          วันที่แจ้ง
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                          {formatDate(notification.submittedAt)}
+                        </Typography>
+                      </Box>
+
+                                                  {/* Payment Slip */}
+                            {notification.paymentSlipData && (
+                              <Box sx={{ mt: 2 }}>
+                                <Typography variant="body2" sx={{ color: colors.text.secondary, mb: 1 }}>
+                                  หลักฐานการโอนเงิน
+                                </Typography>
+                                <Box
+                                  component="img"
+                                  src={notification.paymentSlipData?.startsWith('data:') 
+                                    ? notification.paymentSlipData 
+                                    : notification.paymentSlipData || ''}
+                                  alt="Payment Slip"
+                                  onError={(e) => {
+                                    console.error("Failed to load payment slip image:", notification.paymentSlipData);
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                  sx={{
+                                    width: "100%",
+                                    maxWidth: 300,
+                                    height: "auto",
+                                    borderRadius: 2,
+                                    border: `1px solid ${colors.background.default}`,
+                                    cursor: "pointer",
+                                    "&:hover": {
+                                      transform: "scale(1.02)",
+                                    },
+                                    transition: "transform 0.2s ease",
+                                  }}
+                                  onClick={() => {
+                                    // Open image in new tab for full view
+                                    const imageUrl = notification.paymentSlipData?.startsWith('data:') 
+                                      ? notification.paymentSlipData 
+                                      : notification.paymentSlipData || '';
+                                    
+                                    const newWindow = window.open();
+                                    if (newWindow) {
+                                      newWindow.document.write(`
+                                        <html>
+                                          <head><title>หลักฐานการโอนเงิน</title></head>
+                                          <body style="margin:0;padding:20px;background:#f5f5f5;display:flex;justify-content:center;align-items:center;min-height:100vh;">
+                                            <img src="${imageUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.1);" />
+                                          </body>
+                                        </html>
+                                      `);
+                                      newWindow.document.close();
+                                    }
+                                  }}
+                                />
+                              </Box>
+                            )}
+
+                      {index < selectedOrder.paymentNotifications!.length - 1 && (
+                        <Divider sx={{ mt: 2 }} />
+                      )}
+                    </Box>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
             {/* Items List */}
             <Typography
               variant="h6"
@@ -1880,23 +2318,39 @@ export default function ProfilePage() {
                     <Box sx={{ display: "flex", gap: 2 }}>
                       {item.product.imageUrl ? (
                         <Box
-                          component="img"
-                          src={item.product.imageUrl}
-                          alt={item.product.name}
-                          onClick={() => handleProductClick(item.product)}
                           sx={{
                             width: 60,
                             height: 60,
                             borderRadius: 2,
-                            objectFit: "cover",
+                            background: `linear-gradient(135deg, ${getCardBgColor(item.product.id)} 0%, ${getCardBgColor(item.product.id)}DD 100%)`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
                             flexShrink: 0,
                             cursor: "pointer",
                             transition: "transform 0.2s ease",
                             "&:hover": {
                               transform: "scale(1.1)",
                             },
+                            overflow: "hidden",
                           }}
-                        />
+                        >
+                          <Box
+                            component="img"
+                            src={item.product.imageUrl}
+                            alt={item.product.name}
+                            onClick={() => handleProductClick(item.product)}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = "/images/icon-corgi.png";
+                            }}
+                            sx={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              borderRadius: 2,
+                            }}
+                          />
+                        </Box>
                       ) : (
                         <Box
                           onClick={() => handleProductClick(item.product)}
@@ -1904,8 +2358,7 @@ export default function ProfilePage() {
                             width: 60,
                             height: 60,
                             borderRadius: 2,
-                            background:
-                              "linear-gradient(135deg, #FFB74D 0%, #FF9800 100%)",
+                            background: `linear-gradient(135deg, ${getCardBgColor(item.product.id)} 0%, ${getCardBgColor(item.product.id)}DD 100%)`,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -1993,7 +2446,7 @@ export default function ProfilePage() {
             {/* Action Buttons */}
             <Box sx={{ display: "flex", gap: 2, mt: 3 }}>
               {(selectedOrder.status === "PENDING" ||
-                selectedOrder.status === "PROCESSING") &&
+                selectedOrder.status === "PAYMENT_PENDING") &&
                 selectedOrder.orderNumber && (
                   <Button
                     variant="contained"

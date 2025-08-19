@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Box, Typography } from "@mui/material";
-import { ChatBubbleOutline, Pets, Person } from "@mui/icons-material";
+
 import Image from "next/image";
 import { colors } from "@/theme/colors";
 import { handleLiffNavigation, isInLiffEnvironment } from "@/lib/liff-navigation";
@@ -44,9 +44,9 @@ export default function BottomNavigation({
 
   const tabs = [
     { id: "home", icon: "custom", label: "หน้าหลัก" },
-    { id: "favorites", icon: Pets, label: "รายการโปรด" },
+    { id: "favorites", icon: "custom", label: "รายการโปรด" },
     //{ id: "calendar", icon: ChatBubbleOutline, label: "ปฏิทิน" },
-    { id: "profile", icon: Person, label: "ข้อมูลส่วนตัว" },
+    { id: "profile", icon: "custom", label: "ข้อมูลส่วนตัว" },
   ];
 
   const getHrefForTab = (tabId: string) => {
@@ -135,7 +135,6 @@ export default function BottomNavigation({
         }}
       />
       {tabs.map((tab) => {
-        const Icon = tab.icon;
         const isActive =
           currentActiveTab === tab.id || derivedActiveTab === tab.id;
         const isNavigable =
@@ -159,10 +158,22 @@ export default function BottomNavigation({
               height: 48,
             }}
           >
-            {tab.id === "home" ? (
+            {tab.icon === "custom" ? (
               <Image
-                src="/images/icon-home.png"
-                alt="Home"
+                src={
+                  tab.id === "home" 
+                    ? "/images/icon-home.png" 
+                    : tab.id === "favorites"
+                    ? "/images/icon-paw.png"
+                    : "/images/icon-user.png"
+                }
+                alt={
+                  tab.id === "home" 
+                    ? "Home" 
+                    : tab.id === "favorites"
+                    ? "Favorites"
+                    : "User Profile"
+                }
                 width={20}
                 height={20}
                 style={{
@@ -173,15 +184,7 @@ export default function BottomNavigation({
                   transition: "all 0.3s ease",
                 }}
               />
-            ) : (
-              <Icon
-                fontSize="small"
-                sx={{
-                  color: isActive ? colors.secondary.main : colors.text.secondary,
-                  mb: isActive ? 0 : 0.5,
-                }}
-              />
-            )}
+            ) : null}
             <Typography
               variant="caption"
               sx={{

@@ -85,29 +85,30 @@ export default function BannersAdminPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Predefined gradient options
-  const gradientOptions = [
-    {
-      name: "Orange Pastel",
-      value: "linear-gradient(135deg, #FFE0B2 0%, #FFF3E0 50%, #FFCC80 100%)",
-    },
-    {
-      name: "Pink Pastel",
-      value: "linear-gradient(135deg, #F8BBD9 0%, #F3E5F5 50%, #FCE4EC 100%)",
-    },
-    {
-      name: "Green Pastel",
-      value: "linear-gradient(135deg, #B2DFDB 0%, #E0F2F1 50%, #A5D6A7 100%)",
-    },
-    {
-      name: "Blue Pastel",
-      value: "linear-gradient(135deg, #BBDEFB 0%, #E3F2FD 50%, #90CAF9 100%)",
-    },
-    {
-      name: "Purple Pastel",
-      value: "linear-gradient(135deg, #E1BEE7 0%, #F3E5F5 50%, #CE93D8 100%)",
-    },
-  ];
+// Predefined gradient options (with blue & orange tones)
+const gradientOptions = [
+  {
+    name: "Orange Vibrant",
+    value: "linear-gradient(135deg, #FFB74D 0%, #FB8C00 50%, #F57C00 100%)",
+  },
+  {
+    name: "Blue Vibrant",
+    value: "linear-gradient(135deg, #64B5F6 0%, #42A5F5 50%, #1E88E5 100%)",
+  },
+  {
+    name: "Pink Pastel",
+    value: "linear-gradient(135deg, #F8BBD9 0%, #F3E5F5 50%, #FCE4EC 100%)",
+  },
+  {
+    name: "Green Pastel",
+    value: "linear-gradient(135deg, #B2DFDB 0%, #E0F2F1 50%, #A5D6A7 100%)",
+  },
+  {
+    name: "Purple Pastel",
+    value: "linear-gradient(135deg, #E1BEE7 0%, #F3E5F5 50%, #CE93D8 100%)",
+  },
+];
+
 
   // Load banners
   const loadBanners = async () => {

@@ -432,9 +432,12 @@ export default function PaymentNotificationPage() {
                   },
                 }}
               >
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
                   💡 กรุณาโอนเงินตามจำนวนที่ระบุในคำสั่งซื้อ
                   และแจ้งชำระเงินภายใน 24 ชั่วโมง
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 400, color: "#1976d2" }}>
+                  📝 หมายเหตุ: หากแนบรูปหลักฐานผิด สามารถแจ้งชำระเงินใหม่ได้อีกครั้ง
                 </Typography>
               </Alert>
             </Box>

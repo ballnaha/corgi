@@ -28,10 +28,10 @@ export default function BannerSection() {
   const fallbackBanners: Banner[] = [
     {
       id: "1",
-      title: "อุ๋ง อุ๋ง",
-      subtitle: "Pet Shop",
-      background: 'linear-gradient(135deg, #FFE0B2 0%, #FFF3E0 50%, #FFCC80 100%)',
-      imageUrl: "/images/oong_logo10.png",
+      title: "PetShop",
+      subtitle: "ร้านค้าสัตว์เลี้ยง",
+      background: 'linear-gradient(135deg, #FFB74D 0%, #FB8C00 50%, #F57C00 100%)',
+      imageUrl: "/images/oong_icon.png",
       imageAlt: "Pet Shop Promotion",
       linkUrl: null,
       sortOrder: 0
@@ -155,7 +155,7 @@ export default function BannerSection() {
         <Typography
           variant="h4"
           sx={{
-            color: "black",
+            color: "white",
             fontWeight: '600',
             fontSize: '1.4rem',
             mb: 0.5,
@@ -168,7 +168,7 @@ export default function BannerSection() {
           <Typography
             variant="h6"
             sx={{
-              color: "black",
+              color: "white",
               fontWeight: '400',
               fontSize: '0.95rem',
               lineHeight: 1.2,
@@ -197,8 +197,8 @@ export default function BannerSection() {
         <Image
           src={banner.imageUrl}
           alt={banner.imageAlt}
-          width={180}
-          height={180}
+          width={140}
+          height={140}
           style={{
             objectFit: 'contain',
             borderRadius: '12px',
@@ -208,7 +208,7 @@ export default function BannerSection() {
         />
       </Box>
 
-      {/* Background decorative stars */}
+      {/* Background decorative stars and paws */}
       <Box
         sx={{
           position: 'absolute',
@@ -221,18 +221,30 @@ export default function BannerSection() {
       >
         ✨
       </Box>
+      
+      {/* Paw icon decorations */}
       <Box
         sx={{
           position: 'absolute',
           right: 80,
           top: 35,
-          color: 'rgba(255, 255, 255, 0.3)',
-          fontSize: '0.8rem',
-          zIndex: 1
+          zIndex: 1,
+          opacity: 0.3,
+          transform: 'rotate(-10deg)'
         }}
       >
-        ⭐
+        <Image
+          src="/images/icon-paw.png"
+          alt="paw"
+          width={24}
+          height={24}
+          style={{
+            filter: 'brightness(0) invert(1)', // Makes it white
+            opacity: 1
+          }}
+        />
       </Box>
+      
       <Box
         sx={{
           position: 'absolute',
@@ -244,6 +256,117 @@ export default function BannerSection() {
         }}
       >
         ✨
+      </Box>
+      
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 30,
+          top: 15,
+          zIndex: 1,
+          opacity: 0.25,
+          transform: 'rotate(-15deg)'
+        }}
+      >
+        <Image
+          src="/images/icon-paw.png"
+          alt="paw"
+          width={24}
+          height={24}
+          style={{
+            filter: 'brightness(0) invert(1)', // Makes it white
+            opacity: 1
+          }}
+        />
+      </Box>
+      
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 60,
+          bottom: 30,
+          zIndex: 1,
+          opacity: 0.5,
+          transform: 'rotate(25deg)'
+        }}
+      >
+        <Image
+          src="/images/icon-paw.png"
+          alt="paw"
+          width={18}
+          height={18}
+          style={{
+            filter: 'brightness(0) invert(1)', // Makes it white
+            opacity: 0.6
+          }}
+        />
+      </Box>
+      
+      <Box
+        sx={{
+          position: 'absolute',
+          right: 110,
+          bottom: 10,
+          zIndex: 1,
+          opacity: 0.15,
+          transform: 'rotate(45deg)'
+        }}
+      >
+        <Image
+          src="/images/icon-paw.png"
+          alt="paw"
+          width={18}
+          height={18}
+          style={{
+            filter: 'brightness(0) invert(1)', // Makes it white
+            opacity: 0.9
+          }}
+        />
+      </Box>
+      
+      {/* Additional paw decorations using SVG */}
+      <Box
+        sx={{
+          position: 'absolute',
+          left: 15,
+          bottom: 10,
+          zIndex: 1,
+          opacity: 0.1,
+          transform: 'rotate(-30deg)'
+        }}
+      >
+        <Image
+          src="/images/paw-hero.svg"
+          alt="paw"
+          width={20}
+          height={20}
+          style={{
+            filter: 'brightness(0) invert(1)', // Makes it white
+            opacity: 0.5
+          }}
+        />
+      </Box>
+      
+      <Box
+        sx={{
+          position: 'absolute',
+          right: 25,
+          bottom: 40,
+          zIndex: 1,
+          opacity: 0.12,
+          transform: 'rotate(60deg)'
+        }}
+      >
+        <Image
+          src="/images/paw-hero.svg"
+          alt="paw"
+          width={15}
+          height={15}
+          style={{
+            filter: 'brightness(0) invert(1)', // Makes it white
+            opacity: 0.7
+          }}
+        />
       </Box>
 
       {/* Background decorative circles */}

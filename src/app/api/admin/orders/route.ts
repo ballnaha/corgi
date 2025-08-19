@@ -153,6 +153,20 @@ export async function GET(request: NextRequest) {
               pictureUrl: true,
             },
           },
+          paymentNotifications: {
+            select: {
+              id: true,
+              transferAmount: true,
+              transferDate: true,
+              paymentSlipData: true,
+              paymentSlipMimeType: true,
+              paymentSlipFileName: true,
+              submittedAt: true,
+            },
+            orderBy: {
+              submittedAt: 'desc',
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",

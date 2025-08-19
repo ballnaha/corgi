@@ -2,10 +2,11 @@
 
 import React from "react";
 import { Card, CardMedia, Typography, Box, IconButton, Chip } from "@mui/material";
-import { Pets } from "@mui/icons-material";
+
 import Image from "next/image";
 import { colors } from "@/theme/colors";
 import { Product } from "@/types";
+import { LocationOn } from "@mui/icons-material";
 
 interface ProductCardProps {
   product: Product;
@@ -177,8 +178,8 @@ export default function ProductCard({
           <Image
             src="/images/oho.png"
             alt="Surprise effect!"
-            width={20}
-            height={20}
+            width={25}
+            height={25}
             style={{
               objectFit: "contain",
               filter: "drop-shadow(0 6px 12px rgba(255, 165, 0, 0.4)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))",
@@ -218,11 +219,16 @@ export default function ProductCard({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              zIndex: 1000,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
             }}
           >
             <Typography
               variant="subtitle1"
-              sx={{ color: colors.secondary.main, fontWeight: "bold" }}
+              sx={{ color: colors.secondary.main, fontWeight: "500" }}
             >
               สินค้าหมด
             </Typography>
@@ -237,6 +243,7 @@ export default function ProductCard({
             top: 8,
             right: 8,
             backgroundColor: colors.secondary.main,
+            opacity: 0.7,
             color: isFavorite ? colors.primary.main : colors.text.secondary,
             width: 32,
             height: 32,
@@ -255,7 +262,18 @@ export default function ProductCard({
           }}
           size="small"
         >
-          <Pets fontSize="small" />
+          <Image
+            src="/images/icon-paw.png"
+            alt="Favorite"
+            width={16}
+            height={16}
+            style={{
+              filter: isFavorite 
+                ? "brightness(0) saturate(100%) invert(57%) sepia(97%) saturate(3218%) hue-rotate(10deg) brightness(101%) contrast(101%)" // Orange color for active
+                : "brightness(0) saturate(100%) invert(60%)", // Gray color for inactive
+              transition: "all 0.2s ease",
+            }}
+          />
         </IconButton>
       </Box>
 
@@ -297,12 +315,7 @@ export default function ProductCard({
 
         <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mb: 1 }}>
           <Box
-            sx={{
-              width: 12,
-              height: 12,
-              borderRadius: "50%",
-              backgroundColor: colors.text.disabled,
-            }}
+            
           />
           <Typography
             variant="caption"
@@ -311,6 +324,7 @@ export default function ProductCard({
               fontSize: "0.75rem",
             }}
           >
+            <LocationOn sx={{ fontSize: "1rem", mr: 0.5 }} />
             {product.location}
           </Typography>
         </Box>

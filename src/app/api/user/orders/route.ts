@@ -70,7 +70,32 @@ export async function GET() {
             include: {
                 orderItems: {
                     include: {
-                        product: true,
+                        product: {
+                            include: {
+                                images: {
+                                    select: {
+                                        id: true,
+                                        imageUrl: true,
+                                        altText: true,
+                                        isMain: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+                paymentNotifications: {
+                    select: {
+                        id: true,
+                        transferAmount: true,
+                        transferDate: true,
+                        paymentSlipData: true,
+                        paymentSlipMimeType: true,
+                        paymentSlipFileName: true,
+                        submittedAt: true,
+                    },
+                    orderBy: {
+                        submittedAt: 'desc',
                     },
                 },
             },
@@ -92,22 +117,39 @@ export async function GET() {
             shippingFee: order.shippingFee ? Number(order.shippingFee) : 0,
             discountAmount: order.discountAmount ? Number(order.discountAmount) : 0,
             paymentType: order.paymentType,
+            adminComment: order.adminComment,
             depositAmount: order.depositAmount ? Number(order.depositAmount) : null,
             remainingAmount: order.remainingAmount ? Number(order.remainingAmount) : null,
-            items: order.orderItems.map((item) => ({
-                id: item.id,
-                quantity: item.quantity,
-                price: Number(item.price),
-                product: {
-                    id: item.product.id,
-                    name: item.product.name,
-                    category: item.product.category,
-                    imageUrl: item.product.imageUrl || '',
-                    breed: item.product.breed,
-                    gender: item.product.gender,
-                    age: item.product.age,
-                },
-            })),
+            paymentNotifications: order.paymentNotifications?.map(notification => ({
+                id: notification.id,
+                transferAmount: Number(notification.transferAmount),
+                transferDate: notification.transferDate,
+                status: notification.status,
+                paymentSlipData: notification.paymentSlipData,
+                paymentSlipMimeType: notification.paymentSlipMimeType,
+                paymentSlipFileName: notification.paymentSlipFileName,
+                submittedAt: notification.submittedAt,
+            })) || [],
+            items: order.orderItems.map((item) => {
+                // Get main image from product_images where is_main = true
+                const mainImage = item.product.images?.find(img => img.isMain);
+                const imageUrl = mainImage?.imageUrl || item.product.imageUrl || '';
+                
+                return {
+                    id: item.id,
+                    quantity: item.quantity,
+                    price: Number(item.price),
+                    product: {
+                        id: item.product.id,
+                        name: item.product.name,
+                        category: item.product.category,
+                        imageUrl: imageUrl,
+                        breed: item.product.breed,
+                        gender: item.product.gender,
+                        age: item.product.age,
+                    },
+                };
+            }),
         }));
 
         return NextResponse.json(transformedOrders);

@@ -66,13 +66,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert file to base64 for storage (in production, you'd upload to cloud storage)
-    const bytes = await paymentSlip.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const base64Image = buffer.toString("base64");
-    const mimeType = paymentSlip.type;
+    // Upload payment slip image to folder
+    const uploadFormData = new FormData();
+    uploadFormData.append("paymentSlip", paymentSlip);
 
-    // Create payment notification record
+    const uploadResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/upload/payment-slip`, {
+      method: "POST",
+      headers: {
+        // Don't set Content-Type header, let fetch handle it for FormData
+        'Cookie': request.headers.get('cookie') || '', // Pass session cookies
+      },
+      body: uploadFormData,
+    });
+
+    if (!uploadResponse.ok) {
+      const uploadError = await uploadResponse.text();
+      console.error("Failed to upload payment slip:", uploadError);
+      return NextResponse.json(
+        { error: "Failed to upload payment slip image" },
+        { status: 500 }
+      );
+    }
+
+    const uploadResult = await uploadResponse.json();
+    console.log("Payment slip uploaded successfully:", uploadResult);
+
+    // Create payment notification record with file path instead of base64
     const paymentNotification = await prisma.paymentNotification.create({
       data: {
         orderId: order.id,
@@ -80,10 +99,10 @@ export async function POST(request: NextRequest) {
         transferDate: new Date(`${transferDate}T${transferTime}`),
         transferTime,
         note: note || null,
-        paymentSlipData: base64Image,
-        paymentSlipMimeType: mimeType,
-        paymentSlipFileName: paymentSlip.name,
-        status: "PENDING", // PENDING, APPROVED, REJECTED
+        paymentSlipData: uploadResult.paymentSlipUrl, // Store file URL instead of base64
+        paymentSlipMimeType: paymentSlip.type,
+        paymentSlipFileName: uploadResult.paymentSlipFileName,
+
         submittedAt: new Date(),
       },
     });
@@ -95,6 +114,41 @@ export async function POST(request: NextRequest) {
         status: "PAYMENT_PENDING" as any,
       },
     });
+
+    // Send LINE notification to admins
+    try {
+      console.log("🔔 Sending admin LINE notification...");
+      
+      const adminNotificationData = {
+        type: "PAYMENT_NOTIFICATION" as const,
+        orderNumber: order.orderNumber || `#${order.id.slice(-8).toUpperCase()}`,
+        customerName: order.customerName || order.user.displayName || "ลูกค้า",
+        transferAmount: Number(transferAmount),
+        transferDate: `${transferDate}T${transferTime}`,
+        submittedAt: new Date().toISOString(),
+        paymentSlipUrl: uploadResult.paymentSlipUrl,
+        displayUrl: uploadResult.displayUrl,
+      };
+
+      const adminNotifyResponse = await fetch(`${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/api/line/notify-admin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(adminNotificationData),
+      });
+
+      if (adminNotifyResponse.ok) {
+        const result = await adminNotifyResponse.json();
+        console.log("✅ Admin notification sent successfully:", result.message);
+      } else {
+        const error = await adminNotifyResponse.text();
+        console.warn("⚠️ Failed to send admin notification:", error);
+      }
+    } catch (adminNotifyError) {
+      console.warn("⚠️ Admin notification failed (non-critical):", adminNotifyError);
+      // Don't fail the main payment notification if admin notification fails
+    }
 
     return NextResponse.json({
       success: true,
