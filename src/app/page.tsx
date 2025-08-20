@@ -129,9 +129,15 @@ export default function Home() {
     fetchProducts();
   }, []);
 
-  // Filter products based on category and search
+  // Filter products based on category, search, and stock
   const filteredProducts = useMemo(() => {
     let filtered = products;
+
+    // Filter out products with no stock (additional protection)
+    filtered = filtered.filter((product) => {
+      const stock = typeof product.stock === 'number' ? product.stock : 0;
+      return stock > 0;
+    });
 
     // Filter by category
     if (selectedCategory !== "all") {
@@ -287,10 +293,10 @@ export default function Home() {
         ) : filteredProducts.length === 0 ? (
           <Box sx={{ textAlign: "center", py: 8, px: 2 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
-              No pets found
+              ไม่พบสินค้า
             </Typography>
             <Typography variant="body1" color="text.secondary">
-              Try changing category or search term
+              ลองเปลี่ยนหมวดหมู่หรือคำค้นหา
             </Typography>
           </Box>
         ) : (

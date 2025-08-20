@@ -15,10 +15,20 @@ import {
   LocationOn,
   FiberManualRecord,
   Pets,
+  Palette,
+  Category,
+  MedicalServices,
+  Verified,
+  HealthAndSafety,
+  Schedule,
+  CheckCircle,
+  PendingActions,
+  CalendarToday,
 } from "@mui/icons-material";
 import Image from "next/image";
 import { colors } from "@/theme/colors";
 import { Product } from "@/types";
+import VaccinationSchedule from "./VaccinationSchedule";
 
 interface ProductDetailProps {
   product: Product;
@@ -478,53 +488,361 @@ export default function ProductDetail({
               {product.description || "ไม่มีรายละเอียด"}
             </Typography>
 
-            {/* Additional Pet Info */}
+            {/* Additional Pet Info - Professional Design */}
             {(product.breed ||
               product.color ||
               product.vaccinated ||
-              product.certified) && (
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  backgroundColor: colors.background.paper,
-                  borderRadius: 2,
-                }}
-              >
-                {product.breed && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>สายพันธุ์:</strong> {product.breed}
-                  </Typography>
-                )}
-                {product.color && (
-                  <Typography variant="body2" sx={{ mb: 1 }}>
-                    <strong>สี:</strong> {product.color}
-                  </Typography>
-                )}
-                {product.vaccinated && (
-                  <Typography
-                    variant="body2"
-                    sx={{ mb: 1, color: colors.success }}
+              product.certified ||
+              product.healthNote) && (
+              <Box sx={{ mt: 3 }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: colors.text.primary,
+                    fontWeight: "bold",
+                    fontSize: "1.1rem",
+                    mb: 2,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                  }}
+                >
+                  <HealthAndSafety 
+                    sx={{ 
+                      color: colors.primary.main, 
+                      fontSize: "1.3rem" 
+                    }} 
+                  />
+                  ข้อมูลเพิ่มเติม
+                </Typography>
+
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                    gap: 2,
+                    mb: 2,
+                  }}
+                >
+                  {/* Breed Info */}
+                  {product.breed && (
+                    <Box
+                      sx={{
+                        backgroundColor: colors.cardBg.purple,
+                        borderRadius: 3,
+                        p: 2.5,
+                        border: "2px solid rgba(225, 190, 231, 0.5)",
+                        boxShadow: "0 4px 12px rgba(225, 190, 231, 0.3)",
+                        transition: "all 0.3s ease",
+                        "&:hover": {
+                          transform: "translateY(-3px)",
+                          boxShadow: "0 8px 25px rgba(225, 190, 231, 0.4)",
+                          backgroundColor: "#E8D5ED",
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          mb: 1,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundColor: "rgba(156, 39, 176, 0.15)",
+                            borderRadius: "50%",
+                            p: 0.8,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Category 
+                            sx={{ 
+                              color: "#9C27B0", 
+                              fontSize: "1.1rem" 
+                            }} 
+                          />
+                        </Box>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "#7B1FA2",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.8px",
+                          }}
+                        >
+                          สายพันธุ์
+                        </Typography>
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "#4A148C",
+                          fontWeight: "700",
+                          fontSize: "1rem",
+                        }}
+                      >
+                        {product.breed}
+                      </Typography>
+                    </Box>
+                  )}
+
+                  {/* Color Info */}
+                  {product.color && (
+                    <Box
+                      sx={{
+                        backgroundColor: colors.cardBg.coral,
+                        borderRadius: 3,
+                        p: 2.5,
+                        border: "2px solid rgba(255, 171, 145, 0.5)",
+                        boxShadow: "0 4px 12px rgba(255, 171, 145, 0.3)",
+                        transition: "all 0.3s ease",
+                        "&:hover": {
+                          transform: "translateY(-3px)",
+                          boxShadow: "0 8px 25px rgba(255, 171, 145, 0.4)",
+                          backgroundColor: "#FFBBA6",
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          mb: 1,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundColor: "rgba(255, 87, 34, 0.15)",
+                            borderRadius: "50%",
+                            p: 0.8,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Palette 
+                            sx={{ 
+                              color: "#FF5722", 
+                              fontSize: "1.1rem" 
+                            }} 
+                          />
+                        </Box>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: "#E64A19",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.8px",
+                          }}
+                        >
+                          สี
+                        </Typography>
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "#BF360C",
+                          fontWeight: "700",
+                          fontSize: "1rem",
+                        }}
+                      >
+                        {product.color}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+
+                {/* Health & Certification Status */}
+                {(product.vaccinated || product.certified) && (
+                  <Box
+                    sx={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 1.5,
+                      mb: product.healthNote ? 2 : 0,
+                    }}
                   >
-                    ✅ ฉีดวัคซีนแล้ว
-                  </Typography>
+                    {product.vaccinated && (
+                      <Box
+                        sx={{
+                          backgroundColor: colors.cardBg.mint,
+                          borderRadius: 3,
+                          p: 2.5,
+                          border: "2px solid rgba(178, 223, 219, 0.6)",
+                          boxShadow: "0 4px 12px rgba(178, 223, 219, 0.3)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          transition: "all 0.3s ease",
+                          "&:hover": {
+                            transform: "translateY(-2px)",
+                            boxShadow: "0 6px 20px rgba(178, 223, 219, 0.4)",
+                            backgroundColor: "#C5E9E6",
+                          },
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundColor: "rgba(0, 150, 136, 0.15)",
+                            borderRadius: "50%",
+                            p: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <MedicalServices 
+                            sx={{ 
+                              color: "#009688", 
+                              fontSize: "1.3rem" 
+                            }} 
+                          />
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "#00695C",
+                            fontWeight: "700",
+                            fontSize: "1rem",
+                          }}
+                        >
+                          ฉีดวัคซีนแล้ว
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {product.certified && (
+                      <Box
+                        sx={{
+                          backgroundColor: colors.cardBg.blue,
+                          borderRadius: 3,
+                          p: 2.5,
+                          border: "2px solid rgba(179, 229, 252, 0.6)",
+                          boxShadow: "0 4px 12px rgba(179, 229, 252, 0.3)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          transition: "all 0.3s ease",
+                          "&:hover": {
+                            transform: "translateY(-2px)",
+                            boxShadow: "0 6px 20px rgba(179, 229, 252, 0.4)",
+                            backgroundColor: "#C6F0FD",
+                          },
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundColor: "rgba(33, 150, 243, 0.15)",
+                            borderRadius: "50%",
+                            p: 1,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <Verified 
+                            sx={{ 
+                              color: "#2196F3", 
+                              fontSize: "1.3rem" 
+                            }} 
+                          />
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: "#0D47A1",
+                            fontWeight: "700",
+                            fontSize: "1rem",
+                          }}
+                        >
+                          มีใบรับรองคุณภาพ
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
                 )}
-                {product.certified && (
-                  <Typography
-                    variant="body2"
-                    sx={{ mb: 1, color: colors.success }}
-                  >
-                    ✅ มีใบรับรอง
-                  </Typography>
-                )}
+
+                {/* Health Note */}
                 {product.healthNote && (
-                  <Typography
-                    variant="body2"
-                    sx={{ mt: 1, fontStyle: "italic" }}
+                  <Box
+                    sx={{
+                      backgroundColor: colors.cardBg.yellow,
+                      borderRadius: 3,
+                      p: 3,
+                      border: "2px solid rgba(255, 245, 157, 0.6)",
+                      boxShadow: "0 4px 12px rgba(255, 245, 157, 0.3)",
+                      mt: 2,
+                      transition: "all 0.3s ease",
+                      "&:hover": {
+                        transform: "translateY(-2px)",
+                        boxShadow: "0 6px 20px rgba(255, 245, 157, 0.4)",
+                        backgroundColor: "#FFF8C4",
+                      },
+                    }}
                   >
-                    <strong>หมายเหตุสุขภาพ:</strong> {product.healthNote}
-                  </Typography>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        mb: 1.5,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          backgroundColor: "rgba(255, 193, 7, 0.2)",
+                          borderRadius: "50%",
+                          p: 0.8,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <HealthAndSafety 
+                          sx={{ 
+                            color: "#FF8F00", 
+                            fontSize: "1.2rem" 
+                          }} 
+                        />
+                      </Box>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: "#E65100",
+                          fontSize: "0.8rem",
+                          fontWeight: "700",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.8px",
+                        }}
+                      >
+                        หมายเหตุสุขภาพ
+                      </Typography>
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "#BF360C",
+                        fontWeight: "600",
+                        fontSize: "0.95rem",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {product.healthNote}
+                    </Typography>
+                  </Box>
                 )}
+
+                {/* Vaccination Information */}
+                <VaccinationSchedule product={product} />
               </Box>
             )}
           </Box>

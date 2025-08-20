@@ -61,6 +61,13 @@ model Product {
   location        String?
   contactInfo     String?        @map("contact_info") @db.Text
   
+  // ข้อมูลวัคซีน - สำหรับลูกสุนัข
+  birthDate       DateTime?      @map("birth_date") // วันเกิด
+  firstVaccineDate DateTime?     @map("first_vaccine_date") // วันที่ฉีดเข็มที่ 1
+  secondVaccineDate DateTime?    @map("second_vaccine_date") // วันที่ฉีดเข็มที่ 2
+  vaccineStatus   String?        @map("vaccine_status") // "NONE", "FIRST_DONE", "SECOND_DONE"
+  vaccineNotes    String?        @map("vaccine_notes") @db.Text // หมายเหตุเพิ่มเติม
+  
   // ข้อมูลทั่วไป - สำหรับสินค้าทุกประเภท
   brand           String?        // แบรนด์
   model           String?        // รุ่น/โมเดล

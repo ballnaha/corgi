@@ -27,6 +27,7 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
+    id?: string;
     lineUserId?: string;
     displayName?: string;
     role?: string;
@@ -154,6 +155,7 @@ export const authOptions: NextAuthOptions = {
             console.log(`   - Is Admin: ${dbUser.isAdmin}`);
           }
 
+          token.id = dbUser?.id; // Set internal database ID
           token.displayName = dbUser?.displayName;
           // @ts-ignore - Prisma types not updated yet
           token.role = dbUser?.role;
@@ -179,7 +181,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.sub!;
+        session.user.id = token.id || token.sub!; // Use internal DB ID if available, fallback to LINE ID
         session.user.lineUserId = token.lineUserId;
         session.user.displayName = token.displayName;
         session.user.role = token.role;

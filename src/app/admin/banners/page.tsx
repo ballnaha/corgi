@@ -408,7 +408,7 @@ const gradientOptions = [
           variant="h4" 
           sx={{ 
             fontWeight: "bold",
-            fontSize: { xs: "1.5rem", sm: "2rem" },
+            fontSize: { sm: "1.5rem" },
             textAlign: { xs: "center", sm: "left" }
           }}
         >
@@ -418,7 +418,6 @@ const gradientOptions = [
           variant="contained"
           startIcon={<Add />}
           onClick={openCreateDialog}
-          fullWidth={true}
           sx={{
             backgroundColor: colors.primary.main,
             display: { xs: "flex", sm: "inline-flex" },

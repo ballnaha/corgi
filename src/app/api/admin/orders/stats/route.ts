@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
 
-    const [todayOrders, todayRevenue] = await Promise.all([
+    const [todayOrders, todayRevenue, todayDeliveredRevenue, todayPaymentNotifications] = await Promise.all([
       prisma.order.count({
         where: {
           createdAt: {
@@ -79,6 +79,36 @@ export async function GET(request: NextRequest) {
           totalAmount: true,
         },
       }),
+      // รายได้จาก DELIVERED orders วันนี้
+      prisma.order.aggregate({
+        where: {
+          createdAt: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
+          status: "DELIVERED" as any,
+        },
+        _sum: {
+          totalAmount: true,
+        },
+      }),
+      // รายได้จาก payment notifications วันนี้ (orders ที่ไม่ใช่ DELIVERED)
+      prisma.paymentNotification.aggregate({
+        where: {
+          submittedAt: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
+          order: {
+            status: {
+              in: ["CONFIRMED", "PROCESSING", "SHIPPED"] as any
+            }
+          }
+        },
+        _sum: {
+          transferAmount: true,
+        },
+      }),
     ]);
 
     // คำนวณ total revenue จากคำสั่งซื้อที่ไม่ใช่ PENDING, PAYMENT_PENDING, CANCELLED
@@ -93,17 +123,72 @@ export async function GET(request: NextRequest) {
       },
     });
 
+    // คำนวณรายได้จริง: 
+    // 1. สำหรับ DELIVERED orders = totalAmount เต็ม (ถือว่าจ่ายครบแล้ว)
+    // 2. สำหรับ orders อื่นๆ = ยอดจาก payment notifications
+    
+    const [deliveredOrdersRevenue, nonDeliveredPayments] = await Promise.all([
+      // รายได้จาก DELIVERED orders (นับ totalAmount เต็ม)
+      prisma.order.aggregate({
+        where: {
+          status: "DELIVERED" as any
+        },
+        _sum: {
+          totalAmount: true,
+        },
+      }),
+      // รายได้จาก payment notifications ของ orders ที่ไม่ใช่ DELIVERED
+      prisma.paymentNotification.aggregate({
+        where: {
+          order: {
+            status: {
+              in: ["CONFIRMED", "PROCESSING", "SHIPPED"] as any
+            }
+          }
+        },
+        _sum: {
+          transferAmount: true,
+        },
+      })
+    ]);
+
+    // คำนวณค่าต่างๆ สำหรับการแสดงผล
+    const expectedRevenue = Number(totalRevenueResult._sum.totalAmount || 0);
+    
+    // รายได้จริง = รายได้จาก DELIVERED orders + รายได้จาก payment notifications ของ orders อื่นๆ
+    const deliveredRevenue = Number(deliveredOrdersRevenue._sum.totalAmount || 0);
+    const paymentNotificationRevenue = Number(nonDeliveredPayments._sum.transferAmount || 0);
+    const actualRevenue = deliveredRevenue + paymentNotificationRevenue;
+    
+    const pendingRevenue = Math.max(0, expectedRevenue - actualRevenue);
+
+    const todayExpectedRevenue = Number(todayRevenue._sum.totalAmount || 0);
+    
+    // รายได้จริงวันนี้ = รายได้จาก DELIVERED orders วันนี้ + รายได้จาก payment notifications วันนี้
+    const todayDeliveredRevenueNum = Number(todayDeliveredRevenue._sum.totalAmount || 0);
+    const todayPaymentNotificationsRevenueNum = Number(todayPaymentNotifications._sum.transferAmount || 0);
+    const todayActualRevenueNum = todayDeliveredRevenueNum + todayPaymentNotificationsRevenueNum;
+
     return NextResponse.json({
       success: true,
       stats: {
         // สถิติรวม
         totalOrders,
-        totalRevenue: totalRevenueResult._sum.totalAmount || 0,
+        totalRevenue: actualRevenue, // แสดงรายได้จริงที่ได้รับ
+        expectedRevenue: expectedRevenue, // รายได้ที่คาดหวัง (ราคาสินค้าเต็ม)
+        pendingRevenue: pendingRevenue, // ยอดค้างรับ
         actionRequiredCount,
+        
+        // รายละเอียดการคำนวณรายได้
+        revenueBreakdown: {
+          deliveredOrdersRevenue: deliveredRevenue, // รายได้จาก orders ที่ส่งมอบแล้ว
+          paymentNotificationsRevenue: paymentNotificationRevenue, // รายได้จาก payment notifications
+        },
         
         // สถิติวันนี้
         todayOrders,
-        todayRevenue: todayRevenue._sum.totalAmount || 0,
+        todayRevenue: todayActualRevenueNum, // รายได้จริงวันนี้
+        todayExpectedRevenue: todayExpectedRevenue, // รายได้คาดหวังวันนี้
         
         // สถิติแต่ละสถานะ (ตาม schema)
         statusCounts: {

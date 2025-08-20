@@ -201,7 +201,7 @@ function createReceiptFlexMessage(data: ReceiptData) {
 
   return {
     type: "flex",
-    altText: `🔔 รอชำระเงิน ฿${finalAmount.toLocaleString()} - Oong-Oong Pet Shop`,
+    altText: `🔔 รอชำระเงิน ฿${finalAmount.toLocaleString()} - Natpi & Paws Pet Shop`,
     contents: {
       type: "bubble",
       header: {
@@ -210,7 +210,7 @@ function createReceiptFlexMessage(data: ReceiptData) {
         contents: [
           {
             type: "text",
-            text: "🐕 Oong-Oong Pet Shop",
+            text: "🐕 Natpi & Paws Pet Shop",
             weight: "bold",
             color: "#ffffff",
             size: "lg",

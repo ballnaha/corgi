@@ -40,6 +40,8 @@ interface DashboardStats {
   totalOrders: number;
   totalUsers: number;
   totalRevenue: number;
+  expectedRevenue: number;
+  pendingRevenue: number;
   pendingOrders: number;
   lowStockProducts: number;
 }
@@ -72,6 +74,8 @@ export default function AdminDashboard() {
     totalOrders: 0,
     totalUsers: 0,
     totalRevenue: 0,
+    expectedRevenue: 0,
+    pendingRevenue: 0,
     pendingOrders: 0,
     lowStockProducts: 0,
   });
@@ -99,6 +103,8 @@ export default function AdminDashboard() {
         totalOrders: 0,
         totalUsers: 0,
         totalRevenue: 0,
+        expectedRevenue: 0,
+        pendingRevenue: 0,
         pendingOrders: 0,
         lowStockProducts: 0,
       };
@@ -115,6 +121,8 @@ export default function AdminDashboard() {
         if (orderStats.success && orderStats.stats) {
           dashboardStats.totalOrders = orderStats.stats.totalOrders || 0;
           dashboardStats.totalRevenue = orderStats.stats.totalRevenue || 0;
+          dashboardStats.expectedRevenue = orderStats.stats.expectedRevenue || 0;
+          dashboardStats.pendingRevenue = orderStats.stats.pendingRevenue || 0;
           dashboardStats.pendingOrders = 
             (orderStats.stats.statusCounts?.pending || 0) +
             (orderStats.stats.statusCounts?.paymentPending || 0) +
@@ -161,6 +169,8 @@ export default function AdminDashboard() {
         totalOrders: 0,
         totalUsers: 0,
         totalRevenue: 0,
+        expectedRevenue: 0,
+        pendingRevenue: 0,
         pendingOrders: 0,
         lowStockProducts: 0,
       });
@@ -346,10 +356,32 @@ export default function AdminDashboard() {
           color={colors.success}
         />
         <StatCard
-          title="รายได้ทั้งหมด"
+          title="รายได้ที่ได้รับ"
           value={`฿${stats.totalRevenue.toLocaleString()}`}
           icon={<AttachMoney />}
-          color={colors.warning}
+          color={colors.success}
+        />
+      </Box>
+
+      {/* Revenue Details */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 3, mb: 4 }}>
+        <StatCard
+          title="รายได้ที่ได้รับจริง"
+          value={`฿${stats.totalRevenue.toLocaleString()}`}
+          icon={<CheckCircle />}
+          color={colors.success}
+        />
+        <StatCard
+          title="รายได้คาดหวัง"
+          value={`฿${stats.expectedRevenue.toLocaleString()}`}
+          icon={<TrendingUp />}
+          color={colors.info}
+        />
+        <StatCard
+          title="ยอดค้างรับ"
+          value={`฿${stats.pendingRevenue.toLocaleString()}`}
+          icon={<Schedule />}
+          color={stats.pendingRevenue > 0 ? colors.warning : colors.success}
         />
       </Box>
 

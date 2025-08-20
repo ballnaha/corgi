@@ -575,7 +575,7 @@ export default function ProfilePage() {
       case "SHIPPED":
         return "จัดส่งแล้ว";
       case "DELIVERED":
-        return "ได้รับสินค้าเรียบร้อย";
+        return "ส่งมอบแล้ว";
       case "CANCELLED":
         return "ยกเลิก";
       default:
@@ -986,7 +986,7 @@ export default function ProfilePage() {
               <MenuItem value="DELIVERED">
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <span style={{ fontSize: "1rem" }}>📬</span>
-                  ส่งมอบสำเร็จ
+                  ส่งมอบแล้ว
                 </Box>
               </MenuItem>
               <MenuItem value="CANCELLED">
@@ -1096,21 +1096,49 @@ export default function ProfilePage() {
                             },
                           }}
                         >
-                          {/* Payment Notification Status */}
-                          {order.paymentNotifications && order.paymentNotifications.length > 0 && (
-                            <Chip
-                              label="💳 แจ้งชำระแล้ว"
-                              size="small"
-                              sx={{
-                                color: colors.success,
-                                backgroundColor: `${colors.success}20`,
-                                fontWeight: "bold",
-                                fontSize: { xs: "0.65rem", sm: "0.7rem" },
-                                height: { xs: 22, sm: 26 },
-                                border: `1px solid ${colors.success}40`,
-                              }}
-                            />
-                          )}
+                          {/* Payment Status */}
+                          {(() => {
+                            const totalPaid = (order.paymentNotifications || []).reduce((sum, payment) => {
+                              return sum + Number(payment.transferAmount || 0);
+                            }, 0);
+                            const orderTotal = Number(order.totalAmount || 0);
+                            const remainingToPay = Math.max(0, orderTotal - totalPaid);
+                            
+                            if (totalPaid > 0) {
+                              if (remainingToPay <= 0) {
+                                return (
+                                  <Chip
+                                    label="✅ ชำระครบแล้ว"
+                                    size="small"
+                                    sx={{
+                                      color: colors.success,
+                                      backgroundColor: `${colors.success}20`,
+                                      fontWeight: "bold",
+                                      fontSize: { xs: "0.65rem", sm: "0.7rem" },
+                                      height: { xs: 22, sm: 26 },
+                                      border: `1px solid ${colors.success}40`,
+                                    }}
+                                  />
+                                );
+                              } else {
+                                return (
+                                  <Chip
+                                    label={`💰 ชำระ ฿${totalPaid.toLocaleString()}`}
+                                    size="small"
+                                    sx={{
+                                      color: colors.info,
+                                      backgroundColor: `${colors.info}20`,
+                                      fontWeight: "bold",
+                                      fontSize: { xs: "0.6rem", sm: "0.65rem" },
+                                      height: { xs: 20, sm: 24 },
+                                      border: `1px solid ${colors.info}40`,
+                                    }}
+                                  />
+                                );
+                              }
+                            }
+                            return null;
+                          })()}
 
                           <Chip
                             onClick={() => handleOrderDetailOpen(order)}
@@ -1358,6 +1386,86 @@ export default function ProfilePage() {
                                 ฿{(order.remainingAmount || 0).toLocaleString()}
                               </Typography>
                             </Box>
+                            
+                            {/* Payment Status */}
+                            {(() => {
+                              const totalPaid = (order.paymentNotifications || []).reduce((sum, payment) => {
+                                return sum + Number(payment.transferAmount || 0);
+                              }, 0);
+                              const orderTotal = Number(order.totalAmount || 0);
+                              const remainingToPay = Math.max(0, orderTotal - totalPaid);
+                              
+                              if (totalPaid > 0) {
+                                return (
+                                  <>
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        mb: 1,
+                                        p: 1,
+                                        backgroundColor: colors.success + "15",
+                                        borderRadius: 1,
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        sx={{ color: colors.text.secondary, fontSize: { xs: "0.75rem", sm: "0.85rem" }, fontWeight: 500 }}
+                                      >
+                                        💰 ได้รับแล้ว
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        sx={{ 
+                                          fontWeight: "bold", 
+                                          color: colors.success,
+                                          fontSize: { xs: "0.8rem", sm: "0.9rem" }
+                                        }}
+                                      >
+                                        ฿{totalPaid.toLocaleString()}
+                                      </Typography>
+                                    </Box>
+                                    
+                                    {remainingToPay > 0 && (
+                                      <Box
+                                        sx={{
+                                          display: "flex",
+                                          justifyContent: "space-between",
+                                          alignItems: "center",
+                                          mb: 1,
+                                          p: 1,
+                                          backgroundColor: colors.warning + "15",
+                                          borderRadius: 1,
+                                        }}
+                                      >
+                                        <Typography
+                                          variant="body2"
+                                          sx={{ 
+                                            color: colors.text.secondary, 
+                                            fontSize: { xs: "0.75rem", sm: "0.85rem" }, 
+                                            fontWeight: 500 
+                                          }}
+                                        >
+                                          ⏳ ยังต้องจ่าย
+                                        </Typography>
+                                        <Typography
+                                          variant="body2"
+                                          sx={{ 
+                                            fontWeight: "bold", 
+                                            color: colors.warning,
+                                            fontSize: { xs: "0.8rem", sm: "0.9rem" }
+                                          }}
+                                        >
+                                          ฿{remainingToPay.toLocaleString()}
+                                        </Typography>
+                                      </Box>
+                                    )}
+                                  </>
+                                );
+                              }
+                              return null;
+                            })()}
                             {/* Shipping Fee */}
                             {order.shippingFee !== undefined && order.shippingFee > 0 && (
                               <Box
@@ -1409,17 +1517,106 @@ export default function ProfilePage() {
                                 </Typography>
                               </Box>
                             )}
-                            <Typography
-                              variant="h6"
-                              sx={{
-                                color: colors.text.primary,
-                                fontWeight: "bold",
-                                textAlign: "right",
-                                fontSize: { xs: "1rem", sm: "1.25rem" },
-                              }}
-                            >
-                              รวม: ฿{order.totalAmount.toLocaleString()}
-                            </Typography>
+                            {/* Payment Status for Full Payment */}
+                            {(() => {
+                              const totalPaid = (order.paymentNotifications || []).reduce((sum, payment) => {
+                                return sum + Number(payment.transferAmount || 0);
+                              }, 0);
+                              const orderTotal = Number(order.totalAmount || 0);
+                              const remainingToPay = Math.max(0, orderTotal - totalPaid);
+                              
+                              return (
+                                <>
+                                  {/* ยอดรวม */}
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      mb: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
+                                    >
+                                      ยอดรวม
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ fontWeight: "bold", fontSize: { xs: "0.9rem", sm: "1rem" } }}
+                                    >
+                                      ฿{orderTotal.toLocaleString()}
+                                    </Typography>
+                                  </Box>
+                                  
+                                  {/* ยอดที่ได้รับแล้ว */}
+                                  {totalPaid > 0 && (
+                                    <Box
+                                      sx={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        alignItems: "center",
+                                        mb: 1,
+                                        p: 1,
+                                        backgroundColor: colors.success + "15",
+                                        borderRadius: 1,
+                                      }}
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        sx={{ color: colors.text.secondary, fontSize: { xs: "0.75rem", sm: "0.85rem" }, fontWeight: 500 }}
+                                      >
+                                        💰 ได้รับแล้ว
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        sx={{ 
+                                          fontWeight: "bold", 
+                                          color: colors.success,
+                                          fontSize: { xs: "0.8rem", sm: "0.9rem" }
+                                        }}
+                                      >
+                                        ฿{totalPaid.toLocaleString()}
+                                      </Typography>
+                                    </Box>
+                                  )}
+                                  
+                                  {/* ยอดคงเหลือ */}
+                                  <Box
+                                    sx={{
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      p: 1,
+                                      backgroundColor: remainingToPay > 0 ? colors.warning + "15" : colors.success + "15",
+                                      borderRadius: 1,
+                                    }}
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ 
+                                        color: colors.text.secondary, 
+                                        fontSize: { xs: "0.75rem", sm: "0.85rem" }, 
+                                        fontWeight: 500 
+                                      }}
+                                    >
+                                      {remainingToPay > 0 ? "⏳ คงเหลือ" : "✅ ครบแล้ว"}
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      sx={{ 
+                                        fontWeight: "bold", 
+                                        color: remainingToPay > 0 ? colors.warning : colors.success,
+                                        fontSize: { xs: "0.8rem", sm: "0.9rem" }
+                                      }}
+                                    >
+                                      ฿{remainingToPay.toLocaleString()}
+                                    </Typography>
+                                  </Box>
+                                </>
+                              );
+                            })()}
                           </Box>
                         )}
                       </Box>
@@ -1967,89 +2164,230 @@ export default function ProfilePage() {
                 </Typography>
 
                 {/* Payment Type & Amount */}
-                {selectedOrder.paymentType === "DEPOSIT_PAYMENT" ? (
-                  <>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mb: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{ color: colors.text.secondary }}
+                {(() => {
+                  // คำนวณยอดเงินที่ได้รับจาก payment notifications
+                  const totalPaid = (selectedOrder.paymentNotifications || []).reduce((sum, payment) => {
+                    return sum + Number(payment.transferAmount || 0);
+                  }, 0);
+                  
+                  const orderTotal = Number(selectedOrder.totalAmount || 0);
+                  const remainingToPay = Math.max(0, orderTotal - totalPaid);
+                  
+                  return selectedOrder.paymentType === "DEPOSIT_PAYMENT" ? (
+                    <>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 1,
+                        }}
                       >
-                        ประเภทการชำระ
-                      </Typography>
-                      <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                        มัดจำ
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mb: 1,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{ color: colors.text.secondary }}
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary }}
+                        >
+                          ประเภทการชำระ
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                          มัดจำ
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 1,
+                        }}
                       >
-                        ยอดมัดจำ
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontWeight: "bold", color: colors.primary.main }}
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary }}
+                        >
+                          ยอดรวมทั้งหมด
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: "bold" }}
+                        >
+                          ฿{orderTotal.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 1,
+                        }}
                       >
-                        ฿{(selectedOrder.depositAmount || 0).toLocaleString()}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        mb: 2,
-                      }}
-                    >
-                      <Typography
-                        variant="body2"
-                        sx={{ color: colors.text.secondary }}
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary }}
+                        >
+                          ยอดมัดจำ (ที่ต้องจ่ายก่อน)
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: "bold", color: colors.primary.main }}
+                        >
+                          ฿{(selectedOrder.depositAmount || 0).toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 1,
+                          p: 1.5,
+                          backgroundColor: totalPaid > 0 ? colors.success + "20" : colors.background.default,
+                          borderRadius: 2,
+                        }}
                       >
-                        ยอดที่ต้องจ่ายเพิ่ม
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontWeight: "bold", color: colors.warning }}
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary, fontWeight: 500 }}
+                        >
+                          💰 ยอดที่ได้รับแล้ว
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ 
+                            fontWeight: "bold", 
+                            color: totalPaid > 0 ? colors.success : colors.text.secondary 
+                          }}
+                        >
+                          ฿{totalPaid.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 2,
+                          p: 1.5,
+                          backgroundColor: remainingToPay > 0 ? colors.warning + "20" : colors.success + "20",
+                          borderRadius: 2,
+                        }}
                       >
-                        ฿{(selectedOrder.remainingAmount || 0).toLocaleString()}
-                      </Typography>
-                    </Box>
-                  </>
-                ) : (
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      mb: 2,
-                    }}
-                  >
-                    <Typography
-                      variant="body2"
-                      sx={{ color: colors.text.secondary }}
-                    >
-                      ประเภทการชำระ
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                      ชำระเต็มจำนวน
-                    </Typography>
-                  </Box>
-                )}
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary, fontWeight: 500 }}
+                        >
+                          {remainingToPay > 0 ? "⏳ ยอดคงเหลือ" : "✅ ชำระครบแล้ว"}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ 
+                            fontWeight: "bold", 
+                            color: remainingToPay > 0 ? colors.warning : colors.success 
+                          }}
+                        >
+                          ฿{remainingToPay.toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </>
+                  ) : (
+                    <>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 1,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary }}
+                        >
+                          ประเภทการชำระ
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                          เต็มจำนวน
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 1,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary }}
+                        >
+                          ยอดรวมทั้งหมด
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontWeight: "bold" }}
+                        >
+                          ฿{orderTotal.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 1,
+                          p: 1.5,
+                          backgroundColor: totalPaid > 0 ? colors.success + "20" : colors.background.default,
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary, fontWeight: 500 }}
+                        >
+                          💰 ยอดที่ได้รับแล้ว
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ 
+                            fontWeight: "bold", 
+                            color: totalPaid > 0 ? colors.success : colors.text.secondary 
+                          }}
+                        >
+                          ฿{totalPaid.toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          mb: 2,
+                          p: 1.5,
+                          backgroundColor: remainingToPay > 0 ? colors.warning + "20" : colors.success + "20",
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Typography
+                          variant="body2"
+                          sx={{ color: colors.text.secondary, fontWeight: 500 }}
+                        >
+                          {remainingToPay > 0 ? "⏳ ยอดคงเหลือ" : "✅ ชำระครบแล้ว"}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ 
+                            fontWeight: "bold", 
+                            color: remainingToPay > 0 ? colors.warning : colors.success 
+                          }}
+                        >
+                          ฿{remainingToPay.toLocaleString()}
+                        </Typography>
+                      </Box>
+                    </>
+                  );
+                })()}
 
                 {/* Shipping Fee */}
                 {selectedOrder.shippingFee !== undefined && (
@@ -2202,16 +2540,50 @@ export default function ProfilePage() {
                     variant="h6"
                     sx={{ fontWeight: "bold", mb: 2, color: colors.text.primary }}
                   >
-                    การแจ้งชำระเงิน
+                    💳 ประวัติการชำระเงิน
                   </Typography>
+
+                  {/* Payment Summary */}
+                  <Box 
+                    sx={{ 
+                      p: 2, 
+                      backgroundColor: colors.background.default, 
+                      borderRadius: 2, 
+                      mb: 3 
+                    }}
+                  >
+                    <Typography variant="body2" sx={{ color: colors.text.secondary, mb: 1 }}>
+                      สรุปการชำระเงิน
+                    </Typography>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        ยอดที่ได้รับทั้งหมด: ฿{selectedOrder.paymentNotifications.reduce((sum, p) => sum + Number(p.transferAmount), 0).toLocaleString()}
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: colors.success }}>
+                        ({selectedOrder.paymentNotifications.length} รายการ)
+                      </Typography>
+                    </Box>
+                  </Box>
 
                   {selectedOrder.paymentNotifications.map((notification, index) => (
                     <Box key={notification.id} sx={{ mb: index < selectedOrder.paymentNotifications!.length - 1 ? 3 : 0 }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-                          การแจ้งชำระ #{index + 1}
+                          การชำระเงิน #{index + 1}
                         </Typography>
- 
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            px: 1.5, 
+                            py: 0.5, 
+                            backgroundColor: colors.success + "20", 
+                            color: colors.success, 
+                            borderRadius: 1,
+                            fontWeight: 500
+                          }}
+                        >
+                          ฿{notification.transferAmount.toLocaleString()}
+                        </Typography>
                       </Box>
 
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>

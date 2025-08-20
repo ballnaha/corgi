@@ -269,7 +269,7 @@ export default function ProductCard({
             height={16}
             style={{
               filter: isFavorite 
-                ? "brightness(0) saturate(100%) invert(57%) sepia(97%) saturate(3218%) hue-rotate(10deg) brightness(101%) contrast(101%)" // Orange color for active
+                ? "brightness(0) saturate(100%) invert(34%) sepia(92%) saturate(1384%) hue-rotate(337deg) brightness(98%) contrast(91%)" // red color for active
                 : "brightness(0) saturate(100%) invert(60%)", // Gray color for inactive
               transition: "all 0.2s ease",
             }}

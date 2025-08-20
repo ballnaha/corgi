@@ -10,6 +10,9 @@ export async function GET() {
     const products = await prisma.product.findMany({
       where: {
         isActive: true,
+        stock: {
+          gt: 0, // Only show products with stock > 0
+        },
       },
       include: {
         images: {
@@ -88,6 +91,13 @@ export async function POST(request: NextRequest) {
         healthNote: body.healthNote || null,
         vaccinated: body.vaccinated,
         certified: body.certified,
+        
+        // Vaccination tracking fields
+        birthDate: body.birthDate ? new Date(body.birthDate) : null,
+        firstVaccineDate: body.firstVaccineDate ? new Date(body.firstVaccineDate) : null,
+        secondVaccineDate: body.secondVaccineDate ? new Date(body.secondVaccineDate) : null,
+        vaccineStatus: body.vaccineStatus || null,
+        vaccineNotes: body.vaccineNotes || null,
         
         // General product fields
         brand: body.brand || null,

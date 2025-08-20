@@ -3,8 +3,8 @@ import { CartItem } from "@/types";
 export interface OrderAnalysis {
   hasPets: boolean;
   requiresDeposit: boolean;
-  totalAmount: number;
-  totalAmountAfterDiscount: number;
+  totalAmount: number; // ✅ ราคาที่ลูกค้าจ่ายจริง (หลังหักส่วนลด)
+  totalAmountBeforeDiscount: number; // ราคาเดิมก่อนหักส่วนลด
   depositAmount: number | null;
   remainingAmount: number | null;
   paymentType: "FULL_PAYMENT" | "DEPOSIT_PAYMENT";
@@ -53,8 +53,8 @@ export function analyzeOrder(
     }
   }
 
-  // ราคารวมหลังหักส่วนลด
-  const totalAmountAfterDiscount = Math.max(0, totalAmount - discountAmount);
+  // ราคารวมหลังหักส่วนลด (นี่คือราคาที่ลูกค้าจ่ายจริง)
+  const finalAmount = Math.max(0, totalAmount - discountAmount);
 
   // กำหนดเงื่อนไขการชำระเงิน - ใช้ราคาหลังหักส่วนลด
   let requiresDeposit = false;
@@ -63,11 +63,10 @@ export function analyzeOrder(
   let paymentType: "FULL_PAYMENT" | "DEPOSIT_PAYMENT" = "FULL_PAYMENT";
 
   // เงื่อนไข: สัตว์เลี้ยงราคาเกิน 10,000 บาท (หลังหักส่วนลด) ต้องชำระมัดจำ 10%
-  if (hasPets && totalAmountAfterDiscount > 10000) {
+  if (hasPets && finalAmount > 10000) {
     requiresDeposit = true;
-    depositAmount = Math.round(totalAmountAfterDiscount * 0.1 * 100) / 100; // 10% rounded to 2 decimal places
-    remainingAmount =
-      Math.round((totalAmountAfterDiscount - depositAmount) * 100) / 100;
+    depositAmount = Math.round(finalAmount * 0.1 * 100) / 100; // 10% rounded to 2 decimal places
+    remainingAmount = Math.round((finalAmount - depositAmount) * 100) / 100;
     paymentType = "DEPOSIT_PAYMENT";
   }
 
@@ -79,8 +78,8 @@ export function analyzeOrder(
   return {
     hasPets,
     requiresDeposit,
-    totalAmount,
-    totalAmountAfterDiscount,
+    totalAmount: finalAmount, // ✅ ตอนนี้ totalAmount คือราคาที่ลูกค้าจ่ายจริง (หลังหักส่วนลด)
+    totalAmountBeforeDiscount: totalAmount, // เก็บราคาเดิมไว้เพื่อ reference
     depositAmount,
     remainingAmount,
     paymentType,
@@ -128,7 +127,7 @@ export function calculatePaymentAmount(
 ): number {
   const baseAmount = orderAnalysis.requiresDeposit
     ? orderAnalysis.depositAmount || 0
-    : orderAnalysis.totalAmountAfterDiscount;
+    : orderAnalysis.totalAmount; // ✅ ใช้ totalAmount ใหม่ (หลังหักส่วนลดแล้ว)
 
   return baseAmount + shippingFee - shippingDiscount;
 }
@@ -145,7 +144,7 @@ export function getPaymentDescription(orderAnalysis: OrderAnalysis): string {
     );
   }
 
-  return `ชำระเต็มจำนวน ${orderAnalysis.totalAmountAfterDiscount.toLocaleString()} บาท`;
+  return `ชำระเต็มจำนวน ${orderAnalysis.totalAmount.toLocaleString()} บาท`;
 }
 
 /**

@@ -606,7 +606,7 @@ export default function CheckoutPage() {
 
       const orderCreateData = {
         orderNumber,
-        totalAmount: finalPaymentAmount,
+        totalAmount: orderAnalysis.totalAmount, // ✅ ใช้ totalAmount ใหม่ (ราคาหลังหักส่วนลด)
         discountAmount,
         discountCode: appliedDiscount?.code,
         paymentType: orderAnalysis.paymentType,

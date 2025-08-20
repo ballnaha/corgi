@@ -35,6 +35,7 @@ import {
   Edit,
   Assessment,
   ViewCarousel,
+  History,
 } from "@mui/icons-material";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -88,6 +89,11 @@ const getNavigationItems = (orderStats: { actionRequiredCount: number }): Naviga
     title: "จัดการผู้ใช้",
     path: "/admin/users",
     icon: <People />,
+  },
+  {
+    title: "ประวัติการซื้อ",
+    path: "/admin/customer-history",
+    icon: <History />,
   },
   {
     title: "จัดการ Banner",
@@ -194,11 +200,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             fontSize: "1.5rem",
           }}
         >
-          <img src="/images/oong_logo8.png" alt="Oong-Oong Pet Shop" width={60} height={60} />
+          <img src="/images/oong_logo11.png" alt="Natpi & Paws Pet Shop" width={80} height={80} />
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>
-            Oong-Oong Pet Shop
+            Natpi &amp; Paws
           </Typography>
           <Typography variant="caption" sx={{ opacity: 0.8 }}>
             Admin Panel

@@ -35,6 +35,12 @@ import {
 import { useRouter, useParams } from "next/navigation";
 import { colors } from "@/theme/colors";
 import { handleLiffNavigation } from "@/lib/liff-navigation";
+import { calculateVaccinationSchedule, formatThaiDate, getVaccineStatusText } from "@/lib/vaccination-utils";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import dayjs, { Dayjs } from "dayjs";
+import "dayjs/locale/th";
 
 interface ProductFormData {
   name: string;
@@ -56,6 +62,12 @@ interface ProductFormData {
   healthNote: string;
   vaccinated: boolean;
   certified: boolean;
+  // วัคซีนสำหรับลูกสุนัขและแมว
+  birthDate: Dayjs | null;
+  firstVaccineDate: Dayjs | null;
+  secondVaccineDate: Dayjs | null;
+  vaccineStatus: string;
+  vaccineNotes: string;
   // สำหรับสินค้าทั่วไป
   brand: string;
   model: string;
@@ -142,6 +154,12 @@ export default function EditProductPage() {
     healthNote: "",
     vaccinated: false,
     certified: false,
+    // วัคซีนสำหรับลูกสุนัขและแมว
+    birthDate: null,
+    firstVaccineDate: null,
+    secondVaccineDate: null,
+    vaccineStatus: "NONE",
+    vaccineNotes: "",
     brand: "",
     model: "",
     size: "",
@@ -161,6 +179,7 @@ export default function EditProductPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [calculatedVaccineSchedule, setCalculatedVaccineSchedule] = useState<any>(null);
 
   // Load product data
   useEffect(() => {
@@ -191,6 +210,12 @@ export default function EditProductPage() {
             healthNote: product.healthNote || "",
             vaccinated: product.vaccinated || false,
             certified: product.certified || false,
+            // วัคซีนสำหรับลูกสุนัขและแมว
+            birthDate: product.birthDate ? dayjs(product.birthDate) : null,
+            firstVaccineDate: product.firstVaccineDate ? dayjs(product.firstVaccineDate) : null,
+            secondVaccineDate: product.secondVaccineDate ? dayjs(product.secondVaccineDate) : null,
+            vaccineStatus: product.vaccineStatus || "NONE",
+            vaccineNotes: product.vaccineNotes || "",
             brand: product.brand || "",
             model: product.model || "",
             size: product.size || "",
@@ -285,6 +310,35 @@ export default function EditProductPage() {
         [field]: event.target.checked,
       }));
     };
+
+  // Calculate vaccination schedule when birth date changes
+  useEffect(() => {
+    if (formData.birthDate && formData.productType === 'PET') {
+      try {
+        const birthDate = formData.birthDate.toDate();
+        const schedule = calculateVaccinationSchedule(birthDate);
+        setCalculatedVaccineSchedule(schedule);
+        
+        // Auto-set calculated dates if not manually set (only for new products)
+        if (!formData.firstVaccineDate && schedule.firstVaccineDate) {
+          setFormData(prev => ({
+            ...prev,
+            firstVaccineDate: dayjs(schedule.firstVaccineDate!)
+          }));
+        }
+        if (!formData.secondVaccineDate && schedule.secondVaccineDate) {
+          setFormData(prev => ({
+            ...prev,
+            secondVaccineDate: dayjs(schedule.secondVaccineDate!)
+          }));
+        }
+      } catch (error) {
+        console.error('Error calculating vaccination schedule:', error);
+      }
+    } else {
+      setCalculatedVaccineSchedule(null);
+    }
+  }, [formData.birthDate, formData.productType]);
 
   const processFiles = (files: FileList | File[]) => {
     const newFiles = Array.from(files);
@@ -494,6 +548,18 @@ export default function EditProductPage() {
             : null,
         vaccinated: formData.productType === "PET" ? formData.vaccinated : null,
         certified: formData.productType === "PET" ? formData.certified : null,
+        
+        // Vaccination data (for dogs and cats)
+        birthDate: formData.productType === 'PET' && (formData.category === 'dogs' || formData.category === 'cats') && formData.birthDate 
+          ? formData.birthDate.toISOString() : null,
+        firstVaccineDate: formData.productType === 'PET' && (formData.category === 'dogs' || formData.category === 'cats') && formData.firstVaccineDate 
+          ? formData.firstVaccineDate.toISOString() : null,
+        secondVaccineDate: formData.productType === 'PET' && (formData.category === 'dogs' || formData.category === 'cats') && formData.secondVaccineDate 
+          ? formData.secondVaccineDate.toISOString() : null,
+        vaccineStatus: formData.productType === 'PET' && (formData.category === 'dogs' || formData.category === 'cats') 
+          ? formData.vaccineStatus || null : null,
+        vaccineNotes: formData.productType === 'PET' && (formData.category === 'dogs' || formData.category === 'cats') 
+          ? formData.vaccineNotes.trim() || null : null,
 
         // General product fields
         brand:
@@ -606,13 +672,14 @@ export default function EditProductPage() {
   }
 
   return (
-    <Box sx={{ 
-      p: { xs: 1, md: 3 }, 
-      maxWidth: { xs: "100%", md: 1200 }, 
-      mx: "auto",
-      minHeight: "100vh",
-      width: "100%"
-    }}>
+    <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="th">
+      <Box sx={{ 
+        p: { xs: 1, md: 3 }, 
+        maxWidth: { xs: "100%", md: 1200 }, 
+        mx: "auto",
+        minHeight: "100vh",
+        width: "100%"
+      }}>
       {/* Header */}
       <Box sx={{ mb: { xs: 2, md: 3 } }}>
         <Button
@@ -876,6 +943,127 @@ export default function EditProductPage() {
                       rows={2}
                       placeholder="ข้อมูลเกี่ยวกับสุขภาพหรือการดูแลเฉพาะ"
                     />
+
+                    {/* Vaccination Section - Only for dogs and cats */}
+                    {(formData.category === 'dogs' || formData.category === 'cats') && (
+                      <>
+                        <Divider sx={{ my: 3 }} />
+                        <Typography variant="h6" sx={{ fontWeight: "bold", mb: 2 }}>
+                          📋 ข้อมูลการฉีดวัคซีน (สำหรับ{formData.category === 'dogs' ? 'ลูกสุนัข' : 'ลูกแมว'})
+                        </Typography>
+
+                        {/* Birth Date */}
+                        <DatePicker
+                          label="วันเกิด"
+                          value={formData.birthDate}
+                          onChange={(newValue) => setFormData(prev => ({ ...prev, birthDate: newValue }))}
+                          format="DD/MM/YYYY"
+                          maxDate={dayjs()}
+                          slotProps={{
+                            textField: {
+                              helperText: "วันเกิดจะใช้คำนวณตารางการฉีดวัคซีนอัตโนมัติ",
+                              required: true,
+                              fullWidth: true,
+                              sx: {
+                                mb: 2,
+                                "& .MuiOutlinedInput-root": {
+                                  borderRadius: 2,
+                                  backgroundColor: colors.background.default,
+                                }
+                              }
+                            }
+                          }}
+                        />
+
+                        {/* Show calculated schedule */}
+                        {calculatedVaccineSchedule && (
+                          <Paper sx={{ p: 2, mb: 3, backgroundColor: colors.cardBg.mint }}>
+                            <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1 }}>
+                              📅 ตารางการฉีดวัคซีนที่คำนวณได้:
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              • เข็มที่ 1 (8 สัปดาห์): {formatThaiDate(calculatedVaccineSchedule.firstVaccineDate)}
+                            </Typography>
+                            <Typography variant="body2" sx={{ mb: 1 }}>
+                              • เข็มที่ 2 (12 สัปดาห์): {formatThaiDate(calculatedVaccineSchedule.secondVaccineDate)}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              อายุปัจจุบัน: {calculatedVaccineSchedule.ageInWeeks} สัปดาห์
+                            </Typography>
+                          </Paper>
+                        )}
+
+                        {/* Vaccine Status */}
+                        <FormControl fullWidth sx={{ mb: 2 }}>
+                          <InputLabel>สถานะการฉีดวัคซีน</InputLabel>
+                          <Select
+                            value={formData.vaccineStatus}
+                            onChange={handleInputChange('vaccineStatus')}
+                            label="สถานะการฉีดวัคซีน"
+                          >
+                            <MenuItem value="NONE">ยังไม่ได้ฉีดวัคซีน</MenuItem>
+                            <MenuItem value="FIRST_DONE">ฉีดเข็มที่ 1 แล้ว</MenuItem>
+                            <MenuItem value="SECOND_DONE">ฉีดครบ 2 เข็มแล้ว</MenuItem>
+                          </Select>
+                        </FormControl>
+
+                        {/* Vaccine Dates */}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, mb: 2 }}>
+                          <DatePicker
+                            label="วันที่ฉีดเข็มที่ 1 (จริง)"
+                            value={formData.firstVaccineDate}
+                            onChange={(newValue) => setFormData(prev => ({ ...prev, firstVaccineDate: newValue }))}
+                            format="DD/MM/YYYY"
+                            slotProps={{
+                              textField: {
+                                helperText: "วันที่ฉีดจริง (เลือกได้หากฉีดแล้ว)",
+                                fullWidth: true,
+                                sx: {
+                                  "& .MuiOutlinedInput-root": {
+                                    borderRadius: 2,
+                                    backgroundColor: colors.background.default,
+                                  }
+                                }
+                              }
+                            }}
+                          />
+                          
+                          {/* Show second vaccine date picker only when vaccine status is SECOND_DONE */}
+                          {formData.vaccineStatus === 'SECOND_DONE' && (
+                            <DatePicker
+                              label="วันที่ฉีดเข็มที่ 2 (จริง)"
+                              value={formData.secondVaccineDate}
+                              onChange={(newValue) => setFormData(prev => ({ ...prev, secondVaccineDate: newValue }))}
+                              format="DD/MM/YYYY"
+                              slotProps={{
+                                textField: {
+                                  helperText: "วันที่ฉีดจริง (เลือกได้หากฉีดแล้ว)",
+                                  fullWidth: true,
+                                  sx: {
+                                    "& .MuiOutlinedInput-root": {
+                                      borderRadius: 2,
+                                      backgroundColor: colors.background.default,
+                                    }
+                                  }
+                                }
+                              }}
+                            />
+                          )}
+                        </Box>
+
+                        {/* Vaccine Notes */}
+                        <TextField
+                          label="หมายเหตุการฉีดวัคซีน"
+                          value={formData.vaccineNotes}
+                          onChange={handleInputChange('vaccineNotes')}
+                          multiline
+                          rows={2}
+                          placeholder="เช่น ฉีดที่คลินิก ABC, มีการแพ้ยาเล็กน้อย"
+                          fullWidth
+                          sx={{ mb: 2 }}
+                        />
+                      </>
+                    )}
 
                     <Box sx={{ display: "flex", gap: 2 }}>
                       <FormControlLabel
@@ -1271,6 +1459,7 @@ export default function EditProductPage() {
           </Box>
         </Box>
       </form>
-    </Box>
+      </Box>
+    </LocalizationProvider>
   );
 }

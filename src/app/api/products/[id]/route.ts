@@ -169,6 +169,13 @@ export async function PATCH(
       healthNote: body.healthNote || null,
       vaccinated: body.vaccinated,
       certified: body.certified,
+      
+      // Vaccination tracking fields
+      birthDate: body.birthDate ? new Date(body.birthDate) : null,
+      firstVaccineDate: body.firstVaccineDate ? new Date(body.firstVaccineDate) : null,
+      secondVaccineDate: body.secondVaccineDate ? new Date(body.secondVaccineDate) : null,
+      vaccineStatus: body.vaccineStatus || null,
+      vaccineNotes: body.vaccineNotes || null,
 
       // General product fields
       brand: body.brand || null,

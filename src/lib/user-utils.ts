@@ -67,16 +67,37 @@ export async function ensureUserExists(sessionUser: SessionUser): Promise<User |
         if (userCreateError.code === 'P2002') {
           console.log("Unique constraint violation, trying to find existing user...");
           
+          // ตรวจสอบ field ไหนที่ขัดแย้ง
+          const conflictField = userCreateError.meta?.target;
+          console.log("Conflict field:", conflictField);
+          
           // ลองหา user อีกครั้ง (อาจมีการสร้างพร้อมกัน - race condition)
           user = await prisma.user.findUnique({
             where: { id: sessionUser.id }
           });
           
-          if (!user) {
-            // ลองหาด้วย lineUserId
+          if (!user && conflictField?.includes('line_user_id')) {
+            // หาด้วย lineUserId ถ้า conflict เกิดจาก line_user_id_key
             user = await prisma.user.findUnique({
               where: { lineUserId: sessionUser.lineUserId || sessionUser.id }
             });
+            
+            if (user) {
+              console.log("Found existing user with same lineUserId:", user.id);
+              // อัปเดต user เก่าให้ตรงกับ session
+              try {
+                user = await prisma.user.update({
+                  where: { id: user.id },
+                  data: {
+                    displayName: sessionUser.name || user.displayName,
+                    email: sessionUser.email || user.email,
+                  }
+                });
+                console.log("Updated existing user:", user.id);
+              } catch (updateError) {
+                console.warn("Could not update existing user:", updateError);
+              }
+            }
           }
           
           if (user) {

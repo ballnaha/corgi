@@ -25,6 +25,13 @@ export interface Product {
   certified?: boolean;
   healthNote?: string | null;
   
+  // Vaccination tracking for puppies
+  birthDate?: Date | string | null;
+  firstVaccineDate?: Date | string | null;
+  secondVaccineDate?: Date | string | null;
+  vaccineStatus?: 'NONE' | 'FIRST_DONE' | 'SECOND_DONE' | null;
+  vaccineNotes?: string | null;
+  
   // Location and contact
   location?: string | null;
   contactInfo?: string | null;

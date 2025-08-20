@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Box,
@@ -45,6 +45,9 @@ export default function PaymentNotificationPage() {
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [orderData, setOrderData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   // ข้อมูลบัญชีธนาคาร (ตัวอย่าง)
   const bankAccounts = [
@@ -54,6 +57,54 @@ export default function PaymentNotificationPage() {
       accountName: "นายธัญญา รัตนาวงศ์ไชยา",
     },
   ];
+
+  // ฟังก์ชันดึงข้อมูลคำสั่งซื้อ
+  const fetchOrderData = async () => {
+    if (!orderNumber) {
+      setOrderError("ไม่พบหมายเลขคำสั่งซื้อ");
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setOrderError(null);
+      
+      // ค้นหาคำสั่งซื้อจาก orderNumber
+      const response = await fetch(`/api/orders?orderNumber=${orderNumber}`);
+      const result = await response.json();
+
+      console.log("API Response:", { 
+        status: response.status, 
+        ok: response.ok, 
+        result 
+      });
+
+      if (response.ok && result.success && result.order) {
+        setOrderData(result.order);
+      } else {
+        console.error("Order fetch failed:", result);
+        const errorMessage = result.error || "ไม่พบข้อมูลคำสั่งซื้อ";
+        
+        // แสดงข้อมูล debug หากมี
+        if (result.debug) {
+          console.log("Debug info:", result.debug);
+        }
+        
+        setOrderError(errorMessage);
+      }
+    } catch (error) {
+      console.error("Error fetching order data:", error);
+      setOrderError("เกิดข้อผิดพลาดในการดึงข้อมูลคำสั่งซื้อ");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ดึงข้อมูลคำสั่งซื้อเมื่อโหลดหน้า
+  useEffect(() => {
+    fetchOrderData();
+  }, [orderNumber]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -312,6 +363,307 @@ export default function PaymentNotificationPage() {
         </Box>
 
         <Box sx={{ px: { xs: 1, sm: 2, md: 3 }, py: 0, width: "100%" }}>
+          {/* ข้อมูลคำสั่งซื้อและจำนวนเงิน */}
+          {isLoading && (
+            <Box
+              sx={{
+                backgroundColor: "white",
+                mb: 1,
+                borderBottom: "8px solid " + colors.background.default,
+                borderRadius: { xs: 0, sm: 2 },
+                overflow: "hidden",
+                p: 4,
+                textAlign: "center",
+              }}
+            >
+              <Typography>กำลังโหลดข้อมูลคำสั่งซื้อ...</Typography>
+            </Box>
+          )}
+
+          {orderError && (
+            <Box
+              sx={{
+                backgroundColor: "white",
+                mb: 1,
+                borderBottom: "8px solid " + colors.background.default,
+                borderRadius: { xs: 0, sm: 2 },
+                overflow: "hidden",
+                p: 4,
+              }}
+            >
+              <Alert severity="error" sx={{ borderRadius: 2, mb: 2 }}>
+                {orderError}
+              </Alert>
+              
+              {/* แสดงข้อมูลการค้นหา */}
+              <Alert severity="info" sx={{ borderRadius: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                  🔍 ข้อมูลการค้นหา:
+                </Typography>
+                <Typography variant="body2" sx={{ mb: 1 }}>
+                  หมายเลขคำสั่งซื้อที่ค้นหา: <strong>{orderNumber}</strong>
+                </Typography>
+                <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                  💡 กรุณาตรวจสอบหมายเลขคำสั่งซื้อให้ถูกต้อง หรือติดต่อเจ้าหน้าที่หากปัญหายังคงมีอยู่
+                </Typography>
+              </Alert>
+            </Box>
+          )}
+
+          {orderData && !isLoading && !orderError && (
+            <Box
+              sx={{
+                backgroundColor: "white",
+                mb: 1,
+                borderBottom: "8px solid " + colors.background.default,
+                borderRadius: { xs: 0, sm: 2 },
+                overflow: "hidden",
+              }}
+            >
+              <Box sx={{ px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 600,
+                    color: colors.text.primary,
+                    mb: { xs: 2, sm: 2.5 },
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    fontSize: { xs: "1rem", sm: "1.1rem" },
+                  }}
+                >
+                  <Receipt sx={{ color: colors.primary.main, fontSize: "1.2rem" }} />
+                  ข้อมูลการชำระเงิน
+                </Typography>
+
+                <Paper
+                  sx={{
+                    p: { xs: 2, sm: 2.5 },
+                    borderRadius: { xs: 2, sm: 3 },
+                    backgroundColor: colors.background.paper,
+                    border: "1px solid rgba(0,0,0,0.08)",
+                    mb: 2.5,
+                  }}
+                >
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                        หมายเลขคำสั่งซื้อ:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: colors.text.primary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                        #{orderData.orderNumber}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                        ประเภทการชำระ:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: colors.text.primary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                        {orderData.paymentType === "FULL_PAYMENT" ? "ชำระเต็มจำนวน" : "ชำระมัดจำ"}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                        ยอดรวมคำสั่งซื้อ:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: colors.text.primary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                        ฿{Number(orderData.totalAmount).toLocaleString()}
+                      </Typography>
+                    </Box>
+
+                    {orderData.paymentType === "DEPOSIT" && orderData.depositAmount && (
+                      <>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500, color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                            จำนวนเงินมัดจำ:
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: colors.text.primary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                            ฿{Number(orderData.depositAmount).toLocaleString()}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500, color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                            ยอดคงเหลือ:
+                          </Typography>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: colors.text.primary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                            ฿{Number(orderData.remainingAmount || 0).toLocaleString()}
+                          </Typography>
+                        </Box>
+                      </>
+                    )}
+
+                    {orderData.shippingFee && Number(orderData.shippingFee) > 0 && (
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                          ค่าจัดส่ง:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: colors.text.primary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                          ฿{Number(orderData.shippingFee).toLocaleString()}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {orderData.discountAmount && Number(orderData.discountAmount) > 0 && (
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                          ส่วนลด:
+                        </Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: "#d32f2f", fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
+                          -฿{Number(orderData.discountAmount).toLocaleString()}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    <Box 
+                      sx={{ 
+                        borderTop: "1px solid rgba(0,0,0,0.1)",
+                        pt: 2,
+                        mt: 1,
+                      }}
+                    >
+                      {orderData.paymentType === "DEPOSIT" && orderData.depositAmount ? (
+                        <>
+                          {/* กรณีชำระมัดจำ */}
+                          <Box 
+                            sx={{ 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center",
+                              mb: 2,
+                            }}
+                          >
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 700, 
+                                color: colors.primary.main,
+                                fontSize: { xs: "1.1rem", sm: "1.25rem" }
+                              }}
+                            >
+                              💰 ต้องชำระมัดจำ:
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 700, 
+                                color: colors.primary.main,
+                                fontSize: { xs: "1.3rem", sm: "1.5rem" }
+                              }}
+                            >
+                              ฿{Number(orderData.depositAmount).toLocaleString()}
+                            </Typography>
+                          </Box>
+                          
+                          <Box 
+                            sx={{ 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center",
+                              backgroundColor: colors.background.default,
+                              p: 2,
+                              borderRadius: 2,
+                            }}
+                          >
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                fontWeight: 600, 
+                                color: colors.text.secondary,
+                                fontSize: { xs: "0.9rem", sm: "1rem" }
+                              }}
+                            >
+                              🚚 คงเหลือต้องชำระเมื่อมารับสินค้า:
+                            </Typography>
+                            <Typography 
+                              variant="body1" 
+                              sx={{ 
+                                fontWeight: 600, 
+                                color: colors.text.primary,
+                                fontSize: { xs: "1rem", sm: "1.1rem" }
+                              }}
+                            >
+                              ฿{Number(orderData.remainingAmount || 0).toLocaleString()}
+                            </Typography>
+                          </Box>
+                        </>
+                      ) : (
+                        <>
+                          {/* กรณีชำระเต็มจำนวน */}
+                          <Box 
+                            sx={{ 
+                              display: "flex", 
+                              justifyContent: "space-between", 
+                              alignItems: "center",
+                            }}
+                          >
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 700, 
+                                color: colors.primary.main,
+                                fontSize: { xs: "1.1rem", sm: "1.25rem" }
+                              }}
+                            >
+                              💰 จ่ายมัดจำ:
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 700, 
+                                color: colors.primary.main,
+                                fontSize: { xs: "1.3rem", sm: "1.5rem" }
+                              }}
+                            >
+                              ฿{Number(orderData.depositAmount).toLocaleString()}
+                            </Typography>
+                          </Box>
+                        </>
+                      )}
+                    </Box>
+                  </Box>
+                </Paper>
+
+                <Alert
+                  severity={orderData.paymentType === "DEPOSIT" ? "warning" : "info"}
+                  sx={{
+                    borderRadius: 3,
+                    backgroundColor: orderData.paymentType === "DEPOSIT" ? "#fff3e0" : "#e3f2fd",
+                    border: orderData.paymentType === "DEPOSIT" ? "1px solid #ff9800" : "1px solid #2196f3",
+                    "& .MuiAlert-icon": {
+                      color: orderData.paymentType === "DEPOSIT" ? "#f57c00" : "#1976d2",
+                    },
+                  }}
+                >
+                  {orderData.paymentType === "DEPOSIT" ? (
+                    <>
+                      <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                        💡 กรุณาโอนเงินมัดจำตามจำนวนที่แสดงด้านบน
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 400, color: "#f57c00", mb: 1 }}>
+                        📝 แจ้งชำระเงินมัดจำภายใน 24 ชั่วโมง
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: "#f57c00" }}>
+                        🚚 ยอดคงเหลือจะชำระเมื่อมารับสินค้า ณ หน้าร้าน
+                      </Typography>
+                    </>
+                  ) : (
+                    <>
+                      <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
+                        💡 กรุณาโอนเงินตามจำนวนที่แสดงด้านบน
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 400, color: "#1976d2" }}>
+                        📝 แจ้งชำระเงินภายใน 24 ชั่วโมง
+                      </Typography>
+                    </>
+                  )}
+                </Alert>
+              </Box>
+            </Box>
+          )}
+
           {/* ข้อมูลบัญชีธนาคาร */}
           <Box
             sx={{
@@ -421,37 +773,37 @@ export default function PaymentNotificationPage() {
               </Box>
 
               <Alert
-                severity="info"
+                severity="warning"
                 sx={{
                   mt: 3,
                   borderRadius: 3,
-                  backgroundColor: "#e3f2fd",
-                  border: "1px solid #2196f3",
+                  backgroundColor: "#fff3e0",
+                  border: "1px solid #ff9800",
                   "& .MuiAlert-icon": {
-                    color: "#1976d2",
+                    color: "#f57c00",
                   },
                 }}
               >
                 <Typography variant="body2" sx={{ fontWeight: 500, mb: 1 }}>
-                  💡 กรุณาโอนเงินตามจำนวนที่ระบุในคำสั่งซื้อ
-                  และแจ้งชำระเงินภายใน 24 ชั่วโมง
+                  📌 โอนเงินเข้าบัญชีข้างต้น แล้วแจ้งชำระเงินด้านล่าง
                 </Typography>
-                <Typography variant="body2" sx={{ fontWeight: 400, color: "#1976d2" }}>
+                <Typography variant="body2" sx={{ fontWeight: 400, color: "#f57c00" }}>
                   📝 หมายเหตุ: หากแนบรูปหลักฐานผิด สามารถแจ้งชำระเงินใหม่ได้อีกครั้ง
                 </Typography>
               </Alert>
             </Box>
           </Box>
 
-          {/* ฟอร์มแจ้งชำระเงิน */}
-          <Box
-            sx={{
-              backgroundColor: "white",
-              mb: 1,
-              borderRadius: { xs: 0, sm: 2 },
-              overflow: "hidden",
-            }}
-          >
+          {/* ฟอร์มแจ้งชำระเงิน - แสดงเฉพาะเมื่อมีข้อมูลคำสั่งซื้อ */}
+          {orderData && !isLoading && !orderError && (
+            <Box
+              sx={{
+                backgroundColor: "white",
+                mb: 1,
+                borderRadius: { xs: 0, sm: 2 },
+                overflow: "hidden",
+              }}
+            >
             <Box sx={{ px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}>
               <Typography
                 variant="h6"
@@ -466,7 +818,11 @@ export default function PaymentNotificationPage() {
 
               <Box sx={{ display: "flex", flexDirection: "column", gap: { xs: 2.5, sm: 3 } }}>
                 <TextField
-                  label="จำนวนเงินที่โอน"
+                  label={
+                    orderData?.paymentType === "DEPOSIT" 
+                      ? "จำนวนเงินมัดจำที่โอน" 
+                      : "จำนวนเงินที่โอน"
+                  }
                   type="number"
                   value={transferAmount}
                   onChange={(e) => setTransferAmount(e.target.value)}
@@ -484,6 +840,7 @@ export default function PaymentNotificationPage() {
                       ),
                     },
                   }}
+                  
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: { xs: 2, sm: 3 },
@@ -492,6 +849,11 @@ export default function PaymentNotificationPage() {
                     },
                     "& .MuiInputLabel-root": {
                       fontSize: { xs: "0.875rem", sm: "1rem" },
+                    },
+                    "& .MuiFormHelperText-root": {
+                      fontSize: { xs: "0.75rem", sm: "0.875rem" },
+                      fontWeight: 500,
+                      color: colors.primary.main,
                     },
                   }}
                 />
@@ -673,44 +1035,45 @@ export default function PaymentNotificationPage() {
                   }}
                 />
               </Box>
-            </Box>
-          </Box>
+              </Box>
 
-          {/* Submit Button */}
-          <Box sx={{ px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}>
-            <Button
-              variant="contained"
-              size="large"
-              fullWidth
-              onClick={handleSubmit}
-              disabled={
-                isSubmitting ||
-                !selectedFile ||
-                !transferAmount ||
-                !transferDate ||
-                !transferTime
-              }
-              sx={{
-                py: { xs: 1.5, sm: 2 },
-                fontSize: { xs: "1rem", sm: "1.1rem" },
-                fontWeight: 600,
-                borderRadius: { xs: 2, sm: 3 },
-                backgroundColor: colors.primary.main,
-                boxShadow: `0 4px 20px ${colors.primary.main}40`,
-                minHeight: { xs: "48px", sm: "56px" },
-                "&:hover": {
-                  backgroundColor: colors.primary.dark,
-                  boxShadow: `0 6px 25px ${colors.primary.main}50`,
-                },
-                "&:disabled": {
-                  backgroundColor: colors.text.disabled,
-                  boxShadow: "none",
-                },
-              }}
-            >
-              {isSubmitting ? "กำลังส่ง..." : "แจ้งชำระเงิน"}
-            </Button>
-          </Box>
+              {/* Submit Button */}
+              <Box sx={{ px: { xs: 2, sm: 3 }, py: { xs: 3, sm: 4 } }}>
+                <Button
+                  variant="contained"
+                  size="large"
+                  fullWidth
+                  onClick={handleSubmit}
+                  disabled={
+                    isSubmitting ||
+                    !selectedFile ||
+                    !transferAmount ||
+                    !transferDate ||
+                    !transferTime
+                  }
+                  sx={{
+                    py: { xs: 1.5, sm: 2 },
+                    fontSize: { xs: "1rem", sm: "1.1rem" },
+                    fontWeight: 600,
+                    borderRadius: { xs: 2, sm: 3 },
+                    backgroundColor: colors.primary.main,
+                    boxShadow: `0 4px 20px ${colors.primary.main}40`,
+                    minHeight: { xs: "48px", sm: "56px" },
+                    "&:hover": {
+                      backgroundColor: colors.primary.dark,
+                      boxShadow: `0 6px 25px ${colors.primary.main}50`,
+                    },
+                    "&:disabled": {
+                      backgroundColor: colors.text.disabled,
+                      boxShadow: "none",
+                    },
+                  }}
+                >
+                  {isSubmitting ? "กำลังส่ง..." : "แจ้งชำระเงิน"}
+                </Button>
+              </Box>
+            </Box>
+          )}
         </Box>
       </Box>
     </LocalizationProvider>

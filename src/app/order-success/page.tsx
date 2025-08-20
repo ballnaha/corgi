@@ -172,7 +172,7 @@ export default function OrderSuccessPage() {
                   </Typography>
                   {isDepositPayment && (
                     <Typography variant="body2" sx={{ color: "#ff9800" }}>
-                      ⚠️ การชำระมัดจำ 20% - ส่วนที่เหลือชำระเมื่อรับสินค้า
+                      ⚠️ การชำระมัดจำ 10% - ส่วนที่เหลือชำระเมื่อรับสินค้า
                     </Typography>
                   )}
                 </Box>

@@ -35,6 +35,8 @@ import {
   CircularProgress,
   useTheme,
   useMediaQuery,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import {
   MoreVert,
@@ -55,6 +57,7 @@ import {
   MonetizationOn,
   Inventory,
   ShoppingCart,
+  Delete,
 } from "@mui/icons-material";
 import { colors } from "@/theme/colors";
 import { ORDER_STATUS_INFO } from "@/lib/order-status";
@@ -171,6 +174,22 @@ export default function AdminOrdersPage() {
   const [adminComment, setAdminComment] = useState("");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   
+  // Manual Payment Dialog states
+  const [manualPaymentDialogOpen, setManualPaymentDialogOpen] = useState(false);
+  const [manualPaymentData, setManualPaymentData] = useState({
+    amount: "",
+    paymentMethod: "CASH",
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentTime: new Date().toTimeString().slice(0, 5),
+    note: "",
+    autoComplete: true,
+  });
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  
+  // Delete Order Dialog states
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
+  
   // Menu states
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [menuOrderId, setMenuOrderId] = useState<string | null>(null);
@@ -212,6 +231,83 @@ export default function AdminOrdersPage() {
     }
   };
 
+  // บันทึกการชำระเงินแบบ Manual
+  const recordManualPayment = async () => {
+    if (isRecordingPayment) return;
+    
+    if (!selectedOrder) {
+      setSnackbar({
+        open: true,
+        message: "ไม่พบข้อมูลออเดอร์",
+        severity: "error",
+      });
+      return;
+    }
+    
+    if (!manualPaymentData.amount || Number(manualPaymentData.amount) <= 0) {
+      setSnackbar({
+        open: true,
+        message: "กรุณากรอกจำนวนเงินที่ถูกต้อง",
+        severity: "error",
+      });
+      return;
+    }
+    
+    setIsRecordingPayment(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${selectedOrder.id}/manual-payment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(manualPaymentData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to record manual payment");
+      }
+
+      const result = await response.json();
+      
+      // Debug information
+      if (result.debug) {
+        console.log('Manual Payment Result:', result);
+      }
+      
+      setSnackbar({
+        open: true,
+        message: result.isFullyPaid 
+          ? `🎉 บันทึกการชำระเงินสำเร็จ และออเดอร์เสร็จสิ้นแล้ว! (ยอดคงเหลือ: ฿${result.remainingAmount})`
+          : `✅ บันทึกการชำระเงินสำเร็จ ยอดคงเหลือ: ฿${result.remainingAmount}`,
+        severity: "success",
+      });
+
+      // รีเฟรชข้อมูล
+      fetchOrders();
+      
+    } catch (err) {
+      console.error("Error in recordManualPayment:", err);
+      setSnackbar({
+        open: true,
+        message: "❌ เกิดข้อผิดพลาดในการบันทึกการชำระเงิน",
+        severity: "error",
+      });
+    } finally {
+      // ปิด modal และรีเซ็ต state เสมอ (ไม่ว่าจะสำเร็จหรือไม่)
+      setIsRecordingPayment(false);
+      setManualPaymentDialogOpen(false);
+      setSelectedOrder(null);
+      setManualPaymentData({
+        amount: "",
+        paymentMethod: "CASH",
+        paymentDate: new Date().toISOString().split('T')[0],
+        paymentTime: new Date().toTimeString().slice(0, 5),
+        note: "",
+        autoComplete: true,
+      });
+    }
+  };
+
   // อัปเดตสถานะคำสั่งซื้อ
   const updateOrderStatus = async (orderId: string, status: string) => {
     if (isUpdatingStatus) return; // ป้องกันการกดซ้ำ
@@ -242,19 +338,20 @@ export default function AdminOrdersPage() {
       // รีเฟรชข้อมูล
       fetchOrders();
       
-      // ปิด modal และรีเซ็ต state
-      setStatusDialogOpen(false);
-      setSelectedOrder(null);
-      setAdminComment(""); // รีเซ็ต comment
-      setNewStatus(""); // รีเซ็ต status
     } catch (err) {
+      console.error("Error in updateOrderStatus:", err);
       setSnackbar({
         open: true,
         message: "❌ เกิดข้อผิดพลาดในการอัปเดตสถานะ กรุณาลองใหม่อีกครั้ง",
         severity: "error",
       });
     } finally {
+      // ปิด modal และรีเซ็ต state เสมอ (ไม่ว่าจะสำเร็จหรือไม่)
       setIsUpdatingStatus(false);
+      setStatusDialogOpen(false);
+      setSelectedOrder(null);
+      setAdminComment(""); // รีเซ็ต comment
+      setNewStatus(""); // รีเซ็ต status
     }
   };
 
@@ -287,6 +384,79 @@ export default function AdminOrdersPage() {
     handleMenuClose();
   };
 
+  const handleManualPayment = (order: Order) => {
+    setSelectedOrder(order);
+    
+    // ใช้ฟังก์ชันช่วยคำนวณยอดคงเหลือ
+    const { orderTotal, totalPaid, actualRemaining, paymentStatus } = calculateRemainingAmount(order);
+    
+    console.log('Payment Calculation Debug:', {
+      orderTotal,
+      totalPaid,
+      actualRemaining,
+      paymentStatus,
+      paymentNotifications: order.paymentNotifications?.map(p => ({
+        amount: p.transferAmount,
+        type: typeof p.transferAmount
+      }))
+    });
+    
+    setManualPaymentData({
+      ...manualPaymentData,
+      amount: actualRemaining > 0 ? actualRemaining.toFixed(2) : "0",
+    });
+    setManualPaymentDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const handleDeleteOrder = (order: Order) => {
+    setSelectedOrder(order);
+    setDeleteDialogOpen(true);
+    handleMenuClose();
+  };
+
+  const deleteOrder = async () => {
+    if (!selectedOrder) return;
+
+    setIsDeletingOrder(true);
+    try {
+      const response = await fetch(`/api/admin/orders/${selectedOrder.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete order");
+      }
+
+      const result = await response.json();
+
+      setSnackbar({
+        open: true,
+        message: `🗑️ ลบออเดอร์สำเร็จ และคืน stock แล้ว (${result.restoredItems} รายการ)`,
+        severity: "success",
+      });
+
+      // รีเฟรชข้อมูล
+      fetchOrders();
+      
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      setSnackbar({
+        open: true,
+        message: "❌ เกิดข้อผิดพลาดในการลบออเดอร์",
+        severity: "error",
+      });
+    } finally {
+      // ปิด modal และรีเซ็ต state เสมอ (ไม่ว่าจะสำเร็จหรือไม่)
+      setIsDeletingOrder(false);
+      setDeleteDialogOpen(false);
+      setSelectedOrder(null);
+    }
+  };
+
   const handlePageChange = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -313,6 +483,93 @@ export default function AdminOrdersPage() {
       label: status,
       color: "#757575",
       icon: "❓",
+    };
+  };
+
+  // ฟังก์ชันช่วยคำนวณยอดคงเหลือ (ปรับปรุง: totalAmount ตอนนี้เป็นราคาจริงที่ลูกค้าจ่าย)
+  const calculateRemainingAmount = (order: Order) => {
+    // ข้อมูลจากออเดอร์
+    const depositAmount = order.depositAmount 
+      ? (typeof order.depositAmount === 'string' ? parseFloat(order.depositAmount) : Number(order.depositAmount))
+      : 0;
+    
+    const remainingAmount = order.remainingAmount 
+      ? (typeof order.remainingAmount === 'string' ? parseFloat(order.remainingAmount) : Number(order.remainingAmount))
+      : 0;
+    
+    // ราคาสินค้า = totalAmount (ตอนนี้เป็นราคาจริงที่ลูกค้าจ่ายหลังหักส่วนลดแล้ว)
+    const orderTotal = typeof order.totalAmount === 'string' 
+      ? parseFloat(order.totalAmount) 
+      : Number(order.totalAmount);
+    
+    // ตรวจสอบความสอดคล้องของข้อมูล: totalAmount ควรเท่ากับ deposit + remaining
+    const calculatedFromParts = depositAmount + remainingAmount;
+    const priceMatchesCalculation = Math.abs(orderTotal - calculatedFromParts) < 0.01;
+    const finalPrice = orderTotal; // ใช้ totalAmount เป็นหลัก
+    
+    // คำนวณยอดที่ชำระจริงจาก payment notifications
+    const totalPaid = order.paymentNotifications?.reduce(
+      (sum, payment) => {
+        const amount = typeof payment.transferAmount === 'string' 
+          ? parseFloat(payment.transferAmount) 
+          : Number(payment.transferAmount);
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0
+    ) || 0;
+    
+    // ตรวจสอบสถานะการชำระ
+    const isDepositComplete = depositAmount > 0 ? totalPaid >= depositAmount : true;
+    const isFullyPaid = totalPaid >= finalPrice;
+    
+    // คำนวณยอดคงเหลือ
+    let actualRemaining;
+    if (order.status === 'DELIVERED') {
+      // ถ้าสถานะ DELIVERED แปลว่าได้รับเงินครบแล้ว
+      actualRemaining = 0;
+    } else {
+      // คำนวณจากยอดที่ชำระจริง
+      actualRemaining = Math.max(0, finalPrice - totalPaid);
+    }
+    
+    // สถานะต่างๆ
+    let paymentStatus = '';
+    if (order.status === 'DELIVERED') {
+      paymentStatus = 'delivered'; // ส่งมอบแล้ว = ได้เงินครบ
+    } else if (isFullyPaid) {
+      paymentStatus = 'fully_paid'; // ชำระครบแล้ว
+    } else if (isDepositComplete && depositAmount > 0) {
+      paymentStatus = 'deposit_complete'; // มัดจำครบ
+    } else if (totalPaid > 0 && depositAmount > 0) {
+      paymentStatus = 'partial_deposit'; // มัดจำไม่ครบ
+    } else if (totalPaid > 0) {
+      paymentStatus = 'partial_payment'; // ชำระบางส่วน
+    } else {
+      paymentStatus = 'unpaid'; // ยังไม่ชำระ
+    }
+    
+    return {
+      // ข้อมูลพื้นฐาน
+      orderTotal: finalPrice,
+      totalPaid,
+      actualRemaining,
+      depositAmount,
+      remainingAmount,
+      calculatedPrice: calculatedFromParts, // คำนวณจาก deposit + remaining
+      priceMatchesCalculation,
+      
+      // สถานะการชำระ
+      isDepositComplete,
+      isFullyPaid,
+      paymentStatus,
+      
+      // สำหรับการแสดงผล
+      displayInfo: {
+        price: finalPrice,
+        deposit: depositAmount,
+        remaining: actualRemaining,
+        paidAmount: totalPaid,
+        expectedRemaining: remainingAmount // ยอดคงเหลือที่คาดหวังตาม order
+      }
     };
   };
 
@@ -424,6 +681,75 @@ export default function AdminOrdersPage() {
                 ส่วนลด: {formatCurrency(order.discountAmount)}
               </Typography>
             )}
+            {/* แสดงข้อมูลการชำระเงินใน Mobile */}
+            {(() => {
+              const { 
+                orderTotal,
+                totalPaid,
+                actualRemaining,
+                depositAmount,
+                remainingAmount,
+                isDepositComplete,
+                isFullyPaid,
+                paymentStatus,
+                priceMatchesCalculation,
+                displayInfo
+              } = calculateRemainingAmount(order);
+              
+              return (
+                <Box>
+                  {/* แสดงสูตรการคำนวณ */}
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    (฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + ฿{remainingAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                  </Typography>
+                  
+                  {/* แสดงมัดจำ */}
+                  {depositAmount > 0 && (
+                    <Typography variant="caption" color="info.main" display="block">
+                      มัดจำ: ฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {paymentStatus === 'delivered' ? ' (ครบ)' : 
+                       paymentStatus === 'deposit_complete' ? ' (ครบ)' : 
+                       paymentStatus === 'partial_deposit' ? ` (ได้ ฿${totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : 
+                       ' (ยังไม่ได้)'}
+                    </Typography>
+                  )}
+                  
+                  {/* แสดงยอดคงเหลือ */}
+                  <Typography 
+                    variant="caption" 
+                    color={paymentStatus === 'delivered' || paymentStatus === 'fully_paid' ? "success.main" : "error.main"}
+                    display="block"
+                    fontWeight="bold"
+                  >
+                    คงเหลือ: {
+                      paymentStatus === 'delivered' ? 'ครบแล้ว ✅' : 
+                      paymentStatus === 'fully_paid' ? 'ครบแล้ว ✅' :
+                      `฿${actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    }
+                  </Typography>
+                  
+                  {/* แสดงสถานะพิเศษ */}
+                  {paymentStatus === 'partial_deposit' && (
+                    <Typography variant="caption" color="warning.main" display="block">
+                      💰 มัดจำยังไม่ครบ
+                    </Typography>
+                  )}
+                  
+                  {paymentStatus === 'deposit_complete' && actualRemaining > 0 && (
+                    <Typography variant="caption" color="info.main" display="block">
+                      ✅ มัดจำครบ คงเหลือ ฿{actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Typography>
+                  )}
+                  
+                  {/* เตือนหากข้อมูลไม่ตรงกัน */}
+                  {!priceMatchesCalculation && (
+                    <Typography variant="caption" color="error.main" display="block">
+                      ⚠️ ข้อมูลไม่ถูกต้อง
+                    </Typography>
+                  )}
+                </Box>
+              );
+            })()}
           </Box>
           <Box sx={{ textAlign: "right" }}>
             <Typography variant="body2">
@@ -507,6 +833,201 @@ export default function AdminOrdersPage() {
               ส่วนลด: {formatCurrency(order.discountAmount)}
             </Typography>
           )}
+        </Box>
+      </TableCell>
+
+      <TableCell>
+        <Box>
+          {(() => {
+            const { 
+              orderTotal,
+              totalPaid,
+              actualRemaining,
+              depositAmount,
+              remainingAmount,
+              isDepositComplete,
+              isFullyPaid,
+              paymentStatus,
+              priceMatchesCalculation,
+              displayInfo
+            } = calculateRemainingAmount(order);
+            
+            return (
+              <Box>
+                {/* แสดงราคาสินค้า = มัดจำ + คงเหลือ */}
+                <Typography variant="body2" fontWeight="bold" color="primary.main">
+                  ราคา: ฿{displayInfo.price.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  (฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + ฿{remainingAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                </Typography>
+                
+                {/* แสดงมัดจำ */}
+                {depositAmount > 0 && (
+                  <Typography variant="caption" color="info.main" display="block">
+                    มัดจำ: ฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {paymentStatus === 'delivered' ? ' (ครบ)' : 
+                     paymentStatus === 'deposit_complete' ? ' (ครบ)' : 
+                     paymentStatus === 'partial_deposit' ? ` (ได้ ฿${totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : 
+                     ' (ยังไม่ได้)'}
+                  </Typography>
+                )}
+                
+                {/* แสดงยอดคงเหลือ */}
+                <Typography 
+                  variant="caption" 
+                  color={paymentStatus === 'delivered' || paymentStatus === 'fully_paid' ? "success.main" : "error.main"}
+                  display="block"
+                  fontWeight="bold"
+                >
+                  คงเหลือ: {
+                    paymentStatus === 'delivered' ? 'ครบแล้ว ✅' : 
+                    paymentStatus === 'fully_paid' ? 'ครบแล้ว ✅' :
+                    `฿${actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  }
+                </Typography>
+                
+                {/* แสดงสถานะพิเศษ */}
+                {paymentStatus === 'partial_deposit' && (
+                  <Typography variant="caption" color="warning.main" display="block">
+                    💰 มัดจำยังไม่ครบ
+                  </Typography>
+                )}
+                
+                {paymentStatus === 'deposit_complete' && actualRemaining > 0 && (
+                  <Typography variant="caption" color="info.main" display="block">
+                    ✅ มัดจำครบ คงเหลือ ฿{actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Typography>
+                )}
+                
+                {/* เตือนหากข้อมูลไม่ตรงกัน */}
+                {!priceMatchesCalculation && (
+                  <Typography variant="caption" color="error.main" display="block">
+                    ⚠️ ข้อมูลไม่ถูกต้อง
+                  </Typography>
+                )}
+              </Box>
+            );
+          })()}
+        </Box>
+      </TableCell>
+
+      {/* สถานะการชำระเงิน */}
+      <TableCell>
+        <Box>
+          {(() => {
+            const { 
+              orderTotal,
+              totalPaid,
+              actualRemaining,
+              isFullyPaid,
+              paymentStatus
+            } = calculateRemainingAmount(order);
+            
+            // กำหนดสี และข้อความสำหรับสถานะการชำระ
+            let statusColor = "error.main";
+            let statusText = "ยังไม่ชำระ";
+            let statusIcon = "❌";
+            let statusBgColor = "#ffebee";
+            
+            // ใช้ paymentStatus ที่คำนวณแล้วจาก calculateRemainingAmount
+            switch (paymentStatus) {
+              case 'delivered':
+                statusColor = "success.main";
+                statusText = "ชำระครบแล้ว";
+                statusIcon = "✅";
+                statusBgColor = "#e8f5e8";
+                break;
+              case 'fully_paid':
+                statusColor = "success.main";
+                statusText = "ชำระครบแล้ว";
+                statusIcon = "✅";
+                statusBgColor = "#e8f5e8";
+                break;
+              case 'deposit_complete':
+                statusColor = "info.main";
+                statusText = "ชำระมัดจำครบ";
+                statusIcon = "💰";
+                statusBgColor = "#e3f2fd";
+                break;
+              case 'partial_deposit':
+                statusColor = "warning.main";
+                statusText = "มัดจำไม่ครบ";
+                statusIcon = "⏳";
+                statusBgColor = "#fff3cd";
+                break;
+              case 'partial_payment':
+                statusColor = "warning.main";
+                statusText = "ชำระบางส่วน";
+                statusIcon = "⏳";
+                statusBgColor = "#fff3cd";
+                break;
+              case 'unpaid':
+              default:
+                statusColor = "error.main";
+                statusText = "ยังไม่ชำระ";
+                statusIcon = "❌";
+                statusBgColor = "#ffebee";
+                break;
+            }
+            
+            const paymentPercentage = orderTotal > 0 ? (totalPaid / orderTotal) * 100 : 0;
+            
+            // สำหรับ DELIVERED แสดงยอดเต็มที่ได้รับ
+            const displayPaidAmount = paymentStatus === 'delivered' ? orderTotal : totalPaid;
+            
+            return (
+              <Box>
+                <Chip
+                  label={`${statusIcon} ${statusText}`}
+                  size="small"
+                  sx={{
+                    backgroundColor: statusBgColor,
+                    color: statusColor,
+                    fontWeight: 600,
+                    mb: 0.5
+                  }}
+                />
+                <Typography variant="caption" color="text.secondary" display="block">
+                  ได้รับ: ฿{displayPaidAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" display="block">
+                  จาก: ฿{orderTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
+                
+                {/* แสดงข้อมูลเพิ่มเติมสำหรับ deposit_complete */}
+                {paymentStatus === 'deposit_complete' && (
+                  <Typography variant="caption" color="info.main" display="block">
+                    มัดจำ: ฿{(order.depositAmount || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Typography>
+                )}
+                
+                {/* แสดงเปอร์เซ็นต์สำหรับสถานะที่ยังไม่ครบ (ไม่แสดงสำหรับ delivered และ deposit_complete) */}
+                {paymentPercentage > 0 && paymentPercentage < 100 && 
+                 paymentStatus !== 'deposit_complete' && 
+                 paymentStatus !== 'delivered' && 
+                 paymentStatus !== 'fully_paid' && (
+                  <Typography variant="caption" color="info.main" display="block">
+                    ({paymentPercentage.toFixed(1)}%)
+                  </Typography>
+                )}
+                
+                {/* แสดงยอดคงเหลือสำหรับ deposit_complete */}
+                {paymentStatus === 'deposit_complete' && actualRemaining > 0 && (
+                  <Typography variant="caption" color="warning.main" display="block">
+                    คงเหลือ: ฿{actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Typography>
+                )}
+                
+                {/* แสดงข้อมูลพิเศษสำหรับ delivered */}
+                {paymentStatus === 'delivered' && totalPaid !== orderTotal && (
+                  <Typography variant="caption" color="info.main" display="block">
+                    แจ้งชำระ: ฿{totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Typography>
+                )}
+              </Box>
+            );
+          })()}
         </Box>
       </TableCell>
 
@@ -691,7 +1212,9 @@ export default function AdminOrdersPage() {
                   <TableRow>
                     <TableCell>คำสั่งซื้อ</TableCell>
                     <TableCell>ลูกค้า</TableCell>
-                    <TableCell>ยอดรวม</TableCell>
+                    <TableCell>ราคาสินค้า</TableCell>
+                    <TableCell>คงเหลือ</TableCell>
+                    <TableCell>สถานะการชำระ</TableCell>
                     <TableCell>สถานะ</TableCell>
                     <TableCell>การจัดส่ง</TableCell>
                     <TableCell>รายการ</TableCell>
@@ -702,7 +1225,7 @@ export default function AdminOrdersPage() {
                   {orders.map(renderOrderRow)}
                   {orders.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={7} align="center" sx={{ py: 4 }}>
+                      <TableCell colSpan={9} align="center" sx={{ py: 4 }}>
                         <Typography color="text.secondary">
                           ไม่พบข้อมูลคำสั่งซื้อ
                         </Typography>
@@ -782,6 +1305,24 @@ export default function AdminOrdersPage() {
         }}>
           <Edit sx={{ mr: 1 }} fontSize="small" />
           เปลี่ยนสถานะ
+        </MenuItem>
+        <MenuItem onClick={() => {
+          const order = orders.find(o => o.id === menuOrderId);
+          if (order) handleManualPayment(order);
+        }}>
+          <MonetizationOn sx={{ mr: 1 }} fontSize="small" />
+          บันทึกการชำระเงิน
+        </MenuItem>
+        <Divider />
+        <MenuItem 
+          onClick={() => {
+            const order = orders.find(o => o.id === menuOrderId);
+            if (order) handleDeleteOrder(order);
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          <Delete sx={{ mr: 1, color: 'error.main' }} fontSize="small" />
+          ลบออเดอร์
         </MenuItem>
       </Menu>
 
@@ -940,9 +1481,136 @@ export default function AdminOrdersPage() {
                             </Typography>
                           </Box>
                         )}
+
+                        {/* เพิ่มส่วนแสดงการคำนวณที่ถูกต้อง */}
+                        {(() => {
+                          const { 
+                            orderTotal,
+                            totalPaid,
+                            actualRemaining,
+                            depositAmount,
+                            remainingAmount,
+                            isDepositComplete,
+                            isFullyPaid,
+                            paymentStatus,
+                            priceMatchesCalculation,
+                            calculatedPrice
+                          } = calculateRemainingAmount(selectedOrder);
+                          
+                          return (
+                            <>
+                              <Divider sx={{ my: 1 }} />
+                              <Typography variant="subtitle2" fontWeight="bold" color="primary.main" sx={{ mb: 1 }}>
+                                รายละเอียดการชำระเงิน
+                              </Typography>
+                              
+                              {/* แสดงสูตรการคำนวณ */}
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
+                                  สูตรคำนวณ:
+                                </Typography>
+                                <Typography variant="body2" fontWeight="bold">
+                                  ฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} + ฿{remainingAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })} = ฿{calculatedPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                </Typography>
+                              </Box>
+                              
+                              {/* แสดงมัดจำ */}
+                              {depositAmount > 0 && (
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                  <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
+                                    มัดจำ:
+                                  </Typography>
+                                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                    <Typography variant="body2" fontWeight="bold" color="info.main">
+                                      ฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                    </Typography>
+                                    <Chip
+                                      label={
+                                        paymentStatus === 'delivered' ? 'ชำระครบแล้ว' : 
+                                        paymentStatus === 'deposit_complete' ? 'มัดจำครบ' : 
+                                        paymentStatus === 'partial_deposit' ? `ได้รับ ฿${totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2 })}` : 
+                                        'ยังไม่ได้รับ'
+                                      }
+                                      size="small"
+                                      color={
+                                        paymentStatus === 'delivered' || paymentStatus === 'deposit_complete' ? 'success' :
+                                        paymentStatus === 'partial_deposit' ? 'warning' : 'error'
+                                      }
+                                    />
+                                  </Box>
+                                </Box>
+                              )}
+                              
+                              {/* แสดงยอดที่ได้รับแล้ว */}
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
+                                  ได้รับแล้ว:
+                                </Typography>
+                                <Typography variant="body2" fontWeight="bold" color="success.main">
+                                  ฿{totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                </Typography>
+                              </Box>
+                              
+                              {/* แสดงยอดคงเหลือ */}
+                              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
+                                  คงเหลือ:
+                                </Typography>
+                                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                  <Typography 
+                                    variant="h6" 
+                                    fontWeight="bold" 
+                                    color={paymentStatus === 'delivered' || paymentStatus === 'fully_paid' ? "success.main" : "error.main"}
+                                  >
+                                    {paymentStatus === 'delivered' || paymentStatus === 'fully_paid' ? 
+                                      'ชำระครบแล้ว ✅' : 
+                                      `฿${actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2 })}`
+                                    }
+                                  </Typography>
+                                </Box>
+                              </Box>
+                              
+                              {/* แสดงสถานะพิเศษ */}
+                              {paymentStatus === 'partial_deposit' && (
+                                <Alert severity="warning" sx={{ mt: 1 }}>
+                                  <Typography variant="body2">
+                                    💰 <strong>มัดจำไม่ครบ:</strong> ได้รับ ฿{totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2 })} จากมัดจำที่ต้องจ่าย ฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                  </Typography>
+                                </Alert>
+                              )}
+                              
+                              {paymentStatus === 'deposit_complete' && actualRemaining > 0 && (
+                                <Alert severity="info" sx={{ mt: 1 }}>
+                                  <Typography variant="body2">
+                                    ✅ <strong>มัดจำครบแล้ว:</strong> ยังคงเหลือที่ต้องชำระอีก ฿{actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                                  </Typography>
+                                </Alert>
+                              )}
+                              
+                              {paymentStatus === 'delivered' && (
+                                <Alert severity="success" sx={{ mt: 1 }}>
+                                  <Typography variant="body2">
+                                    🚚 <strong>ส่งมอบแล้ว:</strong> หมายความว่าได้รับเงินครบ ฿{orderTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })} แล้ว
+                                  </Typography>
+                                </Alert>
+                              )}
+                              
+                              {/* เตือนหากข้อมูลไม่ตรงกัน */}
+                              {!priceMatchesCalculation && (
+                                <Alert severity="error" sx={{ mt: 1 }}>
+                                  <Typography variant="body2">
+                                    ⚠️ <strong>ข้อมูลไม่สอดคล้อง:</strong> ยอดรวมในระบบ (฿{orderTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}) ไม่เท่ากับมัดจำ + ส่วนที่เหลือ (฿{calculatedPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}) กรุณาตรวจสอบข้อมูล
+                                  </Typography>
+                                </Alert>
+                              )}
+                            </>
+                          );
+                        })()}
+
+                        <Divider sx={{ my: 1 }} />
                         <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                           <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
-                            การชำระ:
+                            ประเภทการชำระ:
                           </Typography>
                           <Typography variant="body2">
                             {selectedOrder.paymentType}
@@ -1459,6 +2127,325 @@ export default function AdminOrdersPage() {
             startIcon={isUpdatingStatus ? <CircularProgress size={16} color="inherit" /> : null}
           >
             {isUpdatingStatus ? "กำลังบันทึก..." : "บันทึก"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Manual Payment Dialog */}
+      <Dialog
+        open={manualPaymentDialogOpen}
+        onClose={() => setManualPaymentDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <MonetizationOn color="primary" />
+            <Box>
+              <Typography variant="h6">บันทึกการชำระเงิน</Typography>
+              <Typography variant="caption" color="text.secondary">
+                ออเดอร์ #{selectedOrder?.orderNumber || selectedOrder?.id?.slice(-8)}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        
+        <DialogContent>
+          {selectedOrder && (
+            <Box sx={{ pt: 1 }}>
+              {/* Order Summary */}
+              <Card variant="outlined" sx={{ mb: 3, p: 2 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
+                  สรุปออเดอร์
+                </Typography>
+                
+                {(() => {
+                  const { 
+                    orderTotal,
+                    totalPaid,
+                    actualRemaining,
+                    depositAmount,
+                    remainingAmount,
+                    isDepositComplete,
+                    isFullyPaid,
+                    paymentStatus,
+                    priceMatchesCalculation,
+                    displayInfo
+                  } = calculateRemainingAmount(selectedOrder);
+                  
+                  return (
+                    <>
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                        <Typography variant="body2">ราคาสินค้า:</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: "bold", color: "primary.main" }}>
+                          ฿{orderTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Box>
+                      <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+                        (มัดจำ ฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} + คงเหลือ ฿{remainingAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                      </Typography>
+                      
+                      {/* แสดงรายละเอียดมัดจำ */}
+                      {depositAmount > 0 && (
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                          <Typography variant="body2" color="info.main">มัดจำ:</Typography>
+                          <Typography variant="body2" color="info.main" sx={{ fontWeight: "bold" }}>
+                            ฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {paymentStatus === 'delivered' ? ' (ครบ)' : 
+                             paymentStatus === 'deposit_complete' ? ' (ครบ)' : 
+                             paymentStatus === 'partial_deposit' ? ` (ได้ ฿${totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})` : 
+                             ' (ยังไม่ได้)'}
+                          </Typography>
+                        </Box>
+                      )}
+                      
+                      <Divider sx={{ my: 1 }} />
+                      
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                        <Typography variant="body2">ยอดที่ได้รับแล้ว:</Typography>
+                        <Typography variant="body2" color="success.main" sx={{ fontWeight: "bold" }}>
+                          ฿{totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      </Box>
+                      
+                      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: "bold" }}>คงเหลือ:</Typography>
+                        <Typography variant="body2" sx={{ 
+                          fontWeight: "bold", 
+                          color: paymentStatus === 'delivered' || paymentStatus === 'fully_paid' ? "success.main" : "error.main" 
+                        }}>
+                          {paymentStatus === 'delivered' ? "ครบแล้ว ✅" : 
+                           paymentStatus === 'fully_paid' ? "ครบแล้ว ✅" :
+                           `฿${actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        </Typography>
+                      </Box>
+                      
+                      {/* แสดงสถานะพิเศษ */}
+                      {paymentStatus === 'partial_deposit' && (
+                        <Alert severity="warning" sx={{ mt: 1 }}>
+                          💰 มัดจำไม่ครบ: ได้รับ ฿{totalPaid.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} จากมัดจำ ฿{depositAmount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Alert>
+                      )}
+                      
+                      {/* เตือนหากข้อมูลไม่ตรงกัน */}
+                      {!priceMatchesCalculation && (
+                        <Alert severity="error" sx={{ mt: 1 }}>
+                          ⚠️ ข้อมูลไม่สมบูรณ์: totalAmount ≠ depositAmount + remainingAmount
+                        </Alert>
+                      )}
+                      
+                      {paymentStatus === 'deposit_complete' && actualRemaining > 0 && (
+                        <Alert severity="info" sx={{ mt: 1 }}>
+                          ✅ มัดจำครบแล้ว ยังขาดอีก ฿{actualRemaining.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Alert>
+                      )}
+                      
+                      {paymentStatus === 'delivered' && (
+                        <Alert severity="success" sx={{ mt: 1 }}>
+                          🚚 สถานะ "ส่งมอบแล้ว" = ได้รับเงินครบ ฿{orderTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} แล้ว
+                        </Alert>
+                      )}
+                    </>
+                  );
+                })()}
+              </Card>
+
+              {/* Payment Form */}
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                <TextField
+                  label="จำนวนเงินที่ได้รับ (บาท)"
+                  type="number"
+                  value={manualPaymentData.amount}
+                  onChange={(e) => setManualPaymentData({
+                    ...manualPaymentData,
+                    amount: e.target.value
+                  })}
+                  fullWidth
+                  required
+                  inputProps={{ min: 0, step: 0.01 }}
+                />
+                
+                <FormControl fullWidth required>
+                  <InputLabel>วิธีการชำระเงิน</InputLabel>
+                  <Select
+                    value={manualPaymentData.paymentMethod}
+                    onChange={(e) => setManualPaymentData({
+                      ...manualPaymentData,
+                      paymentMethod: e.target.value
+                    })}
+                    label="วิธีการชำระเงิน"
+                  >
+                    <MenuItem value="CASH">เงินสด</MenuItem>
+                    <MenuItem value="TRANSFER">โอนเงิน</MenuItem>
+                    <MenuItem value="CREDIT_CARD">บัตรเครดิต</MenuItem>
+                    <MenuItem value="QR_CODE">QR Code</MenuItem>
+                    <MenuItem value="OTHER">อื่นๆ</MenuItem>
+                  </Select>
+                </FormControl>
+                
+                <Box sx={{ display: "flex", gap: 2 }}>
+                  <TextField
+                    label="วันที่ได้รับเงิน"
+                    type="date"
+                    value={manualPaymentData.paymentDate}
+                    onChange={(e) => setManualPaymentData({
+                      ...manualPaymentData,
+                      paymentDate: e.target.value
+                    })}
+                    fullWidth
+                    required
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    label="เวลา"
+                    type="time"
+                    value={manualPaymentData.paymentTime}
+                    onChange={(e) => setManualPaymentData({
+                      ...manualPaymentData,
+                      paymentTime: e.target.value
+                    })}
+                    fullWidth
+                    required
+                    InputLabelProps={{ shrink: true }}
+                  />
+                </Box>
+                
+                <TextField
+                  label="หมายเหตุ (ถ้ามี)"
+                  value={manualPaymentData.note}
+                  onChange={(e) => setManualPaymentData({
+                    ...manualPaymentData,
+                    note: e.target.value
+                  })}
+                  multiline
+                  rows={2}
+                  fullWidth
+                />
+                
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={manualPaymentData.autoComplete}
+                      onChange={(e) => setManualPaymentData({
+                        ...manualPaymentData,
+                        autoComplete: e.target.checked
+                      })}
+                    />
+                  }
+                  label="เปลี่ยนสถานะเป็น 'ส่งมอบแล้ว' อัตโนมัติเมื่อชำระครบ"
+                />
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        
+        <DialogActions>
+          <Button 
+            onClick={() => setManualPaymentDialogOpen(false)}
+            disabled={isRecordingPayment}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            onClick={recordManualPayment}
+            variant="contained"
+            disabled={isRecordingPayment || !manualPaymentData.amount}
+            startIcon={isRecordingPayment ? <CircularProgress size={16} /> : <MonetizationOn />}
+          >
+            {isRecordingPayment ? "กำลังบันทึก..." : "บันทึกการชำระเงิน"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Order Confirmation Dialog */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={() => setDeleteDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Delete color="error" />
+            <Box>
+              <Typography variant="h6" color="error">
+                ยืนยันการลบออเดอร์
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                ออเดอร์ #{selectedOrder?.orderNumber || selectedOrder?.id?.slice(-8)}
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              ⚠️ การดำเนินการนี้ไม่สามารถยกเลิกได้
+            </Typography>
+          </Alert>
+          
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            คุณต้องการลบออเดอร์นี้หรือไม่? ระบบจะดำเนินการดังนี้:
+          </Typography>
+          
+          <Box sx={{ ml: 2, mb: 2 }}>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • 🗑️ ลบออเดอร์และข้อมูลที่เกี่ยวข้อง
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • 📦 คืน stock ของสินค้าทั้งหมดในออเดอร์
+            </Typography>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              • 💳 ลบประวัติการชำระเงิน
+            </Typography>
+          </Box>
+
+          {selectedOrder && (
+            <Card variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
+                รายละเอียดออเดอร์
+              </Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="body2">ลูกค้า:</Typography>
+                <Typography variant="body2">{selectedOrder.user.displayName}</Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="body2">ยอดรวม:</Typography>
+                <Typography variant="body2">฿{selectedOrder.totalAmount.toLocaleString()}</Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="body2">จำนวนสินค้า:</Typography>
+                <Typography variant="body2">{selectedOrder.orderItems.length} รายการ</Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Typography variant="body2">สถานะ:</Typography>
+                <Chip
+                  label={getStatusInfo(selectedOrder.status).label}
+                  color={getStatusInfo(selectedOrder.status).color as any}
+                  size="small"
+                />
+              </Box>
+            </Card>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button 
+            onClick={() => setDeleteDialogOpen(false)}
+            variant="outlined"
+            disabled={isDeletingOrder}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            onClick={deleteOrder}
+            variant="contained"
+            color="error"
+            disabled={isDeletingOrder}
+            startIcon={isDeletingOrder ? <CircularProgress size={16} /> : <Delete />}
+            sx={{ ml: 1 }}
+          >
+            {isDeletingOrder ? "กำลังลบ..." : "ลบออเดอร์"}
           </Button>
         </DialogActions>
       </Dialog>
