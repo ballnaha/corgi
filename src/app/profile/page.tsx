@@ -1377,13 +1377,17 @@ export default function ProfilePage() {
                                 variant="body2"
                                 sx={{ color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
                               >
-                                คงเหลือ
+                                {order.status === "DELIVERED" ? "ชำระครบแล้ว" : "คงเหลือ"}
                               </Typography>
                               <Typography
                                 variant="body2"
-                                sx={{ fontWeight: "bold", color: colors.warning, fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
+                                sx={{ 
+                                  fontWeight: "bold", 
+                                  color: order.status === "DELIVERED" ? colors.success : colors.warning, 
+                                  fontSize: { xs: "0.85rem", sm: "0.95rem" } 
+                                }}
                               >
-                                ฿{(order.remainingAmount || 0).toLocaleString()}
+                                {order.status === "DELIVERED" ? "ไม่ต้องจ่ายเพิ่ม" : `฿${(order.remainingAmount || 0).toLocaleString()}`}
                               </Typography>
                             </Box>
                             
@@ -1395,7 +1399,7 @@ export default function ProfilePage() {
                               const orderTotal = Number(order.totalAmount || 0);
                               const remainingToPay = Math.max(0, orderTotal - totalPaid);
                               
-                              if (totalPaid > 0) {
+                              if (totalPaid > 0 && order.status !== "DELIVERED") {
                                 return (
                                   <>
                                     <Box
@@ -1551,7 +1555,7 @@ export default function ProfilePage() {
                                   </Box>
                                   
                                   {/* ยอดที่ได้รับแล้ว */}
-                                  {totalPaid > 0 && (
+                                  {(totalPaid > 0 || order.status === "DELIVERED") && (
                                     <Box
                                       sx={{
                                         display: "flex",
@@ -1567,7 +1571,7 @@ export default function ProfilePage() {
                                         variant="body2"
                                         sx={{ color: colors.text.secondary, fontSize: { xs: "0.75rem", sm: "0.85rem" }, fontWeight: 500 }}
                                       >
-                                        💰 ได้รับแล้ว
+                                        {order.status === "DELIVERED" ? "✅ ชำระแล้ว" : "💰 ได้รับแล้ว"}
                                       </Typography>
                                       <Typography
                                         variant="body2"
@@ -1577,7 +1581,7 @@ export default function ProfilePage() {
                                           fontSize: { xs: "0.8rem", sm: "0.9rem" }
                                         }}
                                       >
-                                        ฿{totalPaid.toLocaleString()}
+                                        {order.status === "DELIVERED" && totalPaid === 0 ? "ครบถ้วน" : `฿${totalPaid.toLocaleString()}`}
                                       </Typography>
                                     </Box>
                                   )}
@@ -1589,7 +1593,7 @@ export default function ProfilePage() {
                                       justifyContent: "space-between",
                                       alignItems: "center",
                                       p: 1,
-                                      backgroundColor: remainingToPay > 0 ? colors.warning + "15" : colors.success + "15",
+                                      backgroundColor: (order.status === "DELIVERED" || remainingToPay <= 0) ? colors.success + "15" : colors.warning + "15",
                                       borderRadius: 1,
                                     }}
                                   >
@@ -1601,17 +1605,17 @@ export default function ProfilePage() {
                                         fontWeight: 500 
                                       }}
                                     >
-                                      {remainingToPay > 0 ? "⏳ คงเหลือ" : "✅ ครบแล้ว"}
+                                      {order.status === "DELIVERED" ? "✅ ชำระครบแล้ว" : remainingToPay > 0 ? "⏳ คงเหลือ" : "✅ ครบแล้ว"}
                                     </Typography>
                                     <Typography
                                       variant="body2"
                                       sx={{ 
                                         fontWeight: "bold", 
-                                        color: remainingToPay > 0 ? colors.warning : colors.success,
+                                        color: (order.status === "DELIVERED" || remainingToPay <= 0) ? colors.success : colors.warning,
                                         fontSize: { xs: "0.8rem", sm: "0.9rem" }
                                       }}
                                     >
-                                      ฿{remainingToPay.toLocaleString()}
+                                      {order.status === "DELIVERED" ? "ไม่ต้องจ่ายเพิ่ม" : `฿${remainingToPay.toLocaleString()}`}
                                     </Typography>
                                   </Box>
                                 </>
@@ -2250,7 +2254,7 @@ export default function ProfilePage() {
                           variant="body2"
                           sx={{ color: colors.text.secondary, fontWeight: 500 }}
                         >
-                          💰 ยอดที่ได้รับแล้ว
+                          💰 ยอดที่ได้รับแล้ว(มัดจำ)
                         </Typography>
                         <Typography
                           variant="body2"
@@ -2269,7 +2273,7 @@ export default function ProfilePage() {
                           alignItems: "center",
                           mb: 2,
                           p: 1.5,
-                          backgroundColor: remainingToPay > 0 ? colors.warning + "20" : colors.success + "20",
+                          backgroundColor: (selectedOrder.status === "DELIVERED" || remainingToPay <= 0) ? colors.success + "20" : colors.warning + "20",
                           borderRadius: 2,
                         }}
                       >
@@ -2277,16 +2281,16 @@ export default function ProfilePage() {
                           variant="body2"
                           sx={{ color: colors.text.secondary, fontWeight: 500 }}
                         >
-                          {remainingToPay > 0 ? "⏳ ยอดคงเหลือ" : "✅ ชำระครบแล้ว"}
+                          {selectedOrder.status === "DELIVERED" ? "✅ ชำระครบแล้วเต็มจำนวน" : remainingToPay > 0 ? "⏳ ยอดคงเหลือ" : "✅ ชำระครบแล้ว"}
                         </Typography>
                         <Typography
                           variant="body2"
                           sx={{ 
                             fontWeight: "bold", 
-                            color: remainingToPay > 0 ? colors.warning : colors.success 
+                            color: (selectedOrder.status === "DELIVERED" || remainingToPay <= 0) ? colors.success : colors.warning 
                           }}
                         >
-                          ฿{remainingToPay.toLocaleString()}
+                          {selectedOrder.status === "DELIVERED" ? "ไม่ต้องจ่ายเพิ่ม" : `฿${remainingToPay.toLocaleString()}`}
                         </Typography>
                       </Box>
                     </>
@@ -2365,7 +2369,7 @@ export default function ProfilePage() {
                           alignItems: "center",
                           mb: 2,
                           p: 1.5,
-                          backgroundColor: remainingToPay > 0 ? colors.warning + "20" : colors.success + "20",
+                          backgroundColor: (selectedOrder.status === "DELIVERED" || remainingToPay <= 0) ? colors.success + "20" : colors.warning + "20",
                           borderRadius: 2,
                         }}
                       >
@@ -2373,16 +2377,16 @@ export default function ProfilePage() {
                           variant="body2"
                           sx={{ color: colors.text.secondary, fontWeight: 500 }}
                         >
-                          {remainingToPay > 0 ? "⏳ ยอดคงเหลือ" : "✅ ชำระครบแล้ว"}
+                          {selectedOrder.status === "DELIVERED" ? "✅ ชำระครบแล้ว" : remainingToPay > 0 ? "⏳ ยอดคงเหลือ" : "✅ ชำระครบแล้ว"}
                         </Typography>
                         <Typography
                           variant="body2"
                           sx={{ 
                             fontWeight: "bold", 
-                            color: remainingToPay > 0 ? colors.warning : colors.success 
+                            color: (selectedOrder.status === "DELIVERED" || remainingToPay <= 0) ? colors.success : colors.warning 
                           }}
                         >
-                          ฿{remainingToPay.toLocaleString()}
+                          {selectedOrder.status === "DELIVERED" ? "ไม่ต้องจ่ายเพิ่ม" : `฿${remainingToPay.toLocaleString()}`}
                         </Typography>
                       </Box>
                     </>
