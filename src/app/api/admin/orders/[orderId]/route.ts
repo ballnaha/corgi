@@ -17,7 +17,7 @@ export async function GET(
       );
     }
 
-    const { orderId } = params;
+    const { orderId } = await params;
 
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -76,15 +76,21 @@ export async function DELETE(
       );
     }
 
-    // ตรวจสอบสิทธิ์ admin
-    if (!session.user.isAdmin && !session.user.role?.includes("ADMIN")) {
+    // ตรวจสอบสิทธิ์ admin - ใช้ lineUserId แทน id
+    const user = await prisma.user.findUnique({
+      where: { lineUserId: session.user.id },
+      select: { isAdmin: true, role: true, displayName: true }
+    });
+
+    if (!user?.isAdmin || user.role !== 'ADMIN') {
+      console.log("❌ Forbidden - Not admin");
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
         { status: 403 }
       );
     }
 
-    const { orderId } = params;
+    const { orderId } = await params;
 
     // ตรวจสอบว่าออเดอร์มีอยู่หรือไม่
     const existingOrder = await prisma.order.findUnique({

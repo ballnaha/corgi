@@ -1096,49 +1096,7 @@ export default function ProfilePage() {
                             },
                           }}
                         >
-                          {/* Payment Status */}
-                          {(() => {
-                            const totalPaid = (order.paymentNotifications || []).reduce((sum, payment) => {
-                              return sum + Number(payment.transferAmount || 0);
-                            }, 0);
-                            const orderTotal = Number(order.totalAmount || 0);
-                            const remainingToPay = Math.max(0, orderTotal - totalPaid);
-                            
-                            if (totalPaid > 0) {
-                              if (remainingToPay <= 0) {
-                                return (
-                                  <Chip
-                                    label="✅ ชำระครบแล้ว"
-                                    size="small"
-                                    sx={{
-                                      color: colors.success,
-                                      backgroundColor: `${colors.success}20`,
-                                      fontWeight: "bold",
-                                      fontSize: { xs: "0.65rem", sm: "0.7rem" },
-                                      height: { xs: 22, sm: 26 },
-                                      border: `1px solid ${colors.success}40`,
-                                    }}
-                                  />
-                                );
-                              } else {
-                                return (
-                                  <Chip
-                                    label={`💰 ชำระ ฿${totalPaid.toLocaleString()}`}
-                                    size="small"
-                                    sx={{
-                                      color: colors.info,
-                                      backgroundColor: `${colors.info}20`,
-                                      fontWeight: "bold",
-                                      fontSize: { xs: "0.6rem", sm: "0.65rem" },
-                                      height: { xs: 20, sm: 24 },
-                                      border: `1px solid ${colors.info}40`,
-                                    }}
-                                  />
-                                );
-                              }
-                            }
-                            return null;
-                          })()}
+
 
                           <Chip
                             onClick={() => handleOrderDetailOpen(order)}

@@ -231,23 +231,30 @@ enum PaymentType {
   REMAINING_PAYMENT
 }
 
+enum PaymentNotificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model PaymentNotification {
-  id                   String    @id @default(cuid())
-  orderId              String    @map("order_id")
-  transferAmount       Decimal   @map("transfer_amount") @db.Decimal(10, 2)
-  transferDate         DateTime  @map("transfer_date")
-  transferTime         String    @map("transfer_time")
-  note                 String?   @db.Text
-  paymentSlipData      String?   @map("payment_slip_data") @db.LongText
-  paymentSlipMimeType  String?   @map("payment_slip_mime_type")
-  paymentSlipFileName  String?   @map("payment_slip_file_name")
-  submittedAt          DateTime  @default(now()) @map("submitted_at")
-  reviewedAt           DateTime? @map("reviewed_at")
-  reviewedBy           String?   @map("reviewed_by")
-  reviewNote           String?   @map("review_note") @db.Text
-  createdAt            DateTime  @default(now()) @map("created_at")
-  updatedAt            DateTime  @updatedAt @map("updated_at")
-  order                Order     @relation(fields: [orderId], references: [id])
+  id                   String                    @id @default(cuid())
+  orderId              String                    @map("order_id")
+  transferAmount       Decimal                   @map("transfer_amount") @db.Decimal(10, 2)
+  transferDate         DateTime                  @map("transfer_date")
+  transferTime         String                    @map("transfer_time")
+  note                 String?                   @db.Text
+  paymentSlipData      String?                   @map("payment_slip_data") @db.LongText
+  paymentSlipMimeType  String?                   @map("payment_slip_mime_type")
+  paymentSlipFileName  String?                   @map("payment_slip_file_name")
+  status               PaymentNotificationStatus @default(PENDING)
+  submittedAt          DateTime                  @default(now()) @map("submitted_at")
+  reviewedAt           DateTime?                 @map("reviewed_at")
+  reviewedBy           String?                   @map("reviewed_by")
+  reviewNote           String?                   @map("review_note") @db.Text
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  updatedAt            DateTime                  @updatedAt @map("updated_at")
+  order                Order                     @relation(fields: [orderId], references: [id])
 
   @@index([orderId], map: "payment_notifications_order_id_fkey")
   @@map("payment_notifications")

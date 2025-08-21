@@ -58,6 +58,12 @@ import {
   Inventory,
   ShoppingCart,
   Delete,
+  ThumbUp,
+  ThumbDown,
+  RateReview,
+  Pending,
+  CheckCircleOutline,
+  CancelOutlined,
 } from "@mui/icons-material";
 import { colors } from "@/theme/colors";
 import { ORDER_STATUS_INFO } from "@/lib/order-status";
@@ -93,10 +99,15 @@ interface PaymentNotification {
   id: string;
   transferAmount: number;
   transferDate: string;
+  note?: string | null;
   paymentSlipData?: string | null;
   paymentSlipMimeType?: string | null;
   paymentSlipFileName?: string | null;
+  status?: "PENDING" | "APPROVED" | "REJECTED";
   submittedAt: string;
+  reviewedAt?: string | null;
+  reviewedBy?: string | null;
+  reviewNote?: string | null;
 }
 
 interface Order {
@@ -189,6 +200,17 @@ export default function AdminOrdersPage() {
   // Delete Order Dialog states
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeletingOrder, setIsDeletingOrder] = useState(false);
+  
+  // Delete Payment Notification Dialog states
+  const [deletePaymentDialogOpen, setDeletePaymentDialogOpen] = useState(false);
+  const [selectedPaymentNotification, setSelectedPaymentNotification] = useState<PaymentNotification | null>(null);
+  const [isDeletingPayment, setIsDeletingPayment] = useState(false);
+  
+  // Review Payment Notification Dialog states
+  const [reviewPaymentDialogOpen, setReviewPaymentDialogOpen] = useState(false);
+  const [reviewAction, setReviewAction] = useState<"APPROVED" | "REJECTED">("APPROVED");
+  const [reviewNote, setReviewNote] = useState("");
+  const [isReviewingPayment, setIsReviewingPayment] = useState(false);
   
   // Menu states
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -296,6 +318,7 @@ export default function AdminOrdersPage() {
       // ปิด modal และรีเซ็ต state เสมอ (ไม่ว่าจะสำเร็จหรือไม่)
       setIsRecordingPayment(false);
       setManualPaymentDialogOpen(false);
+      setViewDialogOpen(false); // ปิด view dialog ด้วยเพื่อป้องกัน modal ว่างเปล่า
       setSelectedOrder(null);
       setManualPaymentData({
         amount: "",
@@ -349,6 +372,7 @@ export default function AdminOrdersPage() {
       // ปิด modal และรีเซ็ต state เสมอ (ไม่ว่าจะสำเร็จหรือไม่)
       setIsUpdatingStatus(false);
       setStatusDialogOpen(false);
+      setViewDialogOpen(false); // ปิด view dialog ด้วยเพื่อป้องกัน modal ว่างเปล่า
       setSelectedOrder(null);
       setAdminComment(""); // รีเซ็ต comment
       setNewStatus(""); // รีเซ็ต status
@@ -453,7 +477,125 @@ export default function AdminOrdersPage() {
       // ปิด modal และรีเซ็ต state เสมอ (ไม่ว่าจะสำเร็จหรือไม่)
       setIsDeletingOrder(false);
       setDeleteDialogOpen(false);
+      setViewDialogOpen(false); // ปิด view dialog ด้วยเพื่อป้องกัน modal ว่างเปล่า
       setSelectedOrder(null);
+    }
+  };
+
+  // ลบประวัติการชำระเงิน
+  const deletePaymentNotification = async () => {
+    if (!selectedPaymentNotification) return;
+
+    setIsDeletingPayment(true);
+    try {
+      console.log("🗑️ Deleting payment notification:", selectedPaymentNotification.id);
+      
+      const response = await fetch(`/api/admin/payment-notifications/${selectedPaymentNotification.id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      console.log("📡 Delete response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ Delete failed:", errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to delete payment notification`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Delete successful:", result);
+
+      setSnackbar({
+        open: true,
+        message: `🗑️ ลบประวัติการชำระเงินสำเร็จแล้ว (฿${selectedPaymentNotification.transferAmount.toLocaleString()})`,
+        severity: "success",
+      });
+
+      // รีเฟรชข้อมูล
+      fetchOrders();
+      
+    } catch (error) {
+      console.error("Error deleting payment notification:", error);
+      const errorMessage = error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ";
+      
+      setSnackbar({
+        open: true,
+        message: `❌ เกิดข้อผิดพลาดในการลบประวัติการชำระเงิน: ${errorMessage}`,
+        severity: "error",
+      });
+    } finally {
+      // ปิด modal และรีเซ็ต state เสมอ (ไม่ว่าจะสำเร็จหรือไม่)
+      setIsDeletingPayment(false);
+      setDeletePaymentDialogOpen(false);
+      setViewDialogOpen(false); // ปิด view dialog ด้วยเพื่อกลับไปหน้าหลัก
+      setSelectedPaymentNotification(null);
+      setSelectedOrder(null); // รีเซ็ต selected order ด้วย
+    }
+  };
+
+  // Review Payment Notification
+  const reviewPaymentNotification = async () => {
+    if (!selectedPaymentNotification) return;
+
+    setIsReviewingPayment(true);
+    try {
+      console.log("📋 Reviewing payment notification:", selectedPaymentNotification.id, "as", reviewAction);
+      
+      const response = await fetch(`/api/admin/payment-notifications/${selectedPaymentNotification.id}/review`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: reviewAction,
+          reviewNote: reviewNote.trim() || null,
+        }),
+      });
+
+      console.log("📡 Review response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("❌ Review failed:", errorData);
+        throw new Error(errorData.error || `HTTP ${response.status}: Failed to review payment notification`);
+      }
+
+      const result = await response.json();
+      console.log("✅ Review successful:", result);
+
+      const actionText = reviewAction === "APPROVED" ? "อนุมัติ" : "ปฏิเสธ";
+      const emoji = reviewAction === "APPROVED" ? "✅" : "❌";
+
+      setSnackbar({
+        open: true,
+        message: `${emoji} ${actionText}การชำระเงินสำเร็จแล้ว (฿${selectedPaymentNotification.transferAmount.toLocaleString()})`,
+        severity: reviewAction === "APPROVED" ? "success" : "warning",
+      });
+
+      // รีเฟรชข้อมูล
+      fetchOrders();
+      
+    } catch (error) {
+      console.error("Error reviewing payment notification:", error);
+      const errorMessage = error instanceof Error ? error.message : "เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ";
+      
+      setSnackbar({
+        open: true,
+        message: `❌ เกิดข้อผิดพลาดในการ review การชำระเงิน: ${errorMessage}`,
+        severity: "error",
+      });
+    } finally {
+      // ปิด modal และรีเซ็ต state เสมอ (ไม่ว่าจะสำเร็จหรือไม่)
+      setIsReviewingPayment(false);
+      setReviewPaymentDialogOpen(false);
+      setViewDialogOpen(false); // ปิด view dialog ด้วยเพื่อกลับไปหน้าหลัก
+      setSelectedPaymentNotification(null);
+      setSelectedOrder(null); // รีเซ็ต selected order ด้วย
+      setReviewAction("APPROVED");
+      setReviewNote("");
     }
   };
 
@@ -484,6 +626,37 @@ export default function AdminOrdersPage() {
       color: "#757575",
       icon: "❓",
     };
+  };
+
+  // ฟังก์ชันสำหรับแสดงสถานะ Payment Notification
+  const getPaymentStatusInfo = (status?: string) => {
+    switch (status) {
+      case "APPROVED":
+        return {
+          label: "อนุมัติแล้ว",
+          color: "success" as const,
+          icon: <CheckCircleOutline />,
+          bgColor: "#e8f5e8",
+          textColor: "#2e7d32"
+        };
+      case "REJECTED":
+        return {
+          label: "ปฏิเสธ",
+          color: "error" as const,
+          icon: <CancelOutlined />,
+          bgColor: "#ffebee",
+          textColor: "#c62828"
+        };
+      case "PENDING":
+      default:
+        return {
+          label: "รอตรวจสอบ",
+          color: "warning" as const,
+          icon: <Pending />,
+          bgColor: "#fff3e0",
+          textColor: "#f57c00"
+        };
+    }
   };
 
   // ฟังก์ชันช่วยคำนวณยอดคงเหลือ (ปรับปรุง: totalAmount ตอนนี้เป็นราคาจริงที่ลูกค้าจ่าย)
@@ -1913,11 +2086,85 @@ export default function AdminOrdersPage() {
                               borderColor: "divider",
                             }}
                           >
-                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
-                              <Typography variant="subtitle1" fontWeight="bold">
-                                การแจ้งชำระ #{index + 1}
-                              </Typography>
-
+                            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", mb: 2 }}>
+                              <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                                <Typography variant="subtitle1" fontWeight="bold">
+                                  การแจ้งชำระ #{index + 1}
+                                </Typography>
+                                
+                                {/* แสดงสถานะ Payment */}
+                                {(() => {
+                                  const statusInfo = getPaymentStatusInfo(notification.status);
+                                  return (
+                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                                      <Chip
+                                        icon={statusInfo.icon}
+                                        label={statusInfo.label}
+                                        size="small"
+                                        sx={{
+                                          backgroundColor: statusInfo.bgColor,
+                                          color: statusInfo.textColor,
+                                          "& .MuiChip-icon": {
+                                            color: statusInfo.textColor
+                                          },
+                                          fontWeight: 600,
+                                        }}
+                                      />
+                                    </Box>
+                                  );
+                                })()}
+                              </Box>
+                              
+                              <Box sx={{ display: "flex", gap: 1 }}>
+                                {/* ปุ่ม Review (แสดงเฉพาะเมื่อสถานะเป็น PENDING) */}
+                                {(!notification.status || notification.status === "PENDING") && (
+                                  <Tooltip title="Review การชำระเงิน">
+                                    <IconButton
+                                      size="small"
+                                      color="primary"
+                                      onClick={() => {
+                                        setSelectedPaymentNotification(notification);
+                                        setReviewAction("APPROVED");
+                                        setReviewNote("");
+                                        setReviewPaymentDialogOpen(true);
+                                      }}
+                                      sx={{
+                                        backgroundColor: "primary.light",
+                                        color: "white",
+                                        "&:hover": {
+                                          backgroundColor: "primary.main",
+                                        },
+                                        borderRadius: 1,
+                                      }}
+                                    >
+                                      <RateReview fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                )}
+                                
+                                {/* ปุ่มลบประวัติการชำระเงิน */}
+                                <Tooltip title="ลบประวัติการชำระเงิน">
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => {
+                                      setSelectedPaymentNotification(notification);
+                                      setDeletePaymentDialogOpen(true);
+                                    }}
+                                    sx={{
+                                      backgroundColor: "error.light",
+                                      color: "white",
+                                      "&:hover": {
+                                        backgroundColor: "error.main",
+                                        color: "white",
+                                      },
+                                      borderRadius: 1,
+                                    }}
+                                  >
+                                    <Delete fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
                             </Box>
 
                             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2, mb: 2 }}>
@@ -1997,6 +2244,55 @@ export default function AdminOrdersPage() {
                                     }
                                   }}
                                 />
+                              </Box>
+                            )}
+
+                            {/* Review Information */}
+                            {notification.reviewedAt && (
+                              <Box sx={{ mt: 2, p: 2, backgroundColor: "grey.50", borderRadius: 2 }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1, fontWeight: 600 }}>
+                                  📋 ข้อมูลการ Review
+                                </Typography>
+                                
+                                <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 2 }}>
+                                  <Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                      ผู้ Review:
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight="bold">
+                                      {notification.reviewedBy || "ไม่ระบุ"}
+                                    </Typography>
+                                  </Box>
+                                  <Box>
+                                    <Typography variant="body2" color="text.secondary">
+                                      วันที่ Review:
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight="bold">
+                                      {formatDate(notification.reviewedAt)}
+                                    </Typography>
+                                  </Box>
+                                </Box>
+                                
+                                {notification.reviewNote && (
+                                  <Box sx={{ mt: 2 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                      หมายเหตุจาก Admin:
+                                    </Typography>
+                                    <Typography 
+                                      variant="body2" 
+                                      sx={{ 
+                                        p: 1.5, 
+                                        backgroundColor: "white", 
+                                        borderRadius: 1,
+                                        border: "1px solid",
+                                        borderColor: "divider",
+                                        whiteSpace: "pre-wrap"
+                                      }}
+                                    >
+                                      {notification.reviewNote}
+                                    </Typography>
+                                  </Box>
+                                )}
                               </Box>
                             )}
 
@@ -2446,6 +2742,228 @@ export default function AdminOrdersPage() {
             sx={{ ml: 1 }}
           >
             {isDeletingOrder ? "กำลังลบ..." : "ลบออเดอร์"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Payment Notification Confirmation Dialog */}
+      <Dialog
+        open={deletePaymentDialogOpen}
+        onClose={() => setDeletePaymentDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Delete color="error" />
+            <Box>
+              <Typography variant="h6" color="error">
+                ยืนยันการลบประวัติการชำระเงิน
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                การแจ้งชำระ ฿{selectedPaymentNotification?.transferAmount.toLocaleString()} 
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              ⚠️ การดำเนินการนี้ไม่สามารถยกเลิกได้
+            </Typography>
+          </Alert>
+          
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            คุณต้องการลบประวัติการชำระเงินนี้หรือไม่?
+          </Typography>
+
+          {selectedPaymentNotification && (
+            <Card variant="outlined" sx={{ p: 2, bgcolor: 'grey.50' }}>
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
+                รายละเอียดการชำระเงิน
+              </Typography>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="body2">จำนวนเงิน:</Typography>
+                <Typography variant="body2" fontWeight="bold">
+                  ฿{selectedPaymentNotification.transferAmount.toLocaleString()}
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="body2">วันที่โอน:</Typography>
+                <Typography variant="body2">
+                  {formatDate(selectedPaymentNotification.transferDate)}
+                </Typography>
+              </Box>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                <Typography variant="body2">วันที่แจ้ง:</Typography>
+                <Typography variant="body2">
+                  {formatDate(selectedPaymentNotification.submittedAt)}
+                </Typography>
+              </Box>
+              {selectedPaymentNotification.note && (
+                <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                  <Typography variant="body2">หมายเหตุ:</Typography>
+                  <Typography variant="body2" sx={{ maxWidth: '60%', textAlign: 'right' }}>
+                    {selectedPaymentNotification.note}
+                  </Typography>
+                </Box>
+              )}
+            </Card>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button 
+            onClick={() => setDeletePaymentDialogOpen(false)}
+            variant="outlined"
+            disabled={isDeletingPayment}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            onClick={deletePaymentNotification}
+            variant="contained"
+            color="error"
+            disabled={isDeletingPayment}
+            startIcon={isDeletingPayment ? <CircularProgress size={16} /> : <Delete />}
+            sx={{ ml: 1 }}
+          >
+            {isDeletingPayment ? "กำลังลบ..." : "ลบประวัติการชำระเงิน"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Review Payment Notification Dialog */}
+      <Dialog
+        open={reviewPaymentDialogOpen}
+        onClose={() => setReviewPaymentDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <RateReview color="primary" />
+            <Box>
+              <Typography variant="h6" color="primary">
+                Review การชำระเงิน
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                การแจ้งชำระ ฿{selectedPaymentNotification?.transferAmount.toLocaleString()} 
+              </Typography>
+            </Box>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 1 }}>
+            {selectedPaymentNotification && (
+              <Card variant="outlined" sx={{ p: 2, bgcolor: 'grey.50', mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
+                  รายละเอียดการชำระเงิน
+                </Typography>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Typography variant="body2">จำนวนเงิน:</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    ฿{selectedPaymentNotification.transferAmount.toLocaleString()}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Typography variant="body2">วันที่โอน:</Typography>
+                  <Typography variant="body2">
+                    {formatDate(selectedPaymentNotification.transferDate)}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1 }}>
+                  <Typography variant="body2">วันที่แจ้ง:</Typography>
+                  <Typography variant="body2">
+                    {formatDate(selectedPaymentNotification.submittedAt)}
+                  </Typography>
+                </Box>
+                {selectedPaymentNotification.note && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 1 }}>หมายเหตุจากลูกค้า:</Typography>
+                    <Typography variant="body2" sx={{ 
+                      p: 1, 
+                      backgroundColor: 'white', 
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      fontSize: '0.875rem'
+                    }}>
+                      {selectedPaymentNotification.note}
+                    </Typography>
+                  </Box>
+                )}
+              </Card>
+            )}
+
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {/* เลือก Action */}
+              <FormControl fullWidth>
+                <InputLabel>การตัดสินใจ</InputLabel>
+                <Select
+                  value={reviewAction}
+                  label="การตัดสินใจ"
+                  onChange={(e) => setReviewAction(e.target.value as "APPROVED" | "REJECTED")}
+                >
+                  <MenuItem value="APPROVED">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <ThumbUp color="success" />
+                      <span>อนุมัติการชำระเงิน</span>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="REJECTED">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <ThumbDown color="error" />
+                      <span>ปฏิเสธการชำระเงิน</span>
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* หมายเหตุจาก Admin */}
+              <TextField
+                fullWidth
+                multiline
+                rows={3}
+                label="หมายเหตุจาก Admin (ไม่บังคับ)"
+                placeholder={reviewAction === "APPROVED" 
+                  ? "เช่น การชำระเงินถูกต้อง, เอกสารครบถ้วน" 
+                  : "เช่น จำนวนเงินไม่ตรง, หลักฐานไม่ชัดเจน"}
+                value={reviewNote}
+                onChange={(e) => setReviewNote(e.target.value)}
+                variant="outlined"
+                helperText={`การ${reviewAction === "APPROVED" ? "อนุมัติ" : "ปฏิเสธ"}จะส่งผลต่อสถานะออเดอร์`}
+              />
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 3, pt: 1 }}>
+          <Button 
+            onClick={() => setReviewPaymentDialogOpen(false)}
+            variant="outlined"
+            disabled={isReviewingPayment}
+          >
+            ยกเลิก
+          </Button>
+          <Button
+            onClick={reviewPaymentNotification}
+            variant="contained"
+            color={reviewAction === "APPROVED" ? "success" : "error"}
+            disabled={isReviewingPayment}
+            startIcon={
+              isReviewingPayment ? (
+                <CircularProgress size={16} />
+              ) : reviewAction === "APPROVED" ? (
+                <ThumbUp />
+              ) : (
+                <ThumbDown />
+              )
+            }
+            sx={{ ml: 1 }}
+          >
+            {isReviewingPayment 
+              ? "กำลังบันทึก..." 
+              : `${reviewAction === "APPROVED" ? "อนุมัติ" : "ปฏิเสธ"}การชำระเงิน`
+            }
           </Button>
         </DialogActions>
       </Dialog>
