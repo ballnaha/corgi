@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // Skip middleware for API routes, static files, and auth pages
+  // Skip middleware for API routes, static files, auth pages, and home page
   if (
     request.nextUrl.pathname.startsWith('/api/') ||
     request.nextUrl.pathname.startsWith('/_next/') ||
     request.nextUrl.pathname.startsWith('/auth/') ||
-    request.nextUrl.pathname === '/favicon.ico'
+    request.nextUrl.pathname === '/favicon.ico' ||
+    request.nextUrl.pathname === '/home'
   ) {
     return NextResponse.next();
   }
@@ -43,6 +44,11 @@ export async function middleware(request: NextRequest) {
     const response = NextResponse.next();
     response.headers.set('x-liff-environment', 'true');
     return response;
+  }
+
+  // Allow shop page without auth for normal web access
+  if (request.nextUrl.pathname === '/shop') {
+    return NextResponse.next();
   }
 
   return NextResponse.next();

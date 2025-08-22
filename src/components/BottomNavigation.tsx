@@ -24,7 +24,7 @@ export default function BottomNavigation({
   // Derive active tab from current path when not explicitly controlled
   const derivedActiveTab = useMemo(() => {
     if (!pathname) return "home";
-    if (pathname === "/" || pathname.startsWith("/product")) return "home";
+    if (pathname === "/" || pathname === "/shop" || pathname.startsWith("/product")) return "home";
     if (pathname.startsWith("/profile")) return "profile";
     if (pathname.startsWith("/favorites")) return "favorites";
     if (pathname.startsWith("/calendar")) return "calendar";
@@ -52,7 +52,7 @@ export default function BottomNavigation({
   const getHrefForTab = (tabId: string) => {
     switch (tabId) {
       case "home":
-        return "/";
+        return "/shop";
       case "profile":
         return "/profile";
       case "favorites":
@@ -60,14 +60,14 @@ export default function BottomNavigation({
       case "calendar":
         return "/calendar";
       default:
-        return "/";
+        return "/shop";
     }
   };
 
   const handleTabClick = (tabId: string) => {
     switch (tabId) {
       case "home":
-        handleLiffNavigation(router, "/");
+        handleLiffNavigation(router, "/shop");
         break;
       case "profile":
         handleLiffNavigation(router, "/profile");
@@ -84,10 +84,11 @@ export default function BottomNavigation({
     }
   };
 
-  // Hide bottom navigation on product detail pages, checkout, order-success, payment-notification, and admin pages
+  // Hide bottom navigation on product detail pages, checkout, order-success, payment-notification, admin pages, and the custom /home page
   if (
     pathname &&
-    (pathname.startsWith("/product/") ||
+    (pathname === "/home" ||
+      pathname.startsWith("/product/") ||
       pathname.startsWith("/checkout") ||
       pathname.startsWith("/order-success") ||
       pathname.startsWith("/payment-notification") ||

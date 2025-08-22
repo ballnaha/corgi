@@ -7,7 +7,6 @@ import type { SlideProps } from '@mui/material';
 import { colors } from '@/theme/colors';
 import Navigation from '@/components/Navigation';
 import Header from '@/components/Header';
-import BottomNavigation from '@/components/BottomNavigation';
 import ProductCard from '@/components/ProductCard';
 import Cart from '@/components/Cart';
 import { Product, CartItem } from '@/types';
@@ -231,7 +230,7 @@ export default function FavoritesPage() {
 					</Box>
 				)}
 			</Box>
-			<BottomNavigation />
+
 			
 			<Cart
 				items={cartItems}

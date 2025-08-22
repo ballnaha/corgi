@@ -49,8 +49,8 @@ export default function RootLayout({
             <ThemeProvider>
               <LineAuthProvider>
                 {children}
+                <BottomNavigation />
               </LineAuthProvider>
-              <BottomNavigation />
             </ThemeProvider>
           </AppRouterCacheProvider>
         </ClientOnly>
