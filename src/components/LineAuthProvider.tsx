@@ -30,7 +30,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   })();
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff'];
+  const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff', '/images'];
   // Protected routes that require authentication for LIFF users but redirect non-LIFF to home
   const protectedRoutes = ['/checkout', '/profile', '/favorites', '/order-success', '/shop', '/product'];
   

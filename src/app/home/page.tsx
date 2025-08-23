@@ -110,27 +110,26 @@ export default function HomePage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Box
               sx={{
-                width: 20,
-                height: 20,
-                backgroundColor: "#FF6B35",
-                borderRadius: "50%",
+                width: 80,
+                height: 80,
+                backgroundColor: "transparent",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center"
               }}
             >
-              <Typography sx={{ color: "white", fontSize: "12px", fontWeight: "bold" }}>🐾</Typography>
+              <img 
+                src="/images/whatdadog_logo.png" 
+                alt="logo" 
+                width={150} 
+                height={150} 
+                style={{ 
+                  objectFit: "contain",
+                  filter: "contrast(1.1) brightness(1.1)"
+                }} 
+              />
             </Box>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: "bold",
-                color: "#000",
-                fontSize: "18px"
-              }}
-            >
-              PUPPS
-            </Typography>
+            
           </Box>
 
           {/* Navigation */}

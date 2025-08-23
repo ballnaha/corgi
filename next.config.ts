@@ -3,17 +3,14 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: false, // Disable strict mode to reduce hydration warnings
   images: {
-    domains: [
-      "profile.line-scdn.net", // LINE profile images
-      "obs.line-scdn.net", // LINE OBS images
-      "theredpotion.com",
-      "red1.theredpotion.com",
-      "corgi.theredpotion.com",
-    ],
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "*.line-scdn.net",
+        hostname: "profile.line-scdn.net",
+      },
+      {
+        protocol: "https",
+        hostname: "obs.line-scdn.net",
       },
       {
         protocol: "https",
@@ -26,6 +23,10 @@ const nextConfig: NextConfig = {
       {
         protocol: "https",
         hostname: "corgi.theredpotion.com",
+      },
+      {
+        protocol: "https",
+        hostname: "whatdadog.com",
       },
     ],
   },

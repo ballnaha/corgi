@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // Skip middleware for API routes, static files, auth pages, and home page
+  // Skip middleware for API routes, static files, auth pages, images, and home page
   if (
     request.nextUrl.pathname.startsWith('/api/') ||
     request.nextUrl.pathname.startsWith('/_next/') ||
     request.nextUrl.pathname.startsWith('/auth/') ||
+    request.nextUrl.pathname.startsWith('/images/') ||
     request.nextUrl.pathname === '/favicon.ico' ||
     request.nextUrl.pathname === '/home' ||
     request.nextUrl.pathname === '/'
@@ -76,7 +77,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - auth (auth pages)
+     * - images (static images)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|auth).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|auth|images).*)",
   ],
 };
