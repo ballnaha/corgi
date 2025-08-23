@@ -35,14 +35,18 @@ export const colors = {
   
   // Card backgrounds (soft pastels from design)
   cardBg: {
-    orange: '#FFCC80',    // Soft peach orange
-    yellow: '#FFF59D',    // Soft yellow
-    pink: '#F8BBD9',      // Soft pink
-    blue: '#B3E5FC',      // Soft blue  
-    green: '#A5D6A7',     // Soft mint green
-    purple: '#E1BEE7',    // Soft lavender
-    mint: '#B2DFDB',      // Soft mint
-    coral: '#FFAB91',     // Soft coral
+    orange: '#FF8A50',    // Primary orange
+    teal: '#0FB09E',      // Primary teal
+    yellow: '#F4D03F',    // Primary yellow
+    blue: '#52C4F0',      // Primary blue
+    pink: '#FF6B9D',      // Primary pink
+    green: '#009688',      // Primary green
+    purple: '#9C27B0',      // Primary purple
+    lightOrange: '#FFB380',  // Light orange variant
+    lightTeal: '#4FC4B7',    // Light teal variant
+    lightYellow: '#F7E56B',  // Light yellow variant
+    lightBlue: '#7DD3F7',    // Light blue variant
+    lightPink: '#FF9BB8',    // Light pink variant
   },
   
   // Status colors

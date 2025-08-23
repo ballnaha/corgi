@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import LoadingScreen from "@/components/LoadingScreen";
 
 export default function Home() {
   const router = useRouter();
@@ -19,15 +20,15 @@ export default function Home() {
         );
 
         if (isLiff) {
-          // If from LIFF, redirect to shop page
+          // If from LIFF, redirect to shop page for authentication
           router.replace("/shop");
         } else {
-          // If normal web access, redirect to home page
+          // If normal web access, redirect to home page (public access)
           router.replace("/home");
         }
       } catch (error) {
         console.error('Error checking LIFF environment:', error);
-        // Fallback to home page
+        // Fallback to home page for normal web access
         router.replace("/home");
       } finally {
         setIsRedirecting(false);
@@ -37,10 +38,6 @@ export default function Home() {
     checkLiffAndRedirect();
   }, [router]);
 
-  // Show loading or return null while redirecting
-  if (isRedirecting) {
-    return null;
-  }
-
-  return null;
+  // Show full screen loading to prevent bottom navigation flash
+  return <LoadingScreen message="กำลังเปลี่ยนหน้า..." fullScreen={true} />;
 }

@@ -78,9 +78,10 @@ export default function ProductDetail({
       case "birds":
         return colors.cardBg.yellow;
       case "fish":
-        return colors.cardBg.pink;
+        return colors.cardBg.teal;
       default:
-        return colors.cardBg.green;
+        return colors.cardBg.lightBlue;
+      
     }
   };
 
@@ -141,7 +142,7 @@ export default function ProductDetail({
             : "ไม่ระบุ"
           : "ไม่ระบุ",
         bgColor:
-          product.gender === "MALE" ? colors.cardBg.blue : colors.cardBg.pink,
+          product.gender === "MALE" ? colors.cardBg.blue : colors.cardBg.lightPink,
       },
       {
         label: "อายุ",
@@ -432,8 +433,8 @@ export default function ProductDetail({
                 <Typography
                   variant="caption"
                   sx={{
-                    color: colors.text.secondary,
-                    fontSize: "0.8rem",
+                    color: "black",
+                    fontSize: "1rem",
                     display: "block",
                     mb: 0.5,
                   }}
@@ -528,16 +529,16 @@ export default function ProductDetail({
                   {product.breed && (
                     <Box
                       sx={{
-                        backgroundColor: colors.cardBg.purple,
+                        backgroundColor: colors.cardBg.orange,
                         borderRadius: 3,
                         p: 2.5,
-                        border: "2px solid rgba(225, 190, 231, 0.5)",
-                        boxShadow: "0 4px 12px rgba(225, 190, 231, 0.3)",
+                        border: "2px solid rgba(255, 138, 80, 0.5)",
+                        boxShadow: "0 4px 12px rgba(255, 138, 80, 0.3)",
                         transition: "all 0.3s ease",
                         "&:hover": {
                           transform: "translateY(-3px)",
-                          boxShadow: "0 8px 25px rgba(225, 190, 231, 0.4)",
-                          backgroundColor: "#E8D5ED",
+                          boxShadow: "0 8px 25px rgba(255, 138, 80, 0.4)",
+                          backgroundColor: "#FF8A50",
                         },
                       }}
                     >
@@ -551,7 +552,7 @@ export default function ProductDetail({
                       >
                         <Box
                           sx={{
-                            backgroundColor: "rgba(156, 39, 176, 0.15)",
+                            backgroundColor: "rgba(255, 138, 80, 0.15)",
                             borderRadius: "50%",
                             p: 0.8,
                             display: "flex",
@@ -561,7 +562,7 @@ export default function ProductDetail({
                         >
                           <Category 
                             sx={{ 
-                              color: "#9C27B0", 
+                              color: "#FFF", 
                               fontSize: "1.1rem" 
                             }} 
                           />
@@ -569,8 +570,8 @@ export default function ProductDetail({
                         <Typography
                           variant="caption"
                           sx={{
-                            color: "#7B1FA2",
-                            fontSize: "0.75rem",
+                            color: "#FFF",
+                            fontSize: "1rem",
                             fontWeight: "600",
                             textTransform: "uppercase",
                             letterSpacing: "0.8px",
@@ -582,7 +583,7 @@ export default function ProductDetail({
                       <Typography
                         variant="body2"
                         sx={{
-                          color: "#4A148C",
+                          color: "#FFF",
                           fontWeight: "700",
                           fontSize: "1rem",
                         }}
@@ -596,16 +597,16 @@ export default function ProductDetail({
                   {product.color && (
                     <Box
                       sx={{
-                        backgroundColor: colors.cardBg.coral,
+                        backgroundColor: colors.cardBg.lightTeal,
                         borderRadius: 3,
                         p: 2.5,
-                        border: "2px solid rgba(255, 171, 145, 0.5)",
-                        boxShadow: "0 4px 12px rgba(255, 171, 145, 0.3)",
+                        border: "2px solid rgba(15, 176, 158, 0.5)",
+                        boxShadow: "0 4px 12px rgba(15, 176, 158, 0.3)",
                         transition: "all 0.3s ease",
                         "&:hover": {
                           transform: "translateY(-3px)",
-                          boxShadow: "0 8px 25px rgba(255, 171, 145, 0.4)",
-                          backgroundColor: "#FFBBA6",
+                          boxShadow: "0 8px 25px rgba(15, 176, 158, 0.4)",
+                          backgroundColor: "#0FB09E",
                         },
                       }}
                     >
@@ -619,7 +620,7 @@ export default function ProductDetail({
                       >
                         <Box
                           sx={{
-                            backgroundColor: "rgba(255, 87, 34, 0.15)",
+                            backgroundColor: "rgba(15, 176, 158, 0.15)",
                             borderRadius: "50%",
                             p: 0.8,
                             display: "flex",
@@ -629,7 +630,7 @@ export default function ProductDetail({
                         >
                           <Palette 
                             sx={{ 
-                              color: "#FF5722", 
+                              color: "#FFF", 
                               fontSize: "1.1rem" 
                             }} 
                           />
@@ -637,8 +638,8 @@ export default function ProductDetail({
                         <Typography
                           variant="caption"
                           sx={{
-                            color: "#E64A19",
-                            fontSize: "0.75rem",
+                            color: "#FFF",
+                            fontSize: "1rem",
                             fontWeight: "600",
                             textTransform: "uppercase",
                             letterSpacing: "0.8px",
@@ -650,7 +651,7 @@ export default function ProductDetail({
                       <Typography
                         variant="body2"
                         sx={{
-                          color: "#BF360C",
+                          color: "#FFF",
                           fontWeight: "700",
                           fontSize: "1rem",
                         }}
@@ -674,10 +675,10 @@ export default function ProductDetail({
                     {product.vaccinated && (
                       <Box
                         sx={{
-                          backgroundColor: colors.cardBg.mint,
+                          backgroundColor: colors.cardBg.teal,
                           borderRadius: 3,
                           p: 2.5,
-                          border: "2px solid rgba(178, 223, 219, 0.6)",
+                          border: "2px solid rgba(15, 176, 158, 0.6)",
                           boxShadow: "0 4px 12px rgba(178, 223, 219, 0.3)",
                           display: "flex",
                           alignItems: "center",
@@ -702,7 +703,7 @@ export default function ProductDetail({
                         >
                           <MedicalServices 
                             sx={{ 
-                              color: "#009688", 
+                              color: "#FFF", 
                               fontSize: "1.3rem" 
                             }} 
                           />
@@ -710,7 +711,7 @@ export default function ProductDetail({
                         <Typography
                           variant="body2"
                           sx={{
-                            color: "#00695C",
+                            color: "#FFF",
                             fontWeight: "700",
                             fontSize: "1rem",
                           }}
@@ -751,7 +752,7 @@ export default function ProductDetail({
                         >
                           <Verified 
                             sx={{ 
-                              color: "#2196F3", 
+                              color: "#FFF", 
                               fontSize: "1.3rem" 
                             }} 
                           />
@@ -759,7 +760,7 @@ export default function ProductDetail({
                         <Typography
                           variant="body2"
                           sx={{
-                            color: "#0D47A1",
+                            color: "#FFF",
                             fontWeight: "700",
                             fontSize: "1rem",
                           }}

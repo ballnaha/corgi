@@ -57,18 +57,23 @@ export default function HomePage() {
 
   const petCollection = [
     {
-      name: "COCKATIELL",
+      name: "BIRD",
       imageSrc: "/images/bird1.png",
       bgColor: "#FF8A50"
     },
     {
-      name: "SPANISH BULLDOG", 
-      imageSrc: "/images/icon-corgi.png",
+      name: "DOG", 
+      imageSrc: "/images/dog1-1.png",
+      bgColor: "#0FB09E"
+    },
+    {
+      name: "CAT",
+      imageSrc: "/images/cat1-1.png",
       bgColor: "#F4D03F"
     },
     {
-      name: "SPANIEL DOG",
-      imageSrc: "/images/dog-house.png",
+      name: "PET ACCESSORIES",
+      imageSrc: "/images/accessories1.png",
       bgColor: "#52C4F0"
     }
   ];
@@ -168,17 +173,17 @@ export default function HomePage() {
               <Typography
                 variant="h1"
                 sx={{
-                  fontSize: { xs: "2.5rem", md: "3.5rem" },
-                  fontWeight: "800",
+                  fontSize: { xs: "2rem", md: "2.5rem" },
+                  fontWeight: "600",
                   color: "#000",
                   lineHeight: 1.1,
                   mb: 3,
-                  letterSpacing: "-0.02em"
+                  letterSpacing: "0.08em"
                 }}
               >
-                YOUR<br />
-                PUPP'S BEST<br />
-                FRIEND <Box component="span" sx={{ color: "#FF6B6B", fontSize: "2rem" }}>❤️</Box>
+                เพราะน้องไม่ใช่แค่สัตว์เลี้ยง<br />
+                แต่เค้าคือ....<br />
+                ครอบครัว <Box component="span" sx={{ color: "#FF6B6B", fontSize: "2rem" }}>❤️</Box>
               </Typography>
               
               <Typography
@@ -190,8 +195,7 @@ export default function HomePage() {
                   maxWidth: "400px"
                 }}
               >
-                Training, grooming & nutrition & exercise; there's
-                caring worth often becomes the family.
+                ดูแลด้วยอาหาร ของใช้ และความรัก…เหมือนที่คุณดูแลคนในบ้าน.
               </Typography>
 
               <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
@@ -213,7 +217,7 @@ export default function HomePage() {
                     }
                   }}
                 >
-                  Book a Schedule
+                  พาน้องกลับบ้าน
                 </Button>
                 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -288,8 +292,8 @@ export default function HomePage() {
                     }}
                   >
                     <Box sx={{ textAlign: "center" }}>
-                      <Typography sx={{ fontSize: "20px" }}>🐾</Typography>
-                      <Typography sx={{ fontSize: "8px", fontWeight: "bold", color: "#000" }}>SAFE & HEALTH</Typography>
+                      <Typography sx={{ fontSize: "25px" }}>🐾</Typography>
+                      <Typography sx={{ fontSize: "13px", fontWeight: "bold", color: "#000" , letterSpacing: "0.1em" }}>CORGI</Typography>
                     </Box>
                   </Box>
 
@@ -310,8 +314,8 @@ export default function HomePage() {
                       zIndex: 2
                     }}
                   >
-                    <Typography sx={{ fontSize: "12px", fontWeight: "bold" }}>FISH CUTLET</Typography>
-                    <Typography sx={{ fontSize: "10px", mt: 0.5 }}>Ingredients: Pumpkin, Meat, Fish Cutlet</Typography>
+                    <Typography sx={{ fontSize: "12px", fontWeight: "bold" ,letterSpacing: "0.2em" }}>PEDIGREE</Typography>
+                    <Typography sx={{ fontSize: "15px", mt: 0.5 }}>สุนัขของเรามีใบเพ็ดดีกรีทุกตัว</Typography>
                   </Box>
                 </Box>
               </Box>
@@ -340,8 +344,8 @@ export default function HomePage() {
                 <Box
                   sx={{
                     position: "absolute",
-                    left: -30,
-                    bottom: 30,
+                    left: -20,
+                    bottom: 50,
                     width: 100,
                     height: 100,
                     display: "flex",
@@ -349,19 +353,20 @@ export default function HomePage() {
                     justifyContent: "center"
                   }}
                 >
-                  <Image src="/images/corgi1.png" alt="dog" width={250} height={250} />
+                  <Image src="/images/dog_learn.png" alt="dog" width={200} height={200} />
                 </Box>
 
                 <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
                   {/* Text area */}
-                  <Box sx={{ flex: 1, pl: { xs: 8, md: 10 }, pr: 2 }}>
+                  <Box sx={{ flex: 1, pl: { xs: 8, md: 10 }, pr: 2 ,ml:4}}>
                     <Typography
                       sx={{
                         fontSize: "16px",
                         fontWeight: 800,
                         color: "#000",
                         mb: 0.5,
-                        lineHeight: 1.1
+                        lineHeight: 1.1,
+                        
                       }}
                     >
                       LEARN HOW TO
@@ -428,7 +433,7 @@ export default function HomePage() {
             </Box>
 
             {/* Right Nutrition Card */}
-            <Box sx={{ flex: 1, position: "relative" }}>
+            <Box sx={{ flex: 1, position: "relative", overflow: "visible" }}>
               <Card
                 sx={{
                   p: 2,
@@ -440,14 +445,15 @@ export default function HomePage() {
                   display: "flex",
                   alignItems: "center",
                   position: "relative",
+                  overflow: "visible"
                 }}
               >
-                {/* Product image slightly overlapping inside left side */}
-                <Box sx={{ position: "absolute", left: 12, top: -8 }}>
-                  <Image src="/images/promotion.png" alt="product" width={64} height={86} />
+                {/* Product image overlapping on top like left card */}
+                <Box sx={{ position: "absolute", left: -25, top: -40, zIndex: 10 }}>
+                  <Image src="/images/dog_hiphop.png" alt="product" width={200} height={200} />
                 </Box>
 
-                <Box sx={{ pl: 10 }}>
+                <Box sx={{ pl: 20 }}>
                   <Typography sx={{ fontSize: "12px", fontWeight: 800, mb: 0.5, textAlign: "left" }}>
                     BASIC NUTRITION
                     <br />
@@ -484,17 +490,9 @@ export default function HomePage() {
                 color: "#000"
               }}
             >
-              WELL GROOMED PET COLLECTION
+              สินค้าของเรา
             </Typography>
-            <Typography
-              sx={{
-                color: "#666",
-                fontSize: "14px",
-                maxWidth: "300px"
-              }}
-            >
-              We have huge collection of domestic animal.
-            </Typography>
+            
           </Box>
 
           <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
@@ -521,9 +519,9 @@ export default function HomePage() {
                       fontSize: "80px",
                       position: "relative",
                       overflow: "visible",
-                      // เพิ่ม bubble effects สำหรับแต่ละ pet
-                      ...(pet.name === "COCKATIELL" && {
-                        // เพิ่มวงกลมสีส้มอ่อนแบบ bubble
+                      // เพิ่ม bubble effects สำหรับแต่ละ pet ตามสีพื้นหลัง
+                      ...(pet.name === "BIRD" && {
+                        // เพิ่มวงกลมสีส้มแบบ bubble สำหรับ BIRD (#FF8A50)
                         '&::before': {
                           content: '""',
                           position: 'absolute',
@@ -551,8 +549,8 @@ export default function HomePage() {
                           border: '2px solid rgba(255, 255, 255, 0.2)'
                         }
                       }),
-                      // เพิ่ม bubble effects สำหรับ SPANISH BULLDOG
-                      ...(pet.name === "SPANISH BULLDOG" && {
+                      // เพิ่ม bubble effects สำหรับ DOG (#0FB09E)
+                      ...(pet.name === "DOG" && {
                         '&::before': {
                           content: '""',
                           position: 'absolute',
@@ -560,7 +558,7 @@ export default function HomePage() {
                           right: '-18px',
                           width: '70px',
                           height: '70px',
-                          backgroundColor: 'rgba(244, 208, 63, 0.7)',
+                          backgroundColor: 'rgba(15, 176, 158, 0.7)',
                           borderRadius: '50%',
                           animation: 'bounce 3.5s ease-in-out infinite',
                           zIndex: 10,
@@ -573,15 +571,15 @@ export default function HomePage() {
                           left: '-12px',
                           width: '50px',
                           height: '50px',
-                          backgroundColor: 'rgba(244, 208, 63, 0.6)',
+                          backgroundColor: 'rgba(15, 176, 158, 0.6)',
                           borderRadius: '50%',
                           animation: 'float 4.5s ease-in-out infinite',
                           zIndex: 10,
                           border: '2px solid rgba(255, 255, 255, 0.2)'
                         }
                       }),
-                      // เพิ่ม bubble effects สำหรับ SPANIEL DOG
-                      ...(pet.name === "SPANIEL DOG" && {
+                      // เพิ่ม bubble effects สำหรับ CAT (#F4D03F)
+                      ...(pet.name === "CAT" && {
                         '&::before': {
                           content: '""',
                           position: 'absolute',
@@ -589,7 +587,7 @@ export default function HomePage() {
                           left: '-16px',
                           width: '65px',
                           height: '65px',
-                          backgroundColor: 'rgba(82, 196, 240, 0.7)',
+                          backgroundColor: 'rgba(244, 208, 63, 0.7)',
                           borderRadius: '50%',
                           animation: 'float 3.2s ease-in-out infinite',
                           zIndex: 10,
@@ -602,10 +600,40 @@ export default function HomePage() {
                           right: '-10px',
                           width: '45px',
                           height: '45px',
-                          backgroundColor: 'rgba(82, 196, 240, 0.6)',
+                          backgroundColor: 'rgba(244, 208, 63, 0.6)',
                           borderRadius: '50%',
                           animation: 'bounce 2.8s ease-in-out infinite',
                           animationDelay: '0.5s',
+                          zIndex: 10,
+                          border: '2px solid rgba(255, 255, 255, 0.2)'
+                        }
+                      }),
+                      // เพิ่ม bubble effects สำหรับ PET ACCESSORIES (#52C4F0)
+                      ...(pet.name === "PET ACCESSORIES" && {
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: '-14px',
+                          right: '-14px',
+                          width: '68px',
+                          height: '68px',
+                          backgroundColor: 'rgba(82, 196, 240, 0.7)',
+                          borderRadius: '50%',
+                          animation: 'float 3.8s ease-in-out infinite',
+                          zIndex: 10,
+                          border: '2px solid rgba(255, 255, 255, 0.3)'
+                        },
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          bottom: '-8px',
+                          left: '-8px',
+                          width: '48px',
+                          height: '48px',
+                          backgroundColor: 'rgba(82, 196, 240, 0.6)',
+                          borderRadius: '50%',
+                          animation: 'bounce 3.2s ease-in-out infinite',
+                          animationDelay: '0.3s',
                           zIndex: 10,
                           border: '2px solid rgba(255, 255, 255, 0.2)'
                         }
@@ -613,7 +641,7 @@ export default function HomePage() {
                     }}
                   >
                     {/* เพิ่ม bubble วงกลมเล็กๆ สำหรับแต่ละ pet */}
-                    {pet.name === "COCKATIELL" && (
+                    {pet.name === "BIRD" && (
                       <>
                         <Box
                           sx={{
@@ -676,8 +704,8 @@ export default function HomePage() {
                         />
                       </>
                     )}
-                    {/* เพิ่ม bubble วงกลมเล็กๆ สำหรับ SPANISH BULLDOG */}
-                    {pet.name === "SPANISH BULLDOG" && (
+                    {/* เพิ่ม bubble วงกลมเล็กๆ สำหรับ DOG */}
+                    {pet.name === "DOG" && (
                       <>
                         <Box
                           sx={{
@@ -686,7 +714,7 @@ export default function HomePage() {
                             left: '25px',
                             width: '25px',
                             height: '25px',
-                            backgroundColor: 'rgba(244, 208, 63, 0.8)',
+                            backgroundColor: 'rgba(15, 176, 158, 0.8)',
                             borderRadius: '50%',
                             animation: 'float 2.2s ease-in-out infinite',
                             zIndex: 15,
@@ -700,7 +728,7 @@ export default function HomePage() {
                             right: '35px',
                             width: '40px',
                             height: '40px',
-                            backgroundColor: 'rgba(244, 208, 63, 0.7)',
+                            backgroundColor: 'rgba(15, 176, 158, 0.7)',
                             borderRadius: '50%',
                             animation: 'bounce 3s ease-in-out infinite',
                             animationDelay: '0.8s',
@@ -715,7 +743,7 @@ export default function HomePage() {
                             right: '15px',
                             width: '18px',
                             height: '18px',
-                            backgroundColor: 'rgba(244, 208, 63, 0.8)',
+                            backgroundColor: 'rgba(15, 176, 158, 0.8)',
                             borderRadius: '50%',
                             animation: 'float 2.8s ease-in-out infinite',
                             animationDelay: '1.2s',
@@ -725,8 +753,8 @@ export default function HomePage() {
                         />
                       </>
                     )}
-                    {/* เพิ่ม bubble วงกลมเล็กๆ สำหรับ SPANIEL DOG */}
-                    {pet.name === "SPANIEL DOG" && (
+                    {/* เพิ่ม bubble วงกลมเล็กๆ สำหรับ CAT */}
+                    {pet.name === "CAT" && (
                       <>
                         <Box
                           sx={{
@@ -735,7 +763,7 @@ export default function HomePage() {
                             right: '30px',
                             width: '28px',
                             height: '28px',
-                            backgroundColor: 'rgba(82, 196, 240, 0.8)',
+                            backgroundColor: 'rgba(244, 208, 63, 0.8)',
                             borderRadius: '50%',
                             animation: 'bounce 2.4s ease-in-out infinite',
                             zIndex: 15,
@@ -749,7 +777,7 @@ export default function HomePage() {
                             left: '20px',
                             width: '35px',
                             height: '35px',
-                            backgroundColor: 'rgba(82, 196, 240, 0.7)',
+                            backgroundColor: 'rgba(244, 208, 63, 0.7)',
                             borderRadius: '50%',
                             animation: 'float 3.2s ease-in-out infinite',
                             animationDelay: '0.6s',
@@ -764,7 +792,7 @@ export default function HomePage() {
                             left: '10px',
                             width: '22px',
                             height: '22px',
-                            backgroundColor: 'rgba(82, 196, 240, 0.8)',
+                            backgroundColor: 'rgba(244, 208, 63, 0.8)',
                             borderRadius: '50%',
                             animation: 'bounce 2.6s ease-in-out infinite',
                             animationDelay: '1.4s',
@@ -772,6 +800,43 @@ export default function HomePage() {
                             border: '2px solid rgba(255, 255, 255, 0.4)'
                           }}
                         />
+                      </>
+                    )}
+                    {/* เพิ่ม bubble วงกลมเล็กๆ สำหรับ PET ACCESSORIES */}
+                    {pet.name === "PET ACCESSORIES" && (
+                      <>
+                        
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            bottom: '38px',
+                            left: '18px',
+                            width: '38px',
+                            height: '38px',
+                            backgroundColor: 'rgba(82, 196, 240, 0.7)',
+                            borderRadius: '50%',
+                            animation: 'float 3.4s ease-in-out infinite',
+                            animationDelay: '0.7s',
+                            zIndex: 15,
+                            border: '2px solid rgba(255, 255, 255, 0.3)'
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: '88px',
+                            left: '12px',
+                            width: '24px',
+                            height: '24px',
+                            backgroundColor: 'rgba(82, 196, 240, 0.8)',
+                            borderRadius: '50%',
+                            animation: 'bounce 2.7s ease-in-out infinite',
+                            animationDelay: '1.3s',
+                            zIndex: 15,
+                            border: '2px solid rgba(255, 255, 255, 0.4)'
+                          }}
+                        />
+                        
                       </>
                     )}
                     <Image 
@@ -809,14 +874,14 @@ export default function HomePage() {
                 variant="h2"
                 sx={{
                   fontSize: { xs: "2rem", md: "2.5rem" },
-                  fontWeight: "800",
+                  fontWeight: "600",
                   color: "#000",
                   lineHeight: 1.1,
                   mb: 2
                 }}
               >
-                HOW WE SERVE OUR<br />
-                PET PARENTS
+                ขอต้อนรับสู่<br />
+                ครอบครัวของเรา
               </Typography>
               
               <Typography
@@ -828,15 +893,15 @@ export default function HomePage() {
                   maxWidth: "300px"
                 }}
               >
-                making pet rearing simpler for you. Our entire, well rounded routine is created with love.
+                ค้นหาสัตว์เลี้ยงที่ตอบโจทย์คุณที่สุด ให้เราได้แนะนำคุณ
               </Typography>
 
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 {[
-                  { text: "Adoption", active: true },
-                  { text: "Fostering", active: false },
-                  { text: "Vaccination", active: false },
-                  { text: "Grooming", active: false }
+                  { text: "สายพันธุ์ที่มีสุขภาพดี", active: true },
+                  { text: "ได้รับการฉีดวัคซีน", active: true },
+                  { text: "มีใบเพ็ดดีกรี", active: true },
+                  
                 ].map((item, index) => (
                   <Box key={index} sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <Box

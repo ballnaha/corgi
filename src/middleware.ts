@@ -8,7 +8,8 @@ export async function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/_next/') ||
     request.nextUrl.pathname.startsWith('/auth/') ||
     request.nextUrl.pathname === '/favicon.ico' ||
-    request.nextUrl.pathname === '/home'
+    request.nextUrl.pathname === '/home' ||
+    request.nextUrl.pathname === '/'
   ) {
     return NextResponse.next();
   }
@@ -46,9 +47,21 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Allow shop page without auth for normal web access
-  if (request.nextUrl.pathname === '/shop') {
+  // For non-LIFF users, redirect to home page for any protected routes
+  // Allow access to these public pages without authentication
+  const publicRoutes = ['/shop', '/product', '/unauthorized'];
+  const isPublicRoute = publicRoutes.some(route => 
+    request.nextUrl.pathname.startsWith(route)
+  );
+  
+  if (isPublicRoute) {
     return NextResponse.next();
+  }
+
+  // For non-LIFF users accessing protected routes, redirect to home
+  if (!isFromLiff && request.nextUrl.pathname !== '/home') {
+    const homeUrl = new URL('/home', request.url);
+    return NextResponse.redirect(homeUrl);
   }
 
   return NextResponse.next();

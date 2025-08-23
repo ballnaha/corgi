@@ -29,6 +29,19 @@ function AuthGuard({ children }: { children: ReactNode }) {
     return isLineApp || isLiffUrl;
   })();
 
+  // Public routes that don't require authentication
+  const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff'];
+  // Protected routes that require authentication for LIFF users but redirect non-LIFF to home
+  const protectedRoutes = ['/checkout', '/profile', '/favorites', '/order-success', '/shop', '/product'];
+  
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+  
+  const isProtectedRoute = protectedRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -36,27 +49,56 @@ function AuthGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!mounted || isRedirecting) return;
     
-    // Avoid redirecting to signin when inside LIFF environment to prevent loops
+    // For public routes, allow access without authentication
+    if (isPublicRoute) return;
+    
+    // Handle protected routes and other non-public routes
     if (status === "unauthenticated") {
-      if (pathname === "/auth/signin" || pathname === "/liff") return;
-      if (isLikelyInLiffEnvironment) return;
+      // Set redirecting state immediately to prevent content flash
       setIsRedirecting(true);
-      router.push("/auth/signin");
+      
+      if (isProtectedRoute) {
+        if (!isLikelyInLiffEnvironment) {
+          // For non-LIFF users accessing protected routes, redirect to home
+          router.replace("/home");
+          return;
+        } else {
+          // For LIFF users, redirect to signin for protected routes
+          router.replace("/auth/signin");
+          return;
+        }
+      }
+      
+      // For other routes (like admin), redirect based on environment
+      if (!isLikelyInLiffEnvironment) {
+        router.replace("/home");
+        return;
+      }
+      
+      // For LIFF users on other protected routes
+      if (pathname !== "/auth/signin" && pathname !== "/liff") {
+        router.replace("/auth/signin");
+      }
     }
-  }, [status, router, pathname, mounted, isRedirecting, isLikelyInLiffEnvironment]);
+  }, [status, router, pathname, mounted, isRedirecting, isLikelyInLiffEnvironment, isPublicRoute, isProtectedRoute]);
 
   // Show loading until mounted and session is determined
   if (!mounted || status === "loading") {
-    return <LoadingScreen message="กำลังตรวจสอบการเข้าสู่ระบบ..." />;
+    return <LoadingScreen message="กำลังตรวจสอบการเข้าสู่ระบบ..." fullScreen={true} />;
   }
 
-  // Show redirecting state
+  // Show redirecting state - prevent any content from showing during redirect
   if (isRedirecting) {
-    return <LoadingScreen message="กำลังเปลี่ยนหน้า..." />;
+    return <LoadingScreen message="กำลังเปลี่ยนหน้า..." fullScreen={true} />;
   }
 
-  // Allow signin page and liff page when unauthenticated
-  if (status === "unauthenticated" && (pathname === "/auth/signin" || pathname === "/liff")) {
+  // Handle protected routes for non-LIFF users - prevent content flash
+  if (!isLikelyInLiffEnvironment && (isProtectedRoute || !isPublicRoute) && status === "unauthenticated") {
+    return <LoadingScreen message="กำลังเปลี่ยนหน้า..." fullScreen={true} />;
+  }
+
+  // Allow public routes without authentication
+  if (isPublicRoute) {
     return <>{children}</>;
   }
 

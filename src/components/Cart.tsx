@@ -55,6 +55,42 @@ export default function Cart({
     return product.imageUrl || product.image || "/images/icon-corgi.png";
   };
 
+  // Get background color based on product ID (same as ProductCard)
+  const getCardBgColor = (productId: string) => {
+    const pastelColors = [
+      colors.cardBg.orange,
+      colors.cardBg.teal,
+      colors.cardBg.yellow,
+      colors.cardBg.blue,
+      colors.cardBg.pink,
+      colors.cardBg.lightOrange,
+      colors.cardBg.lightTeal,
+      colors.cardBg.lightYellow,
+      colors.cardBg.lightBlue,
+      colors.cardBg.lightPink,
+    ];
+    
+    // Use product id to get consistent color for each product
+    const colorIndex = Math.abs(productId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)) % pastelColors.length;
+    return pastelColors[colorIndex];
+  };
+
+  // Get category icon
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case "dogs":
+        return "🐕";
+      case "cats":
+        return "🐱";
+      case "birds":
+        return "🐦";
+      case "fish":
+        return "🐠";
+      default:
+        return "🐾";
+    }
+  };
+
   const calculateUnitPrice = (p: CartItem['product']) => {
     const hasSalePrice = p.salePrice != null;
     const hasDiscountPercent = !hasSalePrice && p.discountPercent != null && p.discountPercent > 0;
@@ -143,14 +179,47 @@ export default function Cart({
                     p: 2
                   }}
                 >
-                  <Avatar
-                    src={getMainImage(item.product)}
-                    alt={item.product.name}
-                    sx={{ width: 60, height: 60, mr: 2, borderRadius: 2 }}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/images/icon-corgi.png";
+                  <Box
+                    sx={{
+                      width: 60,
+                      height: 60,
+                      mr: 2,
+                      borderRadius: 2,
+                      background: `linear-gradient(135deg, ${getCardBgColor(item.product.id)} 0%, ${getCardBgColor(item.product.id)}DD 100%)`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      overflow: "hidden",
+                      flexShrink: 0,
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
                     }}
-                  />
+                  >
+                    {getMainImage(item.product) && getMainImage(item.product) !== "/images/icon-corgi.png" ? (
+                      <Box
+                        component="img"
+                        src={getMainImage(item.product)}
+                        alt={item.product.name}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/images/icon-corgi.png";
+                        }}
+                        sx={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          borderRadius: 2,
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          fontSize: "1.5rem",
+                          textAlign: "center",
+                        }}
+                      >
+                        {getCategoryIcon(item.product.category)}
+                      </Box>
+                    )}
+                  </Box>
                   <Box sx={{ flex: 1 }}>
                     <Typography variant="subtitle2" sx={{ color: colors.text.primary, mb: 0.25 }}>
                       {item.product.name}

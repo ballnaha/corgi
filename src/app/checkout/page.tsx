@@ -120,12 +120,16 @@ export default function CheckoutPage() {
   // Get background color based on product ID (same as ProductCard)
   const getCardBgColor = (productId: string) => {
     const pastelColors = [
-      colors.cardBg.pink,     // Soft pink
-      colors.cardBg.mint,     // Soft mint  
-      colors.cardBg.purple,   // Soft lavender
-      colors.cardBg.coral,    // Soft coral
-      colors.cardBg.blue,     // Soft blue
-      colors.cardBg.green,    // Soft green
+      colors.cardBg.orange,
+      colors.cardBg.teal,
+      colors.cardBg.yellow,
+      colors.cardBg.blue,
+      colors.cardBg.pink,
+      colors.cardBg.lightOrange,
+      colors.cardBg.lightTeal,
+      colors.cardBg.lightYellow,
+      colors.cardBg.lightBlue,
+      colors.cardBg.lightPink,
     ];
     
     // Use product id to get consistent color for each product

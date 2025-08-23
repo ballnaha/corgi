@@ -276,7 +276,8 @@ export default function ShopPage() {
           backgroundColor: colors.background.default,
           minHeight: '100vh',
           pt: 8, // Space for fixed header
-          pb: 2 // Reduce bottom space after removing bottom navigation
+          pb: 2, // Reduce bottom space after removing bottom navigation
+          
         }}
       >
         <CategoryFilter
@@ -329,6 +330,7 @@ export default function ShopPage() {
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: 2,
+                mb: 10,
               }}
             >
               {filteredProducts.map((product) => (

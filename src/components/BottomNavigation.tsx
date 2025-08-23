@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Box, Typography } from "@mui/material";
+import { useSession } from "next-auth/react";
 
 import Image from "next/image";
 import { colors } from "@/theme/colors";
@@ -20,6 +21,19 @@ export default function BottomNavigation({
 }: BottomNavigationProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { status } = useSession();
+  
+  // Don't show bottom navigation during authentication loading for non-public routes
+  if (status === "loading") {
+    const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff'];
+    const isPublicRoute = publicRoutes.some(route => 
+      pathname === route || pathname.startsWith(route + '/')
+    );
+    
+    if (!isPublicRoute) {
+      return null;
+    }
+  }
 
   // Derive active tab from current path when not explicitly controlled
   const derivedActiveTab = useMemo(() => {
