@@ -128,6 +128,9 @@ export async function POST(
           status: "DELIVERED",
           adminComment: `${existingOrder.adminComment || ''}\n[${new Date().toLocaleString('th-TH')}] ได้รับการชำระเงินครบถ้วนแล้ว (${paymentMethod}: ฿${amount}) โดย ${session.user.displayName || session.user.name}`.trim(),
         },
+        include: {
+          paymentNotifications: true,
+        },
       });
     }
 

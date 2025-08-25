@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     await mkdir(uploadDir, { recursive: true });
 
     // Process and save only large size image
-    let processedBuffer = buffer;
+    let processedBuffer: Buffer = Buffer.from(buffer);
     
     // Determine if the original file is PNG to preserve transparency
     const isPNG = file.type === 'image/png';

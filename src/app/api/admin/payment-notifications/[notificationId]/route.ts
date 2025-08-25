@@ -6,9 +6,9 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     notificationId: string;
-  };
+  }>;
 }
 
 export async function DELETE(request: NextRequest, context: RouteParams) {

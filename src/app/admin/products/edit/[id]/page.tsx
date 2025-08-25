@@ -977,7 +977,7 @@ export default function EditProductPage() {
 
                         {/* Show calculated schedule */}
                         {calculatedVaccineSchedule && (
-                          <Paper sx={{ p: 2, mb: 3, backgroundColor: colors.cardBg.mint }}>
+                          <Paper sx={{ p: 2, mb: 3, backgroundColor: colors.cardBg.lightTeal }}>
                             <Typography variant="body2" sx={{ fontWeight: "bold", mb: 1 }}>
                               📅 ตารางการฉีดวัคซีนที่คำนวณได้:
                             </Typography>

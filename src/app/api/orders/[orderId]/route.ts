@@ -12,9 +12,9 @@ import {
 import { ensureUserExists, canAccessResource } from "@/lib/user-utils";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     orderId: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, context: RouteParams) {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest, context: RouteParams) {
       );
     }
 
-    const { orderId } = context.params;
+    const { orderId } = await context.params;
 
     if (!orderId) {
       return NextResponse.json(
@@ -138,7 +138,7 @@ export async function PATCH(request: NextRequest, context: RouteParams) {
       );
     }
 
-    const { orderId } = context.params;
+    const { orderId } = await context.params;
     const { status } = await request.json();
 
     if (!orderId) {
@@ -156,7 +156,10 @@ export async function PATCH(request: NextRequest, context: RouteParams) {
     }
 
     // Validate status values
-    const validStatuses = Object.values(OrderStatus);
+    const validStatuses: OrderStatus[] = [
+      "PENDING", "PAYMENT_PENDING", "CONFIRMED", "PROCESSING", 
+      "SHIPPED", "DELIVERED", "CANCELLED"
+    ];
     const upperCaseStatus = status.toUpperCase();
     
     if (!validStatuses.includes(upperCaseStatus as OrderStatus)) {

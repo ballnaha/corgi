@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Box, Typography, Chip, LinearProgress, Paper } from "@mui/material";
-import { OrderStatus as OrderStatusEnum } from "@prisma/client";
+import { orders_status as OrderStatusEnum } from "@prisma/client";
 import { getStatusInfo, getStatusProgress, isFinalStatus, isCancelledStatus } from "@/lib/order-status";
 
 interface OrderStatusProps {
@@ -138,24 +138,20 @@ interface OrderStatusTimelineProps {
 export function OrderStatusTimeline({ currentStatus, orderDetails }: OrderStatusTimelineProps) {
   // สร้าง timeline ตาม order type
   const getTimelineSteps = () => {
-    const baseSteps = [
+    const baseSteps: OrderStatusEnum[] = [
       OrderStatusEnum.PENDING,
-      OrderStatusEnum.CONFIRMED,
     ];
 
     if (orderDetails?.requiresDeposit) {
-      baseSteps.push(OrderStatusEnum.PAYMENT_PENDING, OrderStatusEnum.PAID);
-    } else {
-      baseSteps.push(OrderStatusEnum.PAID);
+      baseSteps.push(OrderStatusEnum.PAYMENT_PENDING);
     }
 
-    baseSteps.push(OrderStatusEnum.PREPARING);
-
-    if (orderDetails?.shippingMethod?.includes("pickup") || orderDetails?.shippingMethod?.includes("รับด้วยตัวเอง")) {
-      baseSteps.push(OrderStatusEnum.READY_FOR_PICKUP, OrderStatusEnum.COMPLETED);
-    } else {
-      baseSteps.push(OrderStatusEnum.SHIPPED, OrderStatusEnum.OUT_FOR_DELIVERY, OrderStatusEnum.DELIVERED, OrderStatusEnum.COMPLETED);
-    }
+    baseSteps.push(
+      OrderStatusEnum.CONFIRMED,
+      OrderStatusEnum.PROCESSING,
+      OrderStatusEnum.SHIPPED,
+      OrderStatusEnum.DELIVERED
+    );
 
     return baseSteps;
   };

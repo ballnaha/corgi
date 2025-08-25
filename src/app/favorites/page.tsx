@@ -69,15 +69,22 @@ export default function FavoritesPage() {
 									 p.imageUrl || 
 									 '';
 					
+					// Transform images to match ProductImage interface
+					const transformedImages = p.images?.map(img => ({
+						...img,
+						productId: p.id,
+						createdAt: new Date() // Use current date as fallback
+					})) || [];
+					
 					return {
 						...p,
 						image: mainImage,
 						imageUrl: mainImage,
+						images: transformedImages,
 						price: Number(p.price),
 						salePrice: p.salePrice != null ? Number(p.salePrice) : null,
 						discountPercent: p.discountPercent != null ? Number(p.discountPercent) : null,
 						stock: Number(p.stock ?? 0),
-						images: p.images || [],
 					};
 				});
 				setProducts(transformed);

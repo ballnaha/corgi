@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const savedImages = [];
 
     for (const size of sizes) {
-      let processedBuffer = buffer;
+      let processedBuffer: Buffer = Buffer.from(buffer);
       let sizeFilename = filename;
 
       // Determine if the original file is PNG to preserve transparency

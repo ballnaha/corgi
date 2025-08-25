@@ -12,9 +12,9 @@ import {
 import { ensureUserExists } from "@/lib/user-utils";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     orderId: string;
-  };
+  }>;
 }
 
 export async function GET(request: NextRequest, context: RouteParams) {
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest, context: RouteParams) {
       );
     }
 
-    const { orderId } = context.params;
+    const { orderId } = await context.params;
 
     if (!orderId) {
       return NextResponse.json(

@@ -151,9 +151,9 @@ export async function searchUsers(query: string, limit: number = 20) {
     const users = await prisma.user.findMany({
       where: {
         OR: [
-          { displayName: { contains: query, mode: 'insensitive' } },
+          { displayName: { contains: query } },
           { lineUserId: { contains: query } },
-          { email: { contains: query, mode: 'insensitive' } },
+          { email: { contains: query } },
         ]
       },
       orderBy: { lastLoginAt: 'desc' },

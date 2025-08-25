@@ -89,6 +89,7 @@ export async function GET() {
                         id: true,
                         transferAmount: true,
                         transferDate: true,
+                        status: true,
                         paymentSlipData: true,
                         paymentSlipMimeType: true,
                         paymentSlipFileName: true,
