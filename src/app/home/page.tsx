@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Box, 
@@ -17,9 +17,11 @@ import {
 } from "@mui/material";
 import Image from "next/image";
 import { colors } from "@/theme/colors";
+import RegistrationCertificateSheet from "@/components/RegistrationCertificateSheet";
 
 export default function HomePage() {
   const router = useRouter();
+  const [isRegistrationSheetOpen, setIsRegistrationSheetOpen] = useState(false);
 
   const handleBookNow = () => {
     router.push("/shop");
@@ -31,6 +33,10 @@ export default function HomePage() {
 
   const handleShopNow = () => {
     router.push("/shop");
+  };
+
+  const handleRegistrationInfo = () => {
+    setIsRegistrationSheetOpen(true);
   };
 
   const infoCards = [
@@ -110,19 +116,20 @@ export default function HomePage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Box
               sx={{
-                width: 80,
-                height: 80,
+                width: 60,
+                height: 60,
                 backgroundColor: "transparent",
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center"
+                justifyContent: "center",
+                ml: 5
               }}
             >
               <img 
-                src="/images/whatdadog_logo.png" 
+                src="/images/whatdadog_logo2.png" 
                 alt="logo" 
-                width={150} 
-                height={150} 
+                width={180} 
+                height={180} 
                 style={{ 
                   objectFit: "contain",
                   filter: "contrast(1.1) brightness(1.1)"
@@ -173,28 +180,28 @@ export default function HomePage() {
                 variant="h1"
                 sx={{
                   fontSize: { xs: "2rem", md: "2.5rem" },
-                  fontWeight: "600",
+                  fontWeight: "400",
                   color: "#000",
-                  lineHeight: 1.1,
+                  lineHeight: 1.5,
                   mb: 3,
                   letterSpacing: "0.08em"
                 }}
               >
-                เพราะน้องไม่ใช่แค่สัตว์เลี้ยง<br />
-                แต่เค้าคือ....<br />
-                ครอบครัว <Box component="span" sx={{ color: "#FF6B6B", fontSize: "2rem" }}>❤️</Box>
+                จำหน่ายลูกสุนัขพันธุ์ คอร์กี้ และสัตว์เลี้ยงอื่นๆ<br />
+                <Box component="span" sx={{ color: "#FF6B6B", fontSize: "2rem" }}>❤️</Box>
               </Typography>
               
               <Typography
                 sx={{
                   color: "#666",
-                  fontSize: "16px",
+                  fontSize: "22px",
                   lineHeight: 1.6,
                   mb: 4,
                   maxWidth: "400px"
                 }}
               >
-                ดูแลด้วยอาหาร ของใช้ และความรัก…เหมือนที่คุณดูแลคนในบ้าน.
+                เพราะน้องไม่ใช่แค่สัตว์เลี้ยง <br />
+                แต่เค้าคือ.... ครอบครัว
               </Typography>
 
               <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
@@ -313,8 +320,8 @@ export default function HomePage() {
                       zIndex: 2
                     }}
                   >
-                    <Typography sx={{ fontSize: "12px", fontWeight: "bold" ,letterSpacing: "0.2em" }}>PEDIGREE</Typography>
-                    <Typography sx={{ fontSize: "15px", mt: 0.5 }}>สุนัขของเรามีใบเพ็ดดีกรีทุกตัว</Typography>
+                    <Typography sx={{ fontSize: "12px", fontWeight: "bold" ,letterSpacing: "0.2em" }}>REGISTRATION CERTIFICATE</Typography>
+                    <Typography sx={{ fontSize: "15px", mt: 0.5 , letterSpacing: "0.08em" }}>สุนัขของเรามีใบทะเบียนตัวสุนัขให้ทุกตัว</Typography>
                   </Box>
                 </Box>
               </Box>
@@ -343,7 +350,7 @@ export default function HomePage() {
                 <Box
                   sx={{
                     position: "absolute",
-                    left: -20,
+                    left: -30,
                     bottom: 50,
                     width: 100,
                     height: 100,
@@ -352,7 +359,7 @@ export default function HomePage() {
                     justifyContent: "center"
                   }}
                 >
-                  <Image src="/images/dog_learn.png" alt="dog" width={200} height={200} />
+                  <Image src="/images/dog_hiphop.png" alt="dog" width={220} height={220} />
                 </Box>
 
                 <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
@@ -453,16 +460,16 @@ export default function HomePage() {
                 </Box>
 
                 <Box sx={{ pl: 20 }}>
-                  <Typography sx={{ fontSize: "12px", fontWeight: 800, mb: 0.5, textAlign: "left" }}>
-                    BASIC NUTRITION
+                  <Typography sx={{ fontSize: "18px", fontWeight: 500, mb: 0.5, textAlign: "left" }}>
+                    REGISTRATION CERTIFICATE
                     <br />
-                    MEAT BALL
+                    ใบทะเบียนสุนัข คือ อะไร?
                   </Typography>
                   <Button
-                    onClick={handleShopNow}
+                    onClick={handleRegistrationInfo}
                     sx={{
                       color: "#111",
-                      fontSize: "12px",
+                      fontSize: "14px",
                       textTransform: "none",
                       p: 0,
                       minWidth: "auto",
@@ -470,7 +477,7 @@ export default function HomePage() {
                       "&:hover": { backgroundColor: "transparent", color: "#FF6B35" }
                     }}
                   >
-                    Shop Now
+                    คำอธิบาย
                   </Button>
                 </Box>
               </Card>
@@ -899,7 +906,7 @@ export default function HomePage() {
                 {[
                   { text: "สายพันธุ์ที่มีสุขภาพดี", active: true },
                   { text: "ได้รับการฉีดวัคซีน", active: true },
-                  { text: "มีใบเพ็ดดีกรี", active: true },
+                  { text: "มีใบทะเบียนสุนัข (Registration Certificate)", active: true },
                   
                 ].map((item, index) => (
                   <Box key={index} sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -1236,6 +1243,12 @@ export default function HomePage() {
             </Box>
           </Container>
         </Box>
+
+        {/* Registration Certificate Sheet */}
+        <RegistrationCertificateSheet
+          open={isRegistrationSheetOpen}
+          onClose={() => setIsRegistrationSheetOpen(false)}
+        />
 
       </Box>
     </>
