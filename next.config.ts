@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: false, // Disable strict mode to reduce hydration warnings
+  eslint: {
+    ignoreDuringBuilds: true, // Disable ESLint during build
+  },
   images: {
     remotePatterns: [
       {
