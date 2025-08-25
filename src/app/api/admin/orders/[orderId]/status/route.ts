@@ -5,9 +5,9 @@ import { prisma } from "@/lib/prisma";
 import type { OrderStatus } from "@/lib/order-status";
 
 interface RouteParams {
-  params: {
+  params: Promise<{
     orderId: string;
-  };
+  }>;
 }
 
 export async function PATCH(request: NextRequest, context: RouteParams) {
