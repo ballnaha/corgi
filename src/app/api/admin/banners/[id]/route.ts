@@ -2,16 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-utils";
 import { prisma } from "@/lib/prisma";
 
+type RouteParams = {
+  params: Promise<{ id: string }>;
+};
+
 // GET - ดึง banner ตาม ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     await requireAdmin();
+    const { id } = await params;
 
     const banner = await prisma.banner.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!banner) {
@@ -42,10 +47,11 @@ export async function GET(
 // PATCH - อัปเดต banner
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     await requireAdmin();
+    const { id } = await params;
 
     const body = await request.json();
     
@@ -53,7 +59,7 @@ export async function PATCH(
 
     // ตรวจสอบว่า banner มีอยู่จริง
     const existingBanner = await prisma.banner.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingBanner) {
@@ -76,7 +82,7 @@ export async function PATCH(
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
 
     const banner = await prisma.banner.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData
     });
 
@@ -101,14 +107,15 @@ export async function PATCH(
 // DELETE - ลบ banner
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   try {
     await requireAdmin();
+    const { id } = await params;
 
     // ตรวจสอบว่า banner มีอยู่จริง
     const existingBanner = await prisma.banner.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!existingBanner) {
@@ -119,7 +126,7 @@ export async function DELETE(
     }
 
     await prisma.banner.delete({
-      where: { id: params.id }
+      where: { id }
     });
 
     return NextResponse.json(
