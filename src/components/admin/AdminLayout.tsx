@@ -200,11 +200,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             fontSize: "1.5rem",
           }}
         >
-          <img src="/images/oong_logo11.png" alt="Natpi & Paws Pet Shop" width={80} height={80} />
+          <img src="/images/whatdadog_icon.png" alt="What Da Dog Pet Shop" width={80} height={80} />
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>
-            Natpi &amp; Paws
+            What Da Dog Pet Shop
           </Typography>
           <Typography variant="caption" sx={{ opacity: 0.8 }}>
             Admin Panel

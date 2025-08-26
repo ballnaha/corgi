@@ -201,7 +201,7 @@ function createReceiptFlexMessage(data: ReceiptData) {
 
   return {
     type: "flex",
-    altText: `🔔 รอชำระเงิน ฿${finalAmount.toLocaleString()} - Natpi & Paws Pet Shop`,
+    altText: `🔔 รอชำระเงิน ฿${finalAmount.toLocaleString()} - What Da Dog Pet Shop`,
     contents: {
       type: "bubble",
       header: {
@@ -210,7 +210,7 @@ function createReceiptFlexMessage(data: ReceiptData) {
         contents: [
           {
             type: "text",
-            text: "🐕 Natpi & Paws Pet Shop",
+            text: "🐕 What Da Dog Pet Shop",
             weight: "bold",
             color: "#ffffff",
             size: "lg",

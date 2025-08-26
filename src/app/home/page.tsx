@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Box, 
@@ -13,15 +13,33 @@ import {
   Rating,
   Chip,
   GlobalStyles,
-  Grid
+  Grid,
+  CircularProgress,
+  IconButton,
+  Badge
 } from "@mui/material";
+import { ShoppingCart } from "@mui/icons-material";
 import Image from "next/image";
 import { colors } from "@/theme/colors";
 import RegistrationCertificateSheet from "@/components/RegistrationCertificateSheet";
+import ProductCard from "@/components/ProductCard";
+import Cart from "@/components/Cart";
+import { Product } from "@/types";
+import { readCartFromStorage, writeCartToStorage } from "@/lib/cart";
+import { CartItem } from "@/types";
+import { generateSlug } from "@/lib/products";
 
 export default function HomePage() {
   const router = useRouter();
   const [isRegistrationSheetOpen, setIsRegistrationSheetOpen] = useState(false);
+  
+  // Product states
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  
+  // Cart states
+  const [isCartOpen, setIsCartOpen] = useState(false);
 
   const handleBookNow = () => {
     router.push("/shop");
@@ -38,6 +56,139 @@ export default function HomePage() {
   const handleRegistrationInfo = () => {
     setIsRegistrationSheetOpen(true);
   };
+
+  // Fetch products from API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/products');
+        if (response.ok) {
+          type DbProduct = {
+            id: string;
+            name: string;
+            category: string;
+            price: number | string;
+            salePrice?: number | string | null;
+            discountPercent?: number | string | null;
+            description?: string | null;
+            imageUrl?: string | null;
+            stock?: number | string | null;
+            gender?: 'MALE' | 'FEMALE' | 'UNKNOWN' | null;
+            age?: string | null;
+            breed?: string | null;
+            location?: string | null;
+            images?: Array<{
+              id: string;
+              imageUrl: string;
+              altText: string | null;
+              isMain: boolean;
+              order: number;
+            }>;
+          };
+          const data: DbProduct[] = await response.json();
+          
+          const transformed: Product[] = data.map((p) => {
+            // Get main image from images array, fallback to imageUrl
+            const mainImage = p.images?.find(img => img.isMain)?.imageUrl || 
+                            p.images?.[0]?.imageUrl || 
+                            p.imageUrl || 
+                            '';
+            
+            // Transform images to match ProductImage interface
+            const transformedImages = p.images?.map(img => ({
+              ...img,
+              productId: p.id,
+              createdAt: new Date()
+            })) || [];
+            
+            return {
+              ...p,
+              image: mainImage,
+              imageUrl: mainImage,
+              images: transformedImages,
+              price: Number(p.price),
+              salePrice: p.salePrice != null ? Number(p.salePrice) : null,
+              discountPercent: p.discountPercent != null ? Number(p.discountPercent) : null,
+              stock: Number(p.stock ?? 0),
+            };
+          });
+          
+          setProducts(transformed);
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Load cart from storage
+  useEffect(() => {
+    const stored = readCartFromStorage();
+    if (stored.length) setCartItems(stored);
+  }, []);
+
+  // Save cart to storage when cart changes
+  useEffect(() => {
+    writeCartToStorage(cartItems);
+  }, [cartItems]);
+
+  // Featured products (show first 8 products)
+  const featuredProducts = useMemo(() => {
+    return products.slice(0, 8);
+  }, [products]);
+
+  const handleAddToCart = (product: Product) => {
+    const existingItem = cartItems.find(item => item.product.id === product.id);
+    
+    if (existingItem) {
+      setCartItems(cartItems.map(item =>
+        item.product.id === product.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+    } else {
+      setCartItems([...cartItems, { product, quantity: 1 }]);
+    }
+  };
+
+  const handleProductClick = (product: Product) => {
+    const slug = generateSlug(product.name, product.id);
+    router.push(`/product/${slug}`);
+  };
+
+  // Cart functions
+  const handleCartClick = () => {
+    setIsCartOpen(true);
+  };
+
+  const handleUpdateQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      handleRemoveItem(productId);
+      return;
+    }
+    
+    setCartItems(cartItems.map(item =>
+      item.product.id === productId
+        ? { ...item, quantity }
+        : item
+    ));
+  };
+
+  const handleRemoveItem = (productId: string) => {
+    setCartItems(cartItems.filter(item => item.product.id !== productId));
+  };
+
+  const handleCheckout = () => {
+    setIsCartOpen(false);
+    router.push("/checkout");
+  };
+
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const infoCards = [
     {
@@ -79,7 +230,7 @@ export default function HomePage() {
     },
     {
       name: "PET ACCESSORIES",
-      imageSrc: "/images/accessories1.png",
+      imageSrc: "/images/accessories2.png",
       bgColor: "#52C4F0"
     }
   ];
@@ -126,7 +277,7 @@ export default function HomePage() {
               }}
             >
               <img 
-                src="/images/whatdadog_logo2.png" 
+                src="/images/whatdadog_logo3.png" 
                 alt="logo" 
                 width={180} 
                 height={180} 
@@ -321,7 +472,7 @@ export default function HomePage() {
                     }}
                   >
                     <Typography sx={{ fontSize: "12px", fontWeight: "bold" ,letterSpacing: "0.2em" }}>REGISTRATION CERTIFICATE</Typography>
-                    <Typography sx={{ fontSize: "15px", mt: 0.5 , letterSpacing: "0.08em" }}>สุนัขของเรามีใบทะเบียนตัวสุนัขให้ทุกตัว</Typography>
+                    <Typography sx={{ fontSize: "15px", mt: 0.5 , letterSpacing: "0.08em" }}>สุนัขของเรามีใบทะเบียนประวัติสุนัขให้ทุกตัว</Typography>
                   </Box>
                 </Box>
               </Box>
@@ -329,164 +480,8 @@ export default function HomePage() {
           </Box>
         </Container>
 
-        {/* Info Cards Section */}
-        <Container maxWidth="lg" sx={{ py: 4 }}>
-          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
-            {/* Left Combined Card (text + price) */}
-            <Box sx={{ flex: 1, position: "relative" }}>
-              <Card
-                sx={{
-                  p: 3,
-                  borderRadius: 3,
-                  backgroundColor: "#FFFFFF",
-                  border: "2px solid #111",
-                  display: "flex",
-                  alignItems: "center",
-                  overflow: "visible",
-                  minHeight: 120
-                }}
-              >
-                {/* Dog image outside card to the left like mockup */}
-                <Box
-                  sx={{
-                    position: "absolute",
-                    left: -30,
-                    bottom: 50,
-                    width: 100,
-                    height: 100,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                >
-                  <Image src="/images/dog_hiphop.png" alt="dog" width={220} height={220} />
-                </Box>
-
-                <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
-                  {/* Text area */}
-                  <Box sx={{ flex: 1, pl: { xs: 8, md: 10 }, pr: 2 ,ml:4}}>
-                    <Typography
-                      sx={{
-                        fontSize: "16px",
-                        fontWeight: 800,
-                        color: "#000",
-                        mb: 0.5,
-                        lineHeight: 1.1,
-                        
-                      }}
-                    >
-                      LEARN HOW TO
-                      <br />
-                      CARE PUPPY'S
-                    </Typography>
-                    <Button
-                      onClick={handleReadArticle}
-                      sx={{
-                        color: "#111",
-                        fontSize: "12px",
-                        textTransform: "none",
-                        p: 0,
-                        minWidth: "auto",
-                        textDecoration: "underline",
-                        "&:hover": { backgroundColor: "transparent", color: "#FF6B35" }
-                      }}
-                    >
-                      Read Article
-                    </Button>
-                  </Box>
-
-                  {/* Price area with divider */}
-                  <Box sx={{ pl: 3, ml: 2, borderLeft: "1px solid #111", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Box sx={{ position: "relative", width: 110, height: 110 }}>
-                      {/* Outer circular text */}
-                      <svg width={110} height={110} viewBox="0 0 110 110" style={{ position: "absolute", top: 0, left: 0 }}>
-                        <defs>
-                          <path id="textcircle" d="M55,55 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" />
-                        </defs>
-                        <text style={{ fontSize: 8, letterSpacing: 1, fill: "#111" }}>
-                          <textPath href="#textcircle" startOffset="0">
-                            GROOMING • EXERCISE • TRAINING •
-                          </textPath>
-                        </text>
-                      </svg>
-
-                      {/* Inner dashed circle and price */}
-                      <Box
-                        sx={{
-                          position: "absolute",
-                          top: "50%",
-                          left: "50%",
-                          transform: "translate(-50%, -50%)",
-                          width: 76,
-                          height: 76,
-                          backgroundColor: "#FFF",
-                          borderRadius: "50%",
-                          border: "2px dashed #111",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center"
-                        }}
-                      >
-                        <Box sx={{ textAlign: "center", lineHeight: 1 }}>
-                          <Typography sx={{ fontSize: "20px", fontWeight: "bold" }}>$13</Typography>
-                          <Typography sx={{ fontSize: "8px", color: "#111" }}>MONTH</Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Box>
-                </Box>
-              </Card>
-            </Box>
-
-            {/* Right Nutrition Card */}
-            <Box sx={{ flex: 1, position: "relative", overflow: "visible" }}>
-              <Card
-                sx={{
-                  p: 2,
-                  borderRadius: 3,
-                  backgroundColor: "#FFFFFF",
-                  border: "2px solid #111",
-                  color: "#000",
-                  minHeight: 160,
-                  display: "flex",
-                  alignItems: "center",
-                  position: "relative",
-                  overflow: "visible"
-                }}
-              >
-                {/* Product image overlapping on top like left card */}
-                <Box sx={{ position: "absolute", left: -25, top: -40, zIndex: 10 }}>
-                  <Image src="/images/dog_hiphop.png" alt="product" width={200} height={200} />
-                </Box>
-
-                <Box sx={{ pl: 20 }}>
-                  <Typography sx={{ fontSize: "18px", fontWeight: 500, mb: 0.5, textAlign: "left" }}>
-                    REGISTRATION CERTIFICATE
-                    <br />
-                    ใบทะเบียนสุนัข คือ อะไร?
-                  </Typography>
-                  <Button
-                    onClick={handleRegistrationInfo}
-                    sx={{
-                      color: "#111",
-                      fontSize: "14px",
-                      textTransform: "none",
-                      p: 0,
-                      minWidth: "auto",
-                      textDecoration: "underline",
-                      "&:hover": { backgroundColor: "transparent", color: "#FF6B35" }
-                    }}
-                  >
-                    คำอธิบาย
-                  </Button>
-                </Box>
-              </Card>
-            </Box>
-          </Box>
-        </Container>
-
         {/* Pet Collection Section */}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Container maxWidth="lg" sx={{ pt: 4 }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
             <Typography
               variant="h3"
@@ -496,12 +491,21 @@ export default function HomePage() {
                 color: "#000"
               }}
             >
-              สินค้าของเรา
+              หมวดหมู่
             </Typography>
             
           </Box>
 
-          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
+          <Box
+              sx={{
+                display: "grid",
+                gap: 3,
+                gridTemplateColumns: {
+                  xs: "1fr 1fr", // mobile → 2 columns
+                  md: "1fr 1fr 1fr 1fr" // desktop → 4 columns (ปรับได้ตามต้องการ)
+                }
+              }}
+            >
             {petCollection.map((pet, index) => (
               <Box key={index} sx={{ flex: 1 }}>
                 <Card
@@ -871,6 +875,7 @@ export default function HomePage() {
           </Box>
         </Container>
 
+
         {/* HOW WE SERVE OUR PET PARENTS Section */}
         <Container maxWidth="lg" sx={{ py: 6 }}>
           <Box sx={{ display: "flex", gap: 6, alignItems: "center", flexDirection: { xs: "column", lg: "row" } }}>
@@ -1064,6 +1069,72 @@ export default function HomePage() {
           </Box>
         </Container>
 
+
+        {/* Featured Products Section */}
+        <Container maxWidth="lg" sx={{ py: 6 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
+            <Typography
+              variant="h3"
+              sx={{
+                fontSize: { xs: "1.8rem", md: "2.2rem" },
+                fontWeight: "800",
+                color: "#000"
+              }}
+            >
+              หาบ้านใหม่ให้น้องๆ
+            </Typography>
+            <Button
+              onClick={handleBookNow}
+              sx={{
+                color: "#FF6B35",
+                fontSize: "14px",
+                textTransform: "none",
+                fontWeight: "600",
+                "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
+              }}
+            >
+              ดูทั้งหมด →
+            </Button>
+          </Box>
+
+          {loading ? (
+            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+              <CircularProgress size={48} sx={{ color: "#FF6B35" }} />
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                display: "grid",
+                gap: 3,
+                gridTemplateColumns: {
+                  xs: "1fr 1fr", // mobile → 2 columns
+                  sm: "1fr 1fr", // tablet → 2 columns  
+                  md: "1fr 1fr 1fr", // medium → 3 columns
+                  lg: "1fr 1fr 1fr 1fr" // desktop → 4 columns
+                }
+              }}
+            >
+              {featuredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onAddToCart={handleAddToCart}
+                  onProductClick={handleProductClick}
+                />
+              ))}
+            </Box>
+          )}
+
+          {!loading && featuredProducts.length === 0 && (
+            <Box sx={{ textAlign: "center", py: 8 }}>
+              <Typography sx={{ color: "#666", fontSize: 16 }}>
+                น้อง ๆ มีย้ายบ้านหมดแล้วครับ
+              </Typography>
+            </Box>
+          )}
+        </Container>
+
+
         {/* WHAT WE CARE THE MOST Section */}
         <Container maxWidth="lg" sx={{ py: 6 }}>
           <Box
@@ -1179,6 +1250,528 @@ export default function HomePage() {
           </Box>
         </Container>
 
+        
+        {/* Special Cards Section */}
+        <Container maxWidth="lg" sx={{ py: 6 }}>
+          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
+            {/* Card 1: LEARN HOW TO CARE PUPPY'S */}
+            <Box sx={{ flex: 1 }}>
+              <Card
+                sx={{
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  border: "3px solid #000",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                  transition: "transform 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-6px)"
+                  },
+                  cursor: "pointer"
+                }}
+                onClick={handleReadArticle}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    backgroundColor: "#FFF",
+                    p: 3,
+                    gap: 3
+                  }}
+                >
+                  {/* Left: Dog Image */}
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 120,
+                      height: 120,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    <Image 
+                      src="/images/lovecorgi1.png" 
+                      alt="Corgi Puppy" 
+                      width={120} 
+                      height={120} 
+                      style={{ objectFit: "contain" }}
+                    />
+                  </Box>
+
+                  {/* Middle: Text Content */}
+                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                    <Typography
+                      sx={{
+                        fontSize: { xs: "18px", md: "24px" },
+                        fontWeight: "800",
+                        color: "#000",
+                        lineHeight: 1.2,
+                        mb: 1
+                      }}
+                    >
+                      LEARN HOW TO<br />
+                      CARE PUPPY'S
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: "#000",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        textDecoration: "underline",
+                        cursor: "pointer"
+                      }}
+                    >
+                      Read Article
+                    </Typography>
+                  </Box>
+
+                  {/* Right: Price Circle */}
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      border: "2px dashed #000",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      position: "relative"
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "10px", color: "#666", position: "absolute", top: 8 }}>
+                      STARTING
+                    </Typography>
+                    <Typography sx={{ fontSize: "24px", fontWeight: "800", color: "#000" }}>
+                      $13
+                    </Typography>
+                    <Typography sx={{ fontSize: "10px", color: "#666", position: "absolute", bottom: 8 }}>
+                      MONTH
+                    </Typography>
+                    <Typography sx={{ fontSize: "8px", color: "#666", position: "absolute", right: -20, transform: "rotate(90deg)" }}>
+                      AVERAGE COST
+                    </Typography>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            {/* Card 2: REGISTRATION CERTIFICATE */}
+            <Box sx={{ flex: 1 }}>
+              <Card
+                sx={{
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  border: "3px solid #000",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                  transition: "transform 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-6px)"
+                  },
+                  cursor: "pointer"
+                }}
+                onClick={handleRegistrationInfo}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    backgroundColor: "#FFF",
+                    p: 3,
+                    gap: 3
+                  }}
+                >
+                  {/* Left: Dog Image */}
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 120,
+                      height: 120,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    <Image 
+                      src="/images/lovecorgi1.png" 
+                      alt="Corgi Puppy" 
+                      width={120} 
+                      height={120} 
+                      style={{ objectFit: "contain" }}
+                    />
+                  </Box>
+
+                  {/* Middle: Text Content */}
+                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                    <Typography
+                      sx={{
+                        fontSize: { xs: "18px", md: "24px" },
+                        fontWeight: "800",
+                        color: "#000",
+                        lineHeight: 1.2,
+                        mb: 1
+                      }}
+                    >
+                      REGISTRATION CERTIFICATE
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: "#666",
+                        fontSize: "14px",
+                        mb: 2,
+                        lineHeight: 1.4
+                      }}
+                    >
+                      ใบทะเบียนสุนัข คือ อะไร?
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: "#000",
+                        fontSize: "14px",
+                        fontWeight: "600",
+                        textDecoration: "underline",
+                        cursor: "pointer"
+                      }}
+                    >
+                      อ่านรายละเอียด
+                    </Typography>
+                  </Box>
+
+                  {/* Border Line */}
+                  <Box
+                    sx={{
+                      width: "2px",
+                      height: "80%",
+                      backgroundColor: "#000",
+                      mx: 1
+                    }}
+                  />
+
+                  {/* Right: Price Circle */}
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 80,
+                      height: 80,
+                      borderRadius: "50%",
+                      border: "2px dashed #000",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      position: "relative"
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "10px", color: "#666", position: "absolute", top: 8 }}>
+                      STARTING
+                    </Typography>
+                    <Typography sx={{ fontSize: "24px", fontWeight: "800", color: "#000" }}>
+                      $13
+                    </Typography>
+                    <Typography sx={{ fontSize: "10px", color: "#666", position: "absolute", bottom: 8 }}>
+                      MONTH
+                    </Typography>
+                    <Typography sx={{ fontSize: "8px", color: "#666", position: "absolute", right: -20, transform: "rotate(90deg)" }}>
+                      AVERAGE COST
+                    </Typography>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+          </Box>
+        </Container>
+
+        {/* Blog Section */}
+        <Container maxWidth="lg" sx={{ py: 6 }}>
+          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
+            <Typography
+              variant="h3"
+              sx={{
+                fontSize: { xs: "1.8rem", md: "2.2rem" },
+                fontWeight: "800",
+                color: "#000"
+              }}
+            >
+              มาทำความรู้จักกับน้องๆ ให้มากขึ้น
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
+            {/* Blog Post 1 */}
+            <Box sx={{ flex: 1 }}>
+              <Card
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: "3px solid #000",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                  transition: "transform 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)"
+                  }
+                }}
+              >
+                <Box
+                  sx={{
+                    height: 200,
+                    backgroundColor: "#FF8A50",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden"
+                  }}
+                >
+                  <Image 
+                    src="/images/lovecorgi1.png" 
+                    alt="สุขภาพสุนัข" 
+                    width={180} 
+                    height={180} 
+                    style={{ objectFit: "contain" }}
+                  />
+                  {/* Badge */}
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      backgroundColor: "#FFD700",
+                      borderRadius: "20px",
+                      px: 2,
+                      py: 0.5,
+                      border: "2px solid #000"
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>
+                      สุขภาพ
+                    </Typography>
+                  </Box>
+                </Box>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography
+                    sx={{
+                      fontSize: "18px",
+                      fontWeight: "700",
+                      color: "#000",
+                      mb: 2,
+                      lineHeight: 1.3
+                    }}
+                  >
+                    วิธีดูแลสุขภาพลูกสุนัขคอร์กี้
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "#666",
+                      fontSize: "14px",
+                      lineHeight: 1.6,
+                      mb: 2
+                    }}
+                  >
+                    เทคนิคการดูแลสุขภาพลูกสุนัขคอร์กี้ตั้งแต่เล็กจนโต รวมถึงการฉีดวัคซีนและการตรวจสุขภาพ
+                  </Typography>
+                  <Button
+                    onClick={handleReadArticle}
+                    sx={{
+                      color: "#FF6B35",
+                      fontSize: "14px",
+                      textTransform: "none",
+                      p: 0,
+                      minWidth: "auto",
+                      fontWeight: "600",
+                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
+                    }}
+                  >
+                    อ่านต่อ →
+                  </Button>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Blog Post 2 */}
+            <Box sx={{ flex: 1 }}>
+              <Card
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: "3px solid #000",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                  transition: "transform 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)"
+                  }
+                }}
+              >
+                <Box
+                  sx={{
+                    height: 200,
+                    backgroundColor: "#4CAF50",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden"
+                  }}
+                >
+                  <Image 
+                    src="/images/dog1-1.png" 
+                    alt="อาหารสุนัข" 
+                    width={180} 
+                    height={180} 
+                    style={{ objectFit: "contain" }}
+                  />
+                  {/* Badge */}
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      backgroundColor: "#E8F5E8",
+                      borderRadius: "20px",
+                      px: 2,
+                      py: 0.5,
+                      border: "2px solid #000"
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>
+                      โภชนาการ
+                    </Typography>
+                  </Box>
+                </Box>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography
+                    sx={{
+                      fontSize: "18px",
+                      fontWeight: "700",
+                      color: "#000",
+                      mb: 2,
+                      lineHeight: 1.3
+                    }}
+                  >
+                    เลือกอาหารสุนัขอย่างไรให้เหมาะสม
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "#666",
+                      fontSize: "14px",
+                      lineHeight: 1.6,
+                      mb: 2
+                    }}
+                  >
+                    คู่มือการเลือกอาหารสุนัขที่มีคุณภาพ พร้อมสารอาหารครบถ้วนสำหรับแต่ละช่วงวัย
+                  </Typography>
+                  <Button
+                    onClick={handleReadArticle}
+                    sx={{
+                      color: "#4CAF50",
+                      fontSize: "14px",
+                      textTransform: "none",
+                      p: 0,
+                      minWidth: "auto",
+                      fontWeight: "600",
+                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
+                    }}
+                  >
+                    อ่านต่อ →
+                  </Button>
+                </CardContent>
+              </Card>
+            </Box>
+
+            {/* Blog Post 3 */}
+            <Box sx={{ flex: 1 }}>
+              <Card
+                sx={{
+                  borderRadius: 3,
+                  overflow: "hidden",
+                  border: "3px solid #000",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                  transition: "transform 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-4px)"
+                  }
+                }}
+              >
+                <Box
+                  sx={{
+                    height: 200,
+                    backgroundColor: "#52C4F0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    overflow: "hidden"
+                  }}
+                >
+                  <Image 
+                    src="/images/dog_fashion1.png" 
+                    alt="ฝึกสุนัข" 
+                    width={180} 
+                    height={180} 
+                    style={{ objectFit: "contain" }}
+                  />
+                  {/* Badge */}
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      top: 16,
+                      right: 16,
+                      backgroundColor: "#E3F2FD",
+                      borderRadius: "20px",
+                      px: 2,
+                      py: 0.5,
+                      border: "2px solid #000"
+                    }}
+                  >
+                    <Typography sx={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>
+                      พฤติกรรม
+                    </Typography>
+                  </Box>
+                </Box>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography
+                    sx={{
+                      fontSize: "18px",
+                      fontWeight: "700",
+                      color: "#000",
+                      mb: 2,
+                      lineHeight: 1.3
+                    }}
+                  >
+                    เทคนิคฝึกสุนัขให้เชื่อฟัง
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "#666",
+                      fontSize: "14px",
+                      lineHeight: 1.6,
+                      mb: 2
+                    }}
+                  >
+                    วิธีการฝึกสุนัขขั้นพื้นฐาน สร้างความเข้าใจและสัมพันธ์ที่ดีระหว่างคุณกับน้องหมา
+                  </Typography>
+                  <Button
+                    onClick={handleReadArticle}
+                    sx={{
+                      color: "#52C4F0",
+                      fontSize: "14px",
+                      textTransform: "none",
+                      p: 0,
+                      minWidth: "auto",
+                      fontWeight: "600",
+                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
+                    }}
+                  >
+                    อ่านต่อ →
+                  </Button>
+                </CardContent>
+              </Card>
+            </Box>
+          </Box>
+        </Container>
+
+
         {/* Footer Services Section */}
         <Box sx={{ backgroundColor: "#F4D03F", py: 4 }}>
           <Container maxWidth="lg">
@@ -1214,14 +1807,22 @@ export default function HomePage() {
         </Box>
 
         {/* Footer - Minimal */}
-        <Box sx={{ backgroundColor: "#1A1A1A", py: 3 }}>
+        <Box sx={{ backgroundColor: "#2d2d2d", py: 3 }}>
           <Container maxWidth="lg">
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexDirection: { xs: "column", sm: "row" } }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Box sx={{ width: 30, height: 30, backgroundColor: "#FF6B35", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Typography sx={{ color: "white", fontSize: "16px" }}>🐾</Typography>
-                </Box>
-                <Typography variant="h6" sx={{ fontWeight: "bold", color: "white", fontSize: "18px" }}>PUPP'S</Typography>
+              {/* Logo */}
+              <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <Image
+                  src="/images/whatdadog_logo4.png"
+                  alt="What Da Dog Pet Shop"
+                  width={140}
+                  height={60}
+                  style={{
+                    objectFit: "contain",
+                    maxWidth: "100%",
+                    height: "auto"
+                  }}
+                />
               </Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                 <a href="#" aria-label="Facebook" style={{ textDecoration: "none" }}>
@@ -1234,7 +1835,7 @@ export default function HomePage() {
                     <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 16 }}>♪</Typography>
                   </Box>
                 </a>
-                <a href="#" aria-label="LINE" style={{ textDecoration: "none" }}>
+                <a href="https://line.me/R/ti/p/@658jluqf" target="_blank" aria-label="LINE" style={{ textDecoration: "none" }}>
                   <Box sx={{ width: 36, height: 36, borderRadius: "50%", backgroundColor: "#06C755", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 10 }}>LINE</Typography>
                   </Box>
@@ -1248,6 +1849,43 @@ export default function HomePage() {
         <RegistrationCertificateSheet
           open={isRegistrationSheetOpen}
           onClose={() => setIsRegistrationSheetOpen(false)}
+        />
+
+        {/* Floating Cart Button */}
+        {totalItems > 0 && (
+          <IconButton
+            onClick={handleCartClick}
+            sx={{
+              position: "fixed",
+              bottom: 100,
+              right: 20,
+              backgroundColor: colors.primary.main,
+              color: "white",
+              width: 60,
+              height: 60,
+              zIndex: 1000,
+              boxShadow: "0 4px 20px rgba(255, 107, 53, 0.3)",
+              "&:hover": {
+                backgroundColor: colors.primary.dark,
+                transform: "scale(1.1)"
+              },
+              transition: "all 0.2s ease"
+            }}
+          >
+            <Badge badgeContent={totalItems} color="error">
+              <ShoppingCart />
+            </Badge>
+          </IconButton>
+        )}
+
+        {/* Cart Drawer */}
+        <Cart
+          open={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          items={cartItems}
+          onUpdateQuantity={handleUpdateQuantity}
+          onRemoveItem={handleRemoveItem}
+          onCheckout={handleCheckout}
         />
 
       </Box>

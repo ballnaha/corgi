@@ -319,7 +319,7 @@ export default function ProductDetail({
                 </Badge>
               </IconButton>
               <IconButton
-                onClick={() => (window.location.href = "/")}
+                onClick={() => (window.location.href = "/shop")}
                 sx={{
                   backgroundColor: "rgba(0, 0, 0, 0.2)",
                   color: colors.secondary.main,
@@ -765,7 +765,7 @@ export default function ProductDetail({
                             fontSize: "1rem",
                           }}
                         >
-                          มีใบรับรองคุณภาพ
+                          มีใบทะเบียนประวัติสุนัข(Registration Certificate)
                         </Typography>
                       </Box>
                     )}

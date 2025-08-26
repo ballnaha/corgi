@@ -9,3 +9,4 @@ export { default as BannerSection } from './BannerSection';
 export { default as ProductDetail } from './ProductDetail';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as RegistrationCertificateSheet } from './RegistrationCertificateSheet';
+export { default as ProductDetailDesktop } from './ProductDetailDesktop';

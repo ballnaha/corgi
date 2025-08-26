@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useSession, signOut } from "next-auth/react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import {
@@ -250,11 +251,6 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!mounted || status === "loading" || dataFetched) return;
-
-    if (!session) {
-      handleLiffNavigation(router, "/auth/signin");
-      return;
-    }
 
     // Only fetch data once when component mounts and session is available
     if (mounted && session && status === "authenticated") {
@@ -629,12 +625,8 @@ export default function ProfilePage() {
     );
   }
 
-  if (!session) {
-    return null;
-  }
-
-  // Wait until all API calls have completed before rendering content
-  const isDataLoading = loadingUser || loadingOrders || loadingCategories;
+  // Wait until all API calls have completed before rendering content (only when authenticated)
+  const isDataLoading = session && (loadingUser || loadingOrders || loadingCategories);
 
   if (isDataLoading) {
     return (
@@ -656,11 +648,177 @@ export default function ProfilePage() {
 
   // Use session data as fallback while userData is loading
   const displayData = userData || {
-    displayName: session.user?.name || "",
-    pictureUrl: session.user?.image || "",
-    email: session.user?.email || "",
-    lineUserId: session.user?.lineUserId || "",
+    displayName: session?.user?.name || "",
+    pictureUrl: session?.user?.image || "",
+    email: session?.user?.email || "",
+    lineUserId: session?.user?.lineUserId || "",
   };
+
+
+
+  // Show loading while determining auth status
+  if (!mounted) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: "#FAFAFA",
+        }}
+      >
+        <CircularProgress color="primary" />
+      </Box>
+    );
+  }
+
+  // Show QR code when not authenticated
+  if (!session) {
+    return (
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: "#FAFAFA",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          px: 3,
+        }}
+      >
+        {/* Header */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: 20,
+            left: 20,
+            zIndex: 1100,
+          }}
+        >
+          <IconButton
+            onClick={() => router.back()}
+            sx={{
+              backgroundColor: "white",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              "&:hover": {
+                backgroundColor: "#f5f5f5",
+              },
+            }}
+          >
+            <ArrowBack />
+          </IconButton>
+        </Box>
+
+        {/* QR Code Section */}
+        <Card
+          sx={{
+            maxWidth: 400,
+            width: "100%",
+            p: 4,
+            textAlign: "center",
+            borderRadius: 3,
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          {/* Logo */}
+          <Box sx={{ 
+            display: "flex", 
+            justifyContent: "center", 
+            mb: 2 
+          }}>
+            <Image
+              src="/images/whatdadog_logo3.png"
+              alt="What Da Dog Pet Shop"
+              width={200}
+              height={100}
+              style={{
+                objectFit: "contain",
+                maxWidth: "100%",
+                height: "auto"
+              }}
+              priority
+            />
+          </Box>
+          
+
+          
+          <Typography
+            variant="body1"
+            sx={{
+              mb: 3,
+              color: colors.text.secondary,
+              lineHeight: 1.6,
+            }}
+          >
+            เข้าสู่ระบบผ่าน LINE เพื่อดูประวัติการซื้อและติดตามคำสั่งซื้อของคุณ
+          </Typography>
+
+          {/* QR Code */}
+          <Box
+            sx={{
+              width: 200,
+              height: 200,
+              mx: "auto",
+              mb: 3,
+              borderRadius: 2,
+              overflow: "hidden",
+              border: "2px solid #E0E0E0",
+            }}
+          >
+            <img
+              src="/images/qr_line.png"
+              alt="LINE Official Account QR Code"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+              }}
+            />
+          </Box>
+
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 600,
+              mb: 1,
+              color: colors.text.primary,
+            }}
+          >
+            LINE Official Account
+          </Typography>
+          
+          <Typography
+            variant="body2"
+            sx={{
+              color: colors.text.secondary,
+              mb: 3,
+            }}
+          >
+            @658jluqf
+          </Typography>
+
+          <Button
+            variant="contained"
+            fullWidth
+            sx={{
+              py: 1.5,
+              backgroundColor: "#06C755",
+              color: "white",
+              fontWeight: 600,
+              borderRadius: 2,
+              "&:hover": {
+                backgroundColor: "#05b04a",
+              },
+            }}
+            onClick={() => window.open("https://line.me/R/ti/p/@658jluqf", "_blank")}
+          >
+            เพิ่มเพื่อน LINE
+          </Button>
+        </Card>
+      </Box>
+    );
+  }
 
   return (
     <Box

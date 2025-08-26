@@ -26,6 +26,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Container,
 } from "@mui/material";
 import type { SlideProps } from "@mui/material";
 import {
@@ -973,14 +974,15 @@ export default function CheckoutPage() {
           borderBottom: "1px solid rgba(0,0,0,0.06)",
         }}
       >
-        <Box
-          sx={{
-            px: 3,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
+        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+          <Box
+            sx={{
+              px: 3,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
           <Box sx={{ display: "flex", alignItems: "center" }}>
             <IconButton
               onClick={() => router.back()}
@@ -1006,7 +1008,8 @@ export default function CheckoutPage() {
           >
             {cartItems.length} รายการ
           </Typography>
-        </Box>
+          </Box>
+        </Container>
       </Box>
 
       {/* Order Summary */}
@@ -1018,7 +1021,8 @@ export default function CheckoutPage() {
           borderBottom: "8px solid " + colors.background.default,
         }}
       >
-        <Box sx={{ px: 3 }}>
+        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+          <Box sx={{ px: 3 }}>
           <Typography
             variant="h6"
             sx={{ mb: 3, fontWeight: 600, color: colors.text.primary }}
@@ -1165,7 +1169,8 @@ export default function CheckoutPage() {
               </Box>
             </Box>
           ))}
-        </Box>
+          </Box>
+        </Container>
       </Box>
 
       {/* Shipping Options */}
@@ -1177,7 +1182,8 @@ export default function CheckoutPage() {
           borderBottom: "8px solid " + colors.background.default,
         }}
       >
-        <Box sx={{ px: 3, mb: 3 }}>
+        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+          <Box sx={{ px: 3, mb: 3 }}>
           <Typography
             variant="h6"
             sx={{ fontWeight: 600, color: colors.text.primary }}
@@ -1251,6 +1257,7 @@ export default function CheckoutPage() {
             ))}
           </RadioGroup>
         )}
+        </Container>
       </Box>
 
       {/* Discount Code - Collapsible */}
@@ -1262,21 +1269,22 @@ export default function CheckoutPage() {
           overflow: "hidden",
         }}
       >
-        {/* Header ที่คลิกได้ */}
-        <Box
-          onClick={() => setShowDiscountSection(!showDiscountSection)}
-          sx={{
-            px: 3,
-            py: 3,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            cursor: "pointer",
-            "&:hover": {
-              backgroundColor: "rgba(0,0,0,0.02)",
-            },
-          }}
-        >
+        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+          {/* Header ที่คลิกได้ */}
+          <Box
+            onClick={() => setShowDiscountSection(!showDiscountSection)}
+            sx={{
+              px: 3,
+              py: 3,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              cursor: "pointer",
+              "&:hover": {
+                backgroundColor: "rgba(0,0,0,0.02)",
+              },
+            }}
+          >
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <LocalOffer sx={{ color: colors.primary.main }} />
             <Typography
@@ -1392,6 +1400,7 @@ export default function CheckoutPage() {
             )}
           </Box>
         )}
+        </Container>
       </Box>
 
       {/* Payment Methods */}
@@ -1403,7 +1412,8 @@ export default function CheckoutPage() {
           borderBottom: "8px solid " + colors.background.default,
         }}
       >
-        <Box sx={{ px: 3, mb: 3 }}>
+        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+          <Box sx={{ px: 3, mb: 3 }}>
           <Typography
             variant="h6"
             sx={{ fontWeight: 600, color: colors.text.primary }}
@@ -1503,6 +1513,7 @@ export default function CheckoutPage() {
             })}
           </RadioGroup>
         )}
+        </Container>
       </Box>
 
       {/* Customer Information */}
@@ -1514,7 +1525,8 @@ export default function CheckoutPage() {
           borderBottom: "8px solid " + colors.background.default,
         }}
       >
-        <Box sx={{ px: 3, mb: 3 }}>
+        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+          <Box sx={{ px: 3, mb: 3 }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
             <Typography
               variant="h6"
@@ -1668,6 +1680,7 @@ export default function CheckoutPage() {
             />
           </Box>
         </Box>
+        </Container>
       </Box>
 
       {/* Payment Summary */}
@@ -1680,7 +1693,8 @@ export default function CheckoutPage() {
             borderBottom: "8px solid " + colors.background.default,
           }}
         >
-          <Box sx={{ px: 3, mb: 3 }}>
+          <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+            <Box sx={{ px: 3, mb: 3 }}>
             <Typography
               variant="h6"
               sx={{ fontWeight: 600, color: colors.text.primary }}
@@ -1842,6 +1856,7 @@ export default function CheckoutPage() {
               )}
             </Box>
           </Box>
+          </Container>
         </Box>
       )}
 
@@ -1864,6 +1879,7 @@ export default function CheckoutPage() {
           
         }}
       >
+        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
 
         <Button
           fullWidth
@@ -1897,6 +1913,7 @@ export default function CheckoutPage() {
                 : `ชำระเงิน (฿${calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()})`
             ) : "ชำระเงิน"}
         </Button>
+        </Container>
       </Box>
 
       {/* Snackbar */}

@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import type { SlideProps } from "@mui/material";
 import ProductDetail from "@/components/ProductDetail";
+import ProductDetailDesktop from "@/components/ProductDetailDesktop";
 import { colors } from "@/theme/colors";
 import { Product } from "@/types";
 import Cart from "@/components/Cart";
@@ -40,6 +41,8 @@ export default function ProductDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
@@ -49,6 +52,19 @@ export default function ProductDetailPage() {
   const [snackbarKey, setSnackbarKey] = useState<number>(0);
   useEffect(() => {
     setCartCount(readCartFromStorage().reduce((s, i) => s + i.quantity, 0));
+    
+    // Detect desktop
+    const checkIsDesktop = () => {
+      setIsDesktop(window.innerWidth >= 768);
+    };
+    
+    checkIsDesktop();
+    window.addEventListener('resize', checkIsDesktop);
+    
+    return () => window.removeEventListener('resize', checkIsDesktop);
+  }, []);
+
+  useEffect(() => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
@@ -100,7 +116,7 @@ export default function ProductDetailPage() {
   }, []);
 
   const handleBack = () => {
-    handleLiffNavigation(router, "/");
+    handleLiffNavigation(router, "/home");
   };
 
   const handleAdopt = () => {
@@ -132,6 +148,10 @@ export default function ProductDetailPage() {
       severity: "success",
     });
     setSnackbarKey((k) => k + 1);
+  };
+
+  const handleToggleFavorite = () => {
+    setIsFavorite(!isFavorite);
   };
 
   if (loading) {
@@ -176,14 +196,19 @@ export default function ProductDetailPage() {
     );
   }
 
+  // Render appropriate component based on screen size
+  const ProductComponent = isDesktop ? ProductDetailDesktop : ProductDetail;
+
   return (
     <>
-      <ProductDetail
+      <ProductComponent
         product={product}
         onBack={handleBack}
         onAdopt={handleAdopt}
         onCartClick={() => setIsCartOpen(true)}
         cartItemCount={cartCount}
+        isFavorite={isFavorite}
+        onToggleFavorite={handleToggleFavorite}
       />
 
       <Cart

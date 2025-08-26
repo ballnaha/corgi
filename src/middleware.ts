@@ -2,70 +2,81 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // Skip middleware for API routes, static files, auth pages, images, and home page
-  if (
-    request.nextUrl.pathname.startsWith('/api/') ||
-    request.nextUrl.pathname.startsWith('/_next/') ||
-    request.nextUrl.pathname.startsWith('/auth/') ||
-    request.nextUrl.pathname.startsWith('/images/') ||
-    request.nextUrl.pathname === '/favicon.ico' ||
-    request.nextUrl.pathname === '/home' ||
-    request.nextUrl.pathname === '/'
-  ) {
+  // Define public routes that should always be accessible
+  const publicRoutes = [
+    '/api/',
+    '/_next/',
+    '/auth/',
+    '/images/',
+    '/uploads/',
+    '/product/',
+    '/shop',
+    '/home',
+    '/checkout',
+    '/profile',
+    '/favorites',
+    '/unauthorized',
+    '/',
+    '/liff',
+    '/favicon.ico'
+  ];
+
+  // Check if current path is a public route
+  const isPublicRoute = publicRoutes.some(route => {
+    if (route === '/') {
+      return request.nextUrl.pathname === '/';
+    }
+    return request.nextUrl.pathname.startsWith(route) || request.nextUrl.pathname === route;
+  });
+
+  // Always allow access to public routes
+  if (isPublicRoute) {
+    // For LIFF-specific routes, add detection header
+    const userAgent = request.headers.get('user-agent') || '';
+    const isLineApp = userAgent.includes('Line/') && 
+                     (userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone'));
+    
+    const isLiffUrl = request.nextUrl.href.includes('liff.line.me') || 
+                     request.nextUrl.href.includes('liff-web.line.me') ||
+                     request.nextUrl.searchParams.has('liff');
+    
+    const isFromLiff = isLineApp || isLiffUrl;
+    
+    if (isFromLiff) {
+      const response = NextResponse.next();
+      response.headers.set('x-liff-environment', 'true');
+      return response;
+    }
+    
     return NextResponse.next();
   }
 
-  // Handle LIFF URL redirect
-  if (request.nextUrl.pathname === '/liff') {
+  // Admin routes protection - let client-side handle auth for admin routes
+  if (request.nextUrl.pathname.startsWith('/admin')) {
     return NextResponse.next();
   }
 
-  // Check if request is from LIFF (LINE Front-end Framework)
+  // Check if request is from LIFF for protected routes
   const userAgent = request.headers.get('user-agent') || '';
   const isLineApp = userAgent.includes('Line/') && 
                    (userAgent.includes('Mobile') || userAgent.includes('Android') || userAgent.includes('iPhone'));
   
-  // Check if URL contains LIFF parameters
   const isLiffUrl = request.nextUrl.href.includes('liff.line.me') || 
                    request.nextUrl.href.includes('liff-web.line.me') ||
                    request.nextUrl.searchParams.has('liff');
   
   const isFromLiff = isLineApp || isLiffUrl;
   
-  // Admin routes protection - let client-side handle auth for admin routes
-  // This avoids edge runtime issues with next-auth and Prisma
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    // For admin routes, let the layout handle authentication and authorization
-    // This prevents edge runtime compatibility issues
-    return NextResponse.next();
-  }
-  
   // For LIFF environment, let client-side handle all auth
   if (isFromLiff) {
-    // Add LIFF detection header for client-side use
     const response = NextResponse.next();
     response.headers.set('x-liff-environment', 'true');
     return response;
   }
 
-  // For non-LIFF users, redirect to home page for any protected routes
-  // Allow access to these public pages without authentication
-  const publicRoutes = ['/shop', '/product', '/unauthorized'];
-  const isPublicRoute = publicRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
-  );
-  
-  if (isPublicRoute) {
-    return NextResponse.next();
-  }
-
-  // For non-LIFF users accessing protected routes, redirect to home
-  if (!isFromLiff && request.nextUrl.pathname !== '/home') {
-    const homeUrl = new URL('/home', request.url);
-    return NextResponse.redirect(homeUrl);
-  }
-
-  return NextResponse.next();
+  // For non-LIFF users accessing truly protected routes, redirect to home
+  const homeUrl = new URL('/home', request.url);
+  return NextResponse.redirect(homeUrl);
 }
 
 export const config = {
@@ -78,7 +89,9 @@ export const config = {
      * - favicon.ico (favicon file)
      * - auth (auth pages)
      * - images (static images)
+     * - product (product pages)
+     * - shop (shop page)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|auth|images).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|auth|images|product|shop|home|uploads|checkout|profile|favorites).*)",
   ],
 };
