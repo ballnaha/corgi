@@ -449,7 +449,7 @@ export default function HomePage() {
                     }}
                   >
                     <Box sx={{ textAlign: "center" }}>
-                      <Typography sx={{ fontSize: "25px" }}>🐾</Typography>
+                      <Typography sx={{ fontSize: "25px" , color:"#FFF" }}>🐾</Typography>
                       <Typography sx={{ fontSize: "13px", fontWeight: "bold", color: "#000" , letterSpacing: "0.1em" }}>CORGI</Typography>
                     </Box>
                   </Box>
@@ -476,6 +476,237 @@ export default function HomePage() {
                   </Box>
                 </Box>
               </Box>
+            </Box>
+          </Box>
+        </Container>
+
+        
+        {/* Special Cards Section */}
+        <Container maxWidth="lg" sx={{ py: 6 }}>
+          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
+            {/* Card 1: LEARN HOW TO CARE PUPPY'S */}
+            <Box sx={{ flex: 1 }}>
+              <Card
+                sx={{
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  border: "3px solid #000",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                  transition: "transform 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-6px)"
+                  },
+                  cursor: "pointer"
+                }}
+                onClick={handleReadArticle}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    backgroundColor: "#FFF",
+                    p: 3,
+                    gap: 3
+                  }}
+                >
+                  {/* Left: Dog Image */}
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 120,
+                      height: 120,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      position:"relative",
+                      top:-30,
+                      left:-10,
+                      
+                    }}
+                  >
+                    <Image 
+                      src="/images/dog_learn.png" 
+                      alt="Corgi Puppy" 
+                      width={150} 
+                      height={150} 
+                      style={{ objectFit: "contain" }}
+                    />
+                  </Box>
+
+                  {/* Middle: Text Content */}
+                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                    <Typography
+                      sx={{
+                        fontSize: { xs: "18px", md: "24px" },
+                        fontWeight: "800",
+                        color: "#000",
+                        lineHeight: 1.2,
+                        mb: 1
+                      }}
+                    >
+                      FRESH PUP,<br />
+                      FRESH START.
+                    </Typography>
+
+                  </Box>
+
+                  {/* Vertical Line Divider */}
+                  <Box
+                    sx={{
+                      width: 1.2,
+                      height: 120,
+                      backgroundColor: "#000",
+                      mx: 2,
+                      borderRadius: "1.5px"
+                    }}
+                  />
+
+                  {/* Right: Price Circle */}
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 120,
+                      height: 120,
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center"
+                    }}
+                  >
+                    {/* Circular text around the circle */}
+                    <Box
+                      sx={{
+                        position: "absolute",
+                        width: "100%",
+                        height: "100%",
+                        "& svg": {
+                          width: "100%",
+                          height: "100%"
+                        }
+                      }}
+                    >
+
+<svg viewBox="0 0 120 120">
+  <defs>
+    <path
+      id="circle"
+      d="M 60, 60 m -50, 0 a 50,50 0 1,1 100,0 a 50,50 0 1,1 -100,0"
+    />
+  </defs>
+  <text fontSize="9" fontWeight="600" fill="#666" letterSpacing="0.5px">
+    <textPath href="#circle" startOffset="0%">
+    PREMIUM QUALITY • HEALTHY & HAPPY • READY TO LOVE 
+    </textPath>
+  </text>
+</svg>
+
+                    </Box>
+
+                    {/* Inner circle with price */}
+                    <Box
+                      sx={{
+                        width: 80,
+                        height: 80,
+                        borderRadius: "50%",
+                        border: "2px dashed #000",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#fff",
+                        position: "relative"
+                      }}
+                    >
+                      <Typography sx={{ fontSize: "16px", fontWeight: "800", color: "#000" }}>
+                        LOVE
+                      </Typography>
+                      <Typography sx={{ fontSize: "20px", fontWeight: "600", color: "#666", letterSpacing: "0.5px" }}>
+                      🐶
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+              </Card>
+            </Box>
+
+            {/* Card 2: REGISTRATION CERTIFICATE */}
+            <Box sx={{ flex: 1 }}>
+              <Card
+                sx={{
+                  borderRadius: 4,
+                  overflow: "hidden",
+                  border: "3px solid #000",
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
+                  transition: "transform 0.3s ease",
+                  "&:hover": {
+                    transform: "translateY(-6px)"
+                  },
+                  cursor: "pointer"
+                }}
+                onClick={handleRegistrationInfo}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    backgroundColor: "#FFF",
+                    p: 3,
+                    gap: 3
+                  }}
+                >
+                  {/* Left: Dog Image */}
+                  <Box
+                    sx={{
+                      flexShrink: 0,
+                      width: 120,
+                      height: 120,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      position:"relative",
+                      top:-10,
+                      left:-10,
+                      
+                    }}
+                  >
+                    <Image 
+                      src="/images/dog_hiphop.png" 
+                      alt="Corgi Puppy" 
+                      width={150} 
+                      height={150} 
+                      style={{ objectFit: "contain" }}
+                    />
+                  </Box>
+
+                  {/* Middle: Text Content */}
+                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                    <Typography
+                      sx={{
+                        fontSize: { xs: "18px", md: "24px" },
+                        fontWeight: "800",
+                        color: "#000",
+                        lineHeight: 1.2,
+                        mb: 1
+                      }}
+                    >
+                      BORN TO BE A DOG STAR.
+
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: "#666",
+                        fontSize: "16px",
+                        mb: 2,
+                        lineHeight: 1.4
+                      }}
+                    >
+                      เกิดมาเพื่อเป็นดาวเด่น
+                    </Typography>
+                    
+                  </Box>
+
+                </Box>
+              </Card>
             </Box>
           </Box>
         </Container>
@@ -1250,238 +1481,7 @@ export default function HomePage() {
           </Box>
         </Container>
 
-        
-        {/* Special Cards Section */}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
-          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
-            {/* Card 1: LEARN HOW TO CARE PUPPY'S */}
-            <Box sx={{ flex: 1 }}>
-              <Card
-                sx={{
-                  borderRadius: 4,
-                  overflow: "hidden",
-                  border: "3px solid #000",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-                  transition: "transform 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-6px)"
-                  },
-                  cursor: "pointer"
-                }}
-                onClick={handleReadArticle}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    backgroundColor: "#FFF",
-                    p: 3,
-                    gap: 3
-                  }}
-                >
-                  {/* Left: Dog Image */}
-                  <Box
-                    sx={{
-                      flexShrink: 0,
-                      width: 120,
-                      height: 120,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center"
-                    }}
-                  >
-                    <Image 
-                      src="/images/lovecorgi1.png" 
-                      alt="Corgi Puppy" 
-                      width={120} 
-                      height={120} 
-                      style={{ objectFit: "contain" }}
-                    />
-                  </Box>
 
-                  {/* Middle: Text Content */}
-                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                    <Typography
-                      sx={{
-                        fontSize: { xs: "18px", md: "24px" },
-                        fontWeight: "800",
-                        color: "#000",
-                        lineHeight: 1.2,
-                        mb: 1
-                      }}
-                    >
-                      LEARN HOW TO<br />
-                      CARE PUPPY'S
-                    </Typography>
-                    <Typography
-                      sx={{
-                        color: "#000",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        textDecoration: "underline",
-                        cursor: "pointer"
-                      }}
-                    >
-                      Read Article
-                    </Typography>
-                  </Box>
-
-                  {/* Right: Price Circle */}
-                  <Box
-                    sx={{
-                      flexShrink: 0,
-                      width: 80,
-                      height: 80,
-                      borderRadius: "50%",
-                      border: "2px dashed #000",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      position: "relative"
-                    }}
-                  >
-                    <Typography sx={{ fontSize: "10px", color: "#666", position: "absolute", top: 8 }}>
-                      STARTING
-                    </Typography>
-                    <Typography sx={{ fontSize: "24px", fontWeight: "800", color: "#000" }}>
-                      $13
-                    </Typography>
-                    <Typography sx={{ fontSize: "10px", color: "#666", position: "absolute", bottom: 8 }}>
-                      MONTH
-                    </Typography>
-                    <Typography sx={{ fontSize: "8px", color: "#666", position: "absolute", right: -20, transform: "rotate(90deg)" }}>
-                      AVERAGE COST
-                    </Typography>
-                  </Box>
-                </Box>
-              </Card>
-            </Box>
-
-            {/* Card 2: REGISTRATION CERTIFICATE */}
-            <Box sx={{ flex: 1 }}>
-              <Card
-                sx={{
-                  borderRadius: 4,
-                  overflow: "hidden",
-                  border: "3px solid #000",
-                  boxShadow: "0 8px 32px rgba(0,0,0,0.15)",
-                  transition: "transform 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-6px)"
-                  },
-                  cursor: "pointer"
-                }}
-                onClick={handleRegistrationInfo}
-              >
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    backgroundColor: "#FFF",
-                    p: 3,
-                    gap: 3
-                  }}
-                >
-                  {/* Left: Dog Image */}
-                  <Box
-                    sx={{
-                      flexShrink: 0,
-                      width: 120,
-                      height: 120,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center"
-                    }}
-                  >
-                    <Image 
-                      src="/images/lovecorgi1.png" 
-                      alt="Corgi Puppy" 
-                      width={120} 
-                      height={120} 
-                      style={{ objectFit: "contain" }}
-                    />
-                  </Box>
-
-                  {/* Middle: Text Content */}
-                  <Box sx={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                    <Typography
-                      sx={{
-                        fontSize: { xs: "18px", md: "24px" },
-                        fontWeight: "800",
-                        color: "#000",
-                        lineHeight: 1.2,
-                        mb: 1
-                      }}
-                    >
-                      REGISTRATION CERTIFICATE
-                    </Typography>
-                    <Typography
-                      sx={{
-                        color: "#666",
-                        fontSize: "14px",
-                        mb: 2,
-                        lineHeight: 1.4
-                      }}
-                    >
-                      ใบทะเบียนสุนัข คือ อะไร?
-                    </Typography>
-                    <Typography
-                      sx={{
-                        color: "#000",
-                        fontSize: "14px",
-                        fontWeight: "600",
-                        textDecoration: "underline",
-                        cursor: "pointer"
-                      }}
-                    >
-                      อ่านรายละเอียด
-                    </Typography>
-                  </Box>
-
-                  {/* Border Line */}
-                  <Box
-                    sx={{
-                      width: "2px",
-                      height: "80%",
-                      backgroundColor: "#000",
-                      mx: 1
-                    }}
-                  />
-
-                  {/* Right: Price Circle */}
-                  <Box
-                    sx={{
-                      flexShrink: 0,
-                      width: 80,
-                      height: 80,
-                      borderRadius: "50%",
-                      border: "2px dashed #000",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      position: "relative"
-                    }}
-                  >
-                    <Typography sx={{ fontSize: "10px", color: "#666", position: "absolute", top: 8 }}>
-                      STARTING
-                    </Typography>
-                    <Typography sx={{ fontSize: "24px", fontWeight: "800", color: "#000" }}>
-                      $13
-                    </Typography>
-                    <Typography sx={{ fontSize: "10px", color: "#666", position: "absolute", bottom: 8 }}>
-                      MONTH
-                    </Typography>
-                    <Typography sx={{ fontSize: "8px", color: "#666", position: "absolute", right: -20, transform: "rotate(90deg)" }}>
-                      AVERAGE COST
-                    </Typography>
-                  </Box>
-                </Box>
-              </Card>
-            </Box>
-          </Box>
-        </Container>
 
         {/* Blog Section */}
         <Container maxWidth="lg" sx={{ py: 6 }}>
