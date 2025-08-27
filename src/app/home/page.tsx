@@ -496,9 +496,9 @@ export default function HomePage() {
                   "&:hover": {
                     transform: "translateY(-6px)"
                   },
-                  cursor: "pointer"
+                  
                 }}
-                onClick={handleReadArticle}
+                
               >
                 <Box
                   sx={{
@@ -641,9 +641,9 @@ export default function HomePage() {
                   "&:hover": {
                     transform: "translateY(-6px)"
                   },
-                  cursor: "pointer"
+                  
                 }}
-                onClick={handleRegistrationInfo}
+                
               >
                 <Box
                   sx={{
