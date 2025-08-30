@@ -96,8 +96,8 @@ export default function ProductCard({
         sx={{
           position: "relative",
           background: `linear-gradient(135deg, ${getCardBgColor(product.category)} 0%, ${getCardBgColor(product.category)}DD 100%)`,
-          borderTopLeftRadius: 20,
-          borderTopRightRadius: 20,
+          borderTopLeftRadius: { xs: 15, sm: 18, md: 20 },
+          borderTopRightRadius: { xs: 15, sm: 18, md: 20 },
           borderBottomLeftRadius: 0,
           borderBottomRightRadius: 0,
           overflow: "visible",
@@ -128,8 +128,8 @@ export default function ProductCard({
             objectFit: "contain",
             backgroundColor: "transparent",
             width: "auto",
-            height: 160,
-            maxWidth: "85%",
+            height: { xs: 160},
+            maxWidth: "90%",
             position: "relative",
             bottom: -20,
             filter: "drop-shadow(0 8px 20px rgba(0, 0, 0, 0.15)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))",
@@ -151,8 +151,8 @@ export default function ProductCard({
             position: "absolute",
             bottom: 0,
             right: -20,
-            width: 50,
-            height: 50,
+            width: { xs: 35, sm: 45, md: 50 },
+            height: { xs: 35, sm: 45, md: 50 },
             zIndex: 4,
             animation: "surpriseEffect 1.5s ease-in-out infinite",
             "@keyframes surpriseEffect": {
@@ -283,8 +283,8 @@ export default function ProductCard({
 
       <Box 
         sx={{ 
-          px: 2, 
-          pb: 2,
+          px: { xs: 1.5, sm: 2 }, 
+          pb: { xs: 1.5, sm: 2 },
           pt: 1,
           position: "relative",
           "&::before": {
@@ -306,7 +306,7 @@ export default function ProductCard({
             color: colors.text.primary,
             fontWeight: "bold",
             mb: 0.5,
-            fontSize: "0.95rem",
+            fontSize: { xs: "0.85rem", sm: "0.9rem", md: "0.95rem" },
             lineHeight: 1.2,
             display: "-webkit-box",
             WebkitLineClamp: 1,
@@ -325,7 +325,7 @@ export default function ProductCard({
             variant="caption"
             sx={{
               color: colors.text.secondary,
-              fontSize: "0.75rem",
+              fontSize: { xs: "0.7rem", sm: "0.75rem" },
             }}
           >
             <LocationOn sx={{ fontSize: "1rem", mr: 0.5 }} />
@@ -357,7 +357,7 @@ export default function ProductCard({
                   sx={{
                     color: colors.text.secondary,
                     textDecoration: "line-through",
-                    fontSize: "0.85rem",
+                    fontSize: { xs: "0.75rem", sm: "0.85rem" },
                   }}
                 >
                   ฿{product.price.toLocaleString()}

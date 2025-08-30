@@ -24,14 +24,14 @@ export default function SignIn() {
     if (mounted && status === "authenticated") {
       // Wait a bit to ensure everything is ready before redirecting
       setTimeout(() => {
-        router.push("/");
+        router.push("/shop");
       }, 500);
     }
   }, [status, router, mounted]);
 
   const handleSignIn = () => {
     setLoading(true);
-    signIn("line", { callbackUrl: "/" });
+    signIn("line", { callbackUrl: "/shop" });
   };
 
   const handleClearCache = async () => {

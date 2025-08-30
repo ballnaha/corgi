@@ -129,16 +129,7 @@ export default function ProductDetailDesktop({
             </Box>
             
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-              <IconButton onClick={onToggleFavorite}>
-                {isFavorite ? (
-                  <Favorite sx={{ color: "#FF6B35" }} />
-                ) : (
-                  <FavoriteOutlined />
-                )}
-              </IconButton>
-              <IconButton>
-                <Share />
-              </IconButton>
+  
               <IconButton onClick={onCartClick}>
                 <Badge badgeContent={cartItemCount} color="primary">
                   <ShoppingCart />

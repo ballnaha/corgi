@@ -51,6 +51,7 @@ interface ProductFormData {
   category: string;
   stock: string;
   productType: string;
+  animalType: string;
   // สำหรับสัตว์เลี้ยง
   gender: string;
   age: string;
@@ -95,6 +96,7 @@ const initialFormData: ProductFormData = {
   category: "",
   stock: "",
   productType: "OTHER",
+  animalType: "GENERAL",
   // สำหรับสัตว์เลี้ยง
   gender: "",
   age: "",
@@ -131,6 +133,18 @@ const productTypes = [
   { value: "GROOMING", label: "อุปกรณ์ดูแลขน", icon: "✂️" },
   { value: "HOUSING", label: "บ้าน/กรง", icon: "🏠" },
   { value: "OTHER", label: "อื่นๆ", icon: "📦" },
+];
+
+const animalTypes = [
+  { value: "DOG", label: "สุนัข", icon: "🐕" },
+  { value: "CAT", label: "แมว", icon: "🐱" },
+  { value: "BIRD", label: "นก", icon: "🐦" },
+  { value: "FISH", label: "ปลา", icon: "🐠" },
+  { value: "RABBIT", label: "กระต่าย", icon: "🐰" },
+  { value: "HAMSTER", label: "แฮมสเตอร์", icon: "🐹" },
+  { value: "REPTILE", label: "สัตว์เลื้อยคลาน", icon: "🦎" },
+  { value: "SMALL_PET", label: "สัตว์เลี้ยงตัวเล็ก", icon: "🐾" },
+  { value: "GENERAL", label: "ทั่วไป/หลายชนิด", icon: "🌟" },
 ];
 
 
@@ -195,21 +209,11 @@ export default function NewProductPage() {
     fetchCategories();
   }, []);
 
-  // Map productType to category keys
+  // Map productType to category keys based on database categories
   const getCategoriesByProductType = (productType: string): Category[] => {
-    const categoryMapping: { [key: string]: string[] } = {
-      PET: ['dogs', 'cats', 'birds'],
-      FOOD: ['food'],
-      TOY: ['toys'],
-      ACCESSORY: ['toys'], // accessories can use toys category for now
-      MEDICINE: ['food'], // medicine can use food category for now  
-      GROOMING: ['toys'], // grooming can use toys category for now
-      HOUSING: ['toys'], // housing can use toys category for now
-      OTHER: ['dogs', 'cats', 'birds', 'food', 'toys'], // other can use any category
-    };
-
-    const allowedKeys = categoryMapping[productType] || [];
-    return categories.filter(cat => allowedKeys.includes(cat.key));
+    // Return all categories for now - admin can choose any category for any product type
+    // This gives more flexibility than hardcoded mapping
+    return categories;
   };
 
   const handleInputChange = (field: keyof ProductFormData) => (
@@ -417,6 +421,7 @@ export default function NewProductPage() {
         categoryId: selectedCategory?.id || null, // category ID for relation
         stock: parseInt(formData.stock),
         productType: formData.productType,
+        animalType: formData.animalType,
         
         // Pet-specific fields (only include if productType is PET)
         gender: formData.productType === 'PET' ? formData.gender || null : null,
@@ -573,8 +578,8 @@ export default function NewProductPage() {
                 ข้อมูลสินค้า
               </Typography>
 
-              {/* Product Type */}
-              <Box sx={{ display: 'grid', gap: 3, mb: 4 }}>
+              {/* Product Type & Animal Type */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 3, mb: 4 }}>
                 <FormControl required>
                   <InputLabel>ประเภทสินค้า</InputLabel>
                   <Select
@@ -583,6 +588,24 @@ export default function NewProductPage() {
                     label="ประเภทสินค้า"
                   >
                     {productTypes.map((type) => (
+                      <MenuItem key={type.value} value={type.value}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <span style={{ fontSize: '1.2em' }}>{type.icon}</span>
+                          {type.label}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl required>
+                  <InputLabel>ชนิดสัตว์เลี้ยง</InputLabel>
+                  <Select
+                    value={formData.animalType}
+                    onChange={handleInputChange('animalType')}
+                    label="ชนิดสัตว์เลี้ยง"
+                  >
+                    {animalTypes.map((type) => (
                       <MenuItem key={type.value} value={type.value}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                           <span style={{ fontSize: '1.2em' }}>{type.icon}</span>

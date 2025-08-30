@@ -30,7 +30,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   })();
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff', '/images', '/shop', '/product', '/checkout', '/profile', '/favorites'];
+  const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff', '/images', '/shop', '/product', '/checkout', '/profile', '/favorites', '/blog'];
   // Protected routes that require authentication for LIFF users but redirect non-LIFF to home
   const protectedRoutes = ['/order-success'];
   
@@ -108,7 +108,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   // Fallback loading state
-  return <LoadingScreen message="กำลังตรวจสอบการเข้าสู่ระบบ..." fullScreen={false} />;
+  return <LoadingScreen message="กำลังตรวจสอบการเข้าสู่ระบบ..." fullScreen={true} />;
 }
 
 function LiffWrapper({ children }: { children: ReactNode }) {
@@ -137,18 +137,24 @@ function LiffWrapper({ children }: { children: ReactNode }) {
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
-    return <LoadingScreen message="กำลังโหลด..." fullScreen={false} />;
+    return <LoadingScreen message="กำลังโหลด..." fullScreen={true} />;
   }
 
   if (liffError) {
     return (
       <Box
         sx={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "white",
+          zIndex: 10000,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          minHeight: "100vh",
           gap: 2,
           p: 3,
         }}
@@ -180,12 +186,12 @@ function LiffWrapper({ children }: { children: ReactNode }) {
     );
   }
 
-  // Show different loading messages based on LIFF state
+  // Show different loading messages based on LIFF state with full screen overlay
   if (isInLiff && showLiffLoading) {
     if (isLoggedIn && status === "loading") {
-      return <LoadingScreen message="กำลังเข้าสู่ระบบ..." fullScreen={false} />;
+      return <LoadingScreen message="กำลังเข้าสู่ระบบ..." fullScreen={true} />;
     }
-    return <LoadingScreen message="กำลังเชื่อมต่อ LINE..." fullScreen={false} />;
+    return <LoadingScreen message="กำลังเชื่อมต่อ LINE..." fullScreen={true} />;
   }
 
   return <>{children}</>;
@@ -194,7 +200,7 @@ function LiffWrapper({ children }: { children: ReactNode }) {
 export default function LineAuthProvider({ children }: LineAuthProviderProps) {
   return (
     <ErrorBoundary>
-      <NoSSR fallback={<LoadingScreen message="กำลังโหลด..." />}>
+      <NoSSR fallback={<LoadingScreen message="กำลังโหลด..." fullScreen={true} />}>
         <SessionProvider>
           <AuthGuard>
             <LiffWrapper>{children}</LiffWrapper>

@@ -68,3 +68,27 @@ export interface User {
   name: string;
   email: string;
 }
+
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  imageUrl?: string | null;
+  category: BlogCategory;
+  author: string;
+  publishedAt: Date | string;
+  updatedAt?: Date | string;
+  tags?: string[];
+
+
+}
+
+export interface BlogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  color?: string;
+}

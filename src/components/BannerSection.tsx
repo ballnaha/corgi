@@ -400,7 +400,7 @@ export default function BannerSection() {
   // Don't render anything while loading
   if (loading) {
     return (
-      <Box sx={{ px: 2, mb: 3 }}>
+      <Box sx={{ mb: 3 }}>
         <Box
           sx={{
             background: 'linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%)',
@@ -424,7 +424,7 @@ export default function BannerSection() {
   }
 
   return (
-    <Box sx={{ px: 2, mb: 3 }}>
+    <Box sx={{ mb: 3 }}>
       {/* Banner Container */}
       <Box
         sx={{

@@ -51,6 +51,7 @@ interface ProductFormData {
   category: string;
   stock: string;
   productType: string;
+  animalType: string;
   // สำหรับสัตว์เลี้ยง
   gender: string;
   age: string;
@@ -105,6 +106,18 @@ const productTypes = [
   { value: "OTHER", label: "อื่นๆ", icon: "📦" },
 ];
 
+const animalTypes = [
+  { value: "DOG", label: "สุนัข", icon: "🐕" },
+  { value: "CAT", label: "แมว", icon: "🐱" },
+  { value: "BIRD", label: "นก", icon: "🐦" },
+  { value: "FISH", label: "ปลา", icon: "🐠" },
+  { value: "RABBIT", label: "กระต่าย", icon: "🐰" },
+  { value: "HAMSTER", label: "แฮมสเตอร์", icon: "🐹" },
+  { value: "REPTILE", label: "สัตว์เลื้อยคลาน", icon: "🦎" },
+  { value: "SMALL_PET", label: "สัตว์เลี้ยงตัวเล็ก", icon: "🐾" },
+  { value: "GENERAL", label: "ทั่วไป/หลายชนิด", icon: "🌟" },
+];
+
 const genderOptions = [
   { value: "MALE", label: "ผู้ (เพศผู้)" },
   { value: "FEMALE", label: "เมีย (เพศเมีย)" },
@@ -144,6 +157,7 @@ export default function EditProductPage() {
     category: "",
     stock: "",
     productType: "OTHER",
+    animalType: "GENERAL",
     gender: "",
     age: "",
     weight: "",
@@ -200,6 +214,7 @@ export default function EditProductPage() {
             category: product.category || "",
             stock: product.stock?.toString() || "",
             productType: product.productType || "OTHER",
+            animalType: product.animalType || "GENERAL",
             gender: product.gender || "",
             age: product.age || "",
             weight: product.weight || "",
@@ -264,21 +279,11 @@ export default function EditProductPage() {
     fetchCategories();
   }, []);
 
-  // Map productType to category keys
+  // Map productType to category keys based on database categories
   const getCategoriesByProductType = (productType: string): Category[] => {
-    const categoryMapping: { [key: string]: string[] } = {
-      PET: ["dogs", "cats", "birds"],
-      FOOD: ["food"],
-      TOY: ["toys"],
-      ACCESSORY: ["toys"],
-      MEDICINE: ["food"],
-      GROOMING: ["toys"],
-      HOUSING: ["toys"],
-      OTHER: ["dogs", "cats", "birds", "food", "toys"],
-    };
-
-    const allowedKeys = categoryMapping[productType] || [];
-    return categories.filter((cat) => allowedKeys.includes(cat.key));
+    // Return all categories for now - admin can choose any category for any product type
+    // This gives more flexibility than hardcoded mapping
+    return categories;
   };
 
   const handleInputChange =

@@ -5,21 +5,68 @@ import { requireAdmin } from '@/lib/admin-utils';
 
 const prisma = new PrismaClient();
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get('category');
+    const animalType = searchParams.get('animalType');
+    const productType = searchParams.get('productType');
+    const search = searchParams.get('search');
+    const minPrice = searchParams.get('minPrice');
+    const maxPrice = searchParams.get('maxPrice');
+    const includeOutOfStock = searchParams.get('includeOutOfStock') === 'true';
+
+    // Build where clause
+    const where: any = {
+      isActive: true,
+    };
+
+    // Only show products with stock unless explicitly requested
+    if (!includeOutOfStock) {
+      where.stock = { gt: 0 };
+    }
+
+    // Filter by category (legacy support)
+    if (category) {
+      where.category = category;
+    }
+
+    // Filter by animal type (new filtering)
+    if (animalType) {
+      where.animalType = animalType;
+    }
+
+    // Filter by product type
+    if (productType) {
+      where.productType = productType;
+    }
+
+    // Search functionality
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { brand: { contains: search, mode: 'insensitive' } },
+        { breed: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    // Price range filtering
+    if (minPrice || maxPrice) {
+      where.price = {};
+      if (minPrice) where.price.gte = parseFloat(minPrice);
+      if (maxPrice) where.price.lte = parseFloat(maxPrice);
+    }
+
     const products = await prisma.product.findMany({
-      where: {
-        isActive: true,
-        stock: {
-          gt: 0, // Only show products with stock > 0
-        },
-      },
+      where,
       include: {
         images: {
           orderBy: {
             order: 'asc',
           },
         },
+        categoryRef: true, // Include category reference
       },
       orderBy: {
         createdAt: 'desc',
@@ -79,6 +126,7 @@ export async function POST(request: NextRequest) {
         categoryId: body.categoryId || null,
         stock: stock,
         productType: body.productType || 'OTHER',
+        animalType: body.animalType || 'GENERAL',
         
         // Pet-specific fields
         gender: body.gender || null,

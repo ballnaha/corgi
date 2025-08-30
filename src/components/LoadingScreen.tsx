@@ -24,7 +24,9 @@ export default function LoadingScreen({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "white",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backdropFilter: "blur(8px)",
+    WebkitBackdropFilter: "blur(8px)",
     zIndex: 10000, // Higher than BottomNavigation
   } : {
     minHeight: "100vh",

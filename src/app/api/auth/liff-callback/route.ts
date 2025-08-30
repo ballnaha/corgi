@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Create NextAuth session manually
-    const response = NextResponse.redirect(new URL('/', request.url));
+    const response = NextResponse.redirect(new URL('/shop', request.url));
     
     // Set session cookie manually (simplified approach)
     response.cookies.set('liff-login-success', '1', {

@@ -12,7 +12,9 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "node scripts/seed.js",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed:categories": "tsx prisma/seeds/category-data.ts",
+    "db:seed:products": "tsx prisma/seeds/product-data.ts",
     "db:seed:payment-methods": "node scripts/seed-payment-methods.js",
     "db:backfill:categories": "node scripts/backfill-category-ids.js",
     "postinstall": "prisma generate"
@@ -36,6 +38,8 @@
     "prisma": "^6.13.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-image-crop": "^11.0.10",
+    "react-markdown": "^10.1.0",
     "sharp": "^0.34.3",
     "swiper": "^11.2.10"
   },
@@ -47,6 +51,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.6",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.5",
     "typescript": "^5"
   }
 }

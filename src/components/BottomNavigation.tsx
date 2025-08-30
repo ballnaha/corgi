@@ -38,7 +38,8 @@ export default function BottomNavigation({
   // Derive active tab from current path when not explicitly controlled
   const derivedActiveTab = useMemo(() => {
     if (!pathname) return "home";
-    if (pathname === "/" || pathname === "/shop" || pathname.startsWith("/product")) return "home";
+    if (pathname === "/" || pathname === "/home") return "home";
+    if (pathname === "/shop" || pathname.startsWith("/product")) return "shop";
     if (pathname.startsWith("/profile")) return "profile";
     if (pathname.startsWith("/favorites")) return "favorites";
     if (pathname.startsWith("/calendar")) return "calendar";
@@ -58,14 +59,16 @@ export default function BottomNavigation({
 
   const tabs = [
     { id: "home", icon: "custom", label: "หน้าหลัก" },
+    { id: "shop", icon: "custom", label: "ร้านค้า" },
     { id: "favorites", icon: "custom", label: "รายการโปรด" },
-    //{ id: "calendar", icon: ChatBubbleOutline, label: "ปฏิทิน" },
     { id: "profile", icon: "custom", label: "ข้อมูลส่วนตัว" },
   ];
 
   const getHrefForTab = (tabId: string) => {
     switch (tabId) {
       case "home":
+        return "/home";
+      case "shop":
         return "/shop";
       case "profile":
         return "/profile";
@@ -74,13 +77,16 @@ export default function BottomNavigation({
       case "calendar":
         return "/calendar";
       default:
-        return "/shop";
+        return "/home";
     }
   };
 
   const handleTabClick = (tabId: string) => {
     switch (tabId) {
       case "home":
+        handleLiffNavigation(router, "/home");
+        break;
+      case "shop":
         handleLiffNavigation(router, "/shop");
         break;
       case "profile":
@@ -98,7 +104,7 @@ export default function BottomNavigation({
     }
   };
 
-  // Hide bottom navigation on product detail pages, checkout, order-success, payment-notification, admin pages, and the custom /home page
+  // Hide bottom navigation on specific pages
   if (
     pathname &&
     (pathname === "/home" ||
@@ -106,7 +112,8 @@ export default function BottomNavigation({
       pathname.startsWith("/checkout") ||
       pathname.startsWith("/order-success") ||
       pathname.startsWith("/payment-notification") ||
-      pathname.startsWith("/admin"))
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/blog"))
   ) {
     return null;
   }
@@ -153,7 +160,7 @@ export default function BottomNavigation({
         const isActive =
           currentActiveTab === tab.id || derivedActiveTab === tab.id;
         const isNavigable =
-          tab.id === "home" || tab.id === "profile" || tab.id === "favorites";
+          tab.id === "home" || tab.id === "shop" || tab.id === "profile" || tab.id === "favorites";
         const content = (
           <Box
             key={tab.id}
@@ -178,6 +185,8 @@ export default function BottomNavigation({
                 src={
                   tab.id === "home" 
                     ? "/images/icon-home.png" 
+                    : tab.id === "shop"
+                    ? "/images/icon-cart.png"
                     : tab.id === "favorites"
                     ? "/images/icon-paw.png"
                     : "/images/icon-user.png"
@@ -185,6 +194,8 @@ export default function BottomNavigation({
                 alt={
                   tab.id === "home" 
                     ? "Home" 
+                    : tab.id === "shop"
+                    ? "Shop"
                     : tab.id === "favorites"
                     ? "Favorites"
                     : "User Profile"

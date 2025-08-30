@@ -21,10 +21,12 @@ model User {
   isAdmin       Boolean    @default(false) @map("is_admin")
   favorites     Favorite[]
   orders        Order[]
+  blogPosts     BlogPost[]
 
   @@map("users")
 }
 
+// ประเภทสินค้าตามคุณสมบัติ/การใช้งาน
 enum ProductType {
   PET         // สัตว์เลี้ยง
   FOOD        // อาหารสัตว์
@@ -34,6 +36,19 @@ enum ProductType {
   GROOMING    // อุปกรณ์ดูแลขน
   HOUSING     // บ้าน/กรง
   OTHER       // อื่นๆ
+}
+
+// ประเภทสัตว์เลี้ยงหลัก
+enum AnimalType {
+  DOG         // สุนัข
+  CAT         // แมว
+  BIRD        // นก
+  FISH        // ปลา
+  RABBIT      // กระต่าย
+  HAMSTER     // แฮมสเตอร์
+  REPTILE     // สัตว์เลื้อยคลาน
+  SMALL_PET   // สัตว์เลี้ยงตัวเล็ก
+  GENERAL     // ทั่วไป
 }
 
 model Product {
@@ -48,6 +63,9 @@ model Product {
   
   // ประเภทสินค้า - ใหม่
   productType     ProductType    @default(OTHER) @map("product_type")
+  
+  // ประเภทสัตว์เลี้ยงที่สินค้านี้เหมาะสม
+  animalType      AnimalType     @default(GENERAL) @map("animal_type")
   
   // ข้อมูลเฉพาะสัตว์เลี้ยง - ทำให้เป็น optional ทั้งหมด
   gender          String?
@@ -88,6 +106,7 @@ model Product {
 
   @@index([categoryId])
   @@index([productType])
+  @@index([animalType])
   @@map("products")
 }
 
@@ -165,14 +184,20 @@ model Favorite {
 }
 
 model Category {
-  id          String    @id @default(cuid())
-  key         String    @unique
+  id          String     @id @default(cuid())
+  key         String     @unique
   name        String
   icon        String?
-  description String?   @db.Text
-  createdAt   DateTime  @default(now()) @map("created_at")
+  description String?    @db.Text
+  animalType  AnimalType @default(GENERAL) @map("animal_type") // เชื่อมโยงกับ AnimalType
+  isActive    Boolean    @default(true) @map("is_active") // สถานะเปิด/ปิด
+  sortOrder   Int        @default(0) @map("sort_order") // ลำดับการจัดเรียง
+  createdAt   DateTime   @default(now()) @map("created_at")
   products    Product[]
 
+  @@index([animalType])
+  @@index([isActive])
+  @@index([sortOrder])
   @@map("categories")
 }
 
@@ -286,4 +311,46 @@ model Banner {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("banners")
+}
+
+model BlogCategory {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?    @db.Text
+  color       String?    // Hex color code เช่น #4CAF50
+  isActive    Boolean    @default(true) @map("is_active")
+  sortOrder   Int        @default(0) @map("sort_order")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  posts       BlogPost[]
+
+  @@map("blog_categories")
+}
+
+model BlogPost {
+  id           String       @id @default(cuid())
+  title        String
+  slug         String       @unique
+  excerpt      String?      @db.Text
+  content      String       @db.LongText
+  imageUrl     String?      @map("image_url")
+  categoryId   String       @map("category_id")
+  authorId     String?      @map("author_id")
+  author       String       @default("แอดมิน") // ชื่อผู้เขียน
+  publishedAt  DateTime?    @map("published_at")
+  isPublished  Boolean      @default(false) @map("is_published")
+  tags         String?      @db.Text // JSON array เก็บ tags
+  seoTitle     String?      @map("seo_title")
+  seoDescription String?    @map("seo_description") @db.Text
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  category     BlogCategory @relation(fields: [categoryId], references: [id])
+  authorUser   User?        @relation(fields: [authorId], references: [id])
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([publishedAt])
+
+  @@map("blog_posts")
 }

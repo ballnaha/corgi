@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Typography, Snackbar, Alert, CircularProgress, Slide } from "@mui/material";
+import { Box, Typography, Snackbar, Alert, CircularProgress, Slide, Container } from "@mui/material";
 import type { SlideProps } from "@mui/material";
 import { colors } from "@/theme/colors";
 import Header from "@/components/Header";
@@ -267,6 +267,8 @@ export default function ShopPage() {
         cartItemCount={cartItemCount}
         onCartClick={() => setIsCartOpen(true)}
         onSearchChange={setSearchQuery}
+        showLogo={true}
+        logoSrc="/images/whatdadog_logo6.png"
       />
 
       <Box 
@@ -280,12 +282,18 @@ export default function ShopPage() {
           
         }}
       >
-        <CategoryFilter
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
-        />
+        {/* Category Filter with Container */}
+        <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
+          <CategoryFilter
+            selectedCategory={selectedCategory}
+            onCategoryChange={setSelectedCategory}
+          />
+        </Container>
 
-        <BannerSection />
+        {/* Banner Section with Container */}
+        <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
+          <BannerSection />
+        </Container>
 
         {loading ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
@@ -301,7 +309,7 @@ export default function ShopPage() {
             </Typography>
           </Box>
         ) : (
-          <Box sx={{ px: 2 }}>
+          <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -328,8 +336,13 @@ export default function ShopPage() {
             <Box
               sx={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: 2,
+                gridTemplateColumns: { 
+                  xs: 'repeat(2, 1fr)', 
+                  sm: 'repeat(3, 1fr)', 
+                  md: 'repeat(4, 1fr)', 
+                  lg: 'repeat(4, 1fr)' 
+                },
+                gap: { xs: 2, md: 3 },
                 mb: 10,
               }}
             >
@@ -344,7 +357,7 @@ export default function ShopPage() {
                 />
               ))}
             </Box>
-          </Box>
+          </Container>
         )}
       </Box>
 

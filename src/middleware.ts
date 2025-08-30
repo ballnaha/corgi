@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Skip middleware completely for blog routes (make them fully public like /home)
+  if (request.nextUrl.pathname.startsWith('/blog')) {
+    return NextResponse.next();
+  }
+  
   // Define public routes that should always be accessible
   const publicRoutes = [
     '/api/',
@@ -15,6 +20,7 @@ export async function middleware(request: NextRequest) {
     '/checkout',
     '/profile',
     '/favorites',
+
     '/unauthorized',
     '/',
     '/liff',
@@ -26,7 +32,12 @@ export async function middleware(request: NextRequest) {
     if (route === '/') {
       return request.nextUrl.pathname === '/';
     }
-    return request.nextUrl.pathname.startsWith(route) || request.nextUrl.pathname === route;
+    // For routes like /blog, /shop, etc., check if the path starts with the route
+    if (route.endsWith('/')) {
+      return request.nextUrl.pathname.startsWith(route);
+    }
+    // For exact paths and paths with sub-routes
+    return request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(route + '/');
   });
 
   // Always allow access to public routes
@@ -91,7 +102,11 @@ export const config = {
      * - images (static images)
      * - product (product pages)
      * - shop (shop page)
+     * - home (home page)
+     * - blog (blog pages) - completely public like home
+     * - uploads (file uploads)
+     * - checkout, profile, favorites (handled separately)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|auth|images|product|shop|home|uploads|checkout|profile|favorites).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|auth|images|product|shop|home|blog|uploads|checkout|profile|favorites).*)",
   ],
 };

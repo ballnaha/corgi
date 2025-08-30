@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, signIn } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
@@ -33,6 +33,7 @@ import {
   Drawer,
   Divider,
   Tooltip,
+  Container,
 } from "@mui/material";
 import type { SlideProps } from "@mui/material";
 import {
@@ -798,23 +799,23 @@ export default function ProfilePage() {
             @658jluqf
           </Typography>
 
-          <Button
-            variant="contained"
-            fullWidth
-            sx={{
-              py: 1.5,
-              backgroundColor: "#06C755",
-              color: "white",
-              fontWeight: 600,
-              borderRadius: 2,
-              "&:hover": {
-                backgroundColor: "#05b04a",
-              },
-            }}
-            onClick={() => window.open("https://line.me/R/ti/p/@658jluqf", "_blank")}
-          >
-            เพิ่มเพื่อน LINE
-          </Button>
+                     <Button
+             variant="contained"
+             fullWidth
+             sx={{
+               py: 1.5,
+               backgroundColor: "#06C755",
+               color: "white",
+               fontWeight: 600,
+               borderRadius: 2,
+               "&:hover": {
+                 backgroundColor: "#05b04a",
+               },
+             }}
+             onClick={() => signIn("line", { callbackUrl: "/shop" })}
+           >
+             LINE Login
+           </Button>
         </Card>
       </Box>
     );
@@ -909,16 +910,16 @@ export default function ProfilePage() {
       </Box>
 
       {/* User Profile Section */}
-      <Box
-        sx={{
-          pt: 8,
-          pb: 4,
-          px: 3,
-          display: "flex",
-          alignItems: "center",
-          gap: 3,
-        }}
-      >
+      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
+        <Box
+          sx={{
+            pt: 8,
+            pb: 4,
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+          }}
+        >
         {/* User Avatar */}
         <Avatar
           src={displayData.pictureUrl || session.user?.image || ""}
@@ -1020,19 +1021,21 @@ export default function ProfilePage() {
               </Typography>
             </Box>
           )}
+          </Box>
         </Box>
-      </Box>
+      </Container>
 
       {/* Purchase History Section */}
-      <Box
-        sx={{
-          backgroundColor: colors.secondary.main,
-          borderRadius: { xs: "24px 24px 0 0", sm: "32px 32px 0 0" },
-          minHeight: "60vh",
-          p: { xs: 2, sm: 3 },
-          mt: 2,
-        }}
-      >
+      <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
+        <Box
+          sx={{
+            backgroundColor: colors.secondary.main,
+            borderRadius: { xs: "24px 24px 0 0", sm: "32px 32px 0 0" },
+            minHeight: "60vh",
+            p: { xs: 2, sm: 3 },
+            mt: 2,
+          }}
+        >
         <Typography
           variant="h5"
           sx={{
@@ -1826,7 +1829,8 @@ export default function ProfilePage() {
             </>
           )}
         </Box>
-      </Box>
+        </Box>
+      </Container>
 
       {/* Edit Profile Dialog - Full Screen */}
       <Dialog

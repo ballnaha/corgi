@@ -36,6 +36,8 @@ import {
   Assessment,
   ViewCarousel,
   History,
+  Article,
+  Category,
 } from "@mui/icons-material";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -89,6 +91,28 @@ const getNavigationItems = (orderStats: { actionRequiredCount: number }): Naviga
     title: "จัดการผู้ใช้",
     path: "/admin/users",
     icon: <People />,
+  },
+  {
+    title: "จัดการบทความ",
+    path: "/admin/blog",
+    icon: <Article />,
+    children: [
+      {
+        title: "รายการบทความ",
+        path: "/admin/blog",
+        icon: <Article />,
+      },
+      {
+        title: "เขียนบทความใหม่",
+        path: "/admin/blog/new",
+        icon: <Add />,
+      },
+      {
+        title: "จัดการหมวดหมู่",
+        path: "/admin/blog/categories",
+        icon: <Category />,
+      },
+    ],
   },
   {
     title: "ประวัติการซื้อ",
@@ -200,7 +224,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             fontSize: "1.5rem",
           }}
         >
-          <img src="/images/whatdadog_icon.png" alt="What Da Dog Pet Shop" width={80} height={80} />
+          <img src="/images/whatdadog_icon1.png" alt="What Da Dog Pet Shop" width={60} height={60} />
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>
@@ -368,10 +392,28 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Page title */}
           <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600 }}>
-            {pathname === "/admin"
-              ? "Dashboard"
-              : getNavigationItems(orderStats).find((item) => isActivePath(item.path))?.title ||
-                "Admin Panel"}
+            {(() => {
+              if (pathname === "/admin") return "Dashboard";
+              
+              // Check for blog pages specifically
+              if (pathname.startsWith("/admin/blog")) {
+                if (pathname === "/admin/blog") return "จัดการบทความ";
+                if (pathname === "/admin/blog/new") return "เขียนบทความใหม่";
+                if (pathname.startsWith("/admin/blog/edit/")) return "แก้ไขบทความ";
+                if (pathname === "/admin/blog/categories") return "จัดการหมวดหมู่บทความ";
+                return "จัดการบทความ";
+              }
+              
+              // Find main navigation item
+              const mainItem = getNavigationItems(orderStats).find((item) => isActivePath(item.path));
+              if (mainItem?.children) {
+                // Check for sub-navigation match
+                const subItem = mainItem.children.find(child => pathname === child.path);
+                return subItem?.title || mainItem.title;
+              }
+              
+              return mainItem?.title || "Admin Panel";
+            })()}
           </Typography>
 
           {/* Notifications */}

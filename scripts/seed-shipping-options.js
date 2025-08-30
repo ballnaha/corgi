@@ -8,8 +8,8 @@ async function seedShippingOptions() {
   const shippingOptions = [
     // สำหรับสัตว์เลี้ยง - รับด้วยตัวเอง
     {
-      name: "รับด้วยตัวเอง (สัตว์เลี้ยง)",
-      description: "มารับสัตว์เลี้ยงด้วยตัวเองที่ร้าน - ตรวจสุขภาพก่อนรับมอบ",
+      name: "ทางร้านจัดส่งด้วยตัวเอง (สัตว์เลี้ยง)",
+      description: "ทางร้านจัดส่งด้วยตัวเอง",
       price: 0.00,
       estimatedDays: "ตามนัดหมาย",
       method: "pickup",
@@ -21,7 +21,7 @@ async function seedShippingOptions() {
     // สำหรับของอื่นๆ - จัดส่งด่วน
     {
       name: "จัดส่งด่วน",
-      description: "จัดส่งภายใน 1-2 วันทำการ (ไม่รวมสัตว์เลี้ยง)",
+      description: "จัดส่งภายใน 1-2 วันทำการ",
       price: 50.00,
       estimatedDays: "1-2 วันทำการ",
       method: "delivery",
@@ -29,28 +29,7 @@ async function seedShippingOptions() {
       isActive: true,
       sortOrder: 2,
     },
-    
-    {
-      name: "จัดส่งธรรมดา",
-      description: "จัดส่งภายใน 3-5 วันทำการ (ไม่รวมสัตว์เลี้ยง)",
-      price: 30.00,
-      estimatedDays: "3-5 วันทำการ",
-      method: "delivery",
-      forPetsOnly: false,
-      isActive: true,
-      sortOrder: 3,
-    },
-    
-    {
-      name: "รับด้วยตัวเอง (อุปกรณ์)",
-      description: "มารับสินค้าด้วยตัวเองที่ร้าน - ฟรีค่าจัดส่ง",
-      price: 0.00,
-      estimatedDays: "ตามนัดหมาย",
-      method: "pickup",
-      forPetsOnly: false,
-      isActive: true,
-      sortOrder: 4,
-    },
+
   ];
 
   // ลบ shipping options เก่าออกก่อน (เพื่อให้ seed ใหม่ได้)

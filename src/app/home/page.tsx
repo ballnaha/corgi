@@ -24,29 +24,47 @@ import { colors } from "@/theme/colors";
 import RegistrationCertificateSheet from "@/components/RegistrationCertificateSheet";
 import ProductCard from "@/components/ProductCard";
 import Cart from "@/components/Cart";
+import ResponsiveHeader from "@/components/ResponsiveHeader";
+import CategoryFilter from "@/components/CategoryFilter";
 import { Product } from "@/types";
 import { readCartFromStorage, writeCartToStorage } from "@/lib/cart";
 import { CartItem } from "@/types";
+import FloatingActions from "@/components/FloatingActions";
 import { generateSlug } from "@/lib/products";
+import { useSession } from "next-auth/react";
 
 export default function HomePage() {
   const router = useRouter();
   const [isRegistrationSheetOpen, setIsRegistrationSheetOpen] = useState(false);
   
+  // Authentication
+  const { data: session } = useSession();
+  
   // Product states
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  
+  // Blog states
+  const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [blogLoading, setBlogLoading] = useState(true);
   
   // Cart states
   const [isCartOpen, setIsCartOpen] = useState(false);
+  
+
 
   const handleBookNow = () => {
-    router.push("/shop");
+    router.push("https://line.me/R/ti/p/@658jluqf");
   };
 
-  const handleReadArticle = () => {
-    router.push("/shop");
+  const handleReadArticle = (slug?: string) => {
+    if (slug) {
+      router.push(`/blog/${slug}`);
+    } else {
+      router.push("/blog");
+    }
   };
 
   const handleShopNow = () => {
@@ -56,6 +74,36 @@ export default function HomePage() {
   const handleRegistrationInfo = () => {
     setIsRegistrationSheetOpen(true);
   };
+
+  const handleCategoryChange = (category: string) => {
+    setSelectedCategory(category);
+  };
+
+
+
+
+
+  // Fetch blog posts from API
+  useEffect(() => {
+    const fetchBlogPosts = async () => {
+      try {
+        setBlogLoading(true);
+        const response = await fetch('/api/blog?limit=4');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBlogPosts(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching blog posts:', error);
+      } finally {
+        setBlogLoading(false);
+      }
+    };
+
+    fetchBlogPosts();
+  }, []);
 
   // Fetch products from API
   useEffect(() => {
@@ -137,10 +185,20 @@ export default function HomePage() {
     writeCartToStorage(cartItems);
   }, [cartItems]);
 
-  // Featured products (show first 8 products)
-  const featuredProducts = useMemo(() => {
-    return products.slice(0, 8);
-  }, [products]);
+  // Filter products based on category and show first 8 products
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
+
+    // Filter by category
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter(
+        (product) => product.category === selectedCategory
+      );
+    }
+
+    // Return first 8 products
+    return filtered.slice(0, 8);
+  }, [products, selectedCategory]);
 
   const handleAddToCart = (product: Product) => {
     const existingItem = cartItems.find(item => item.product.id === product.id);
@@ -246,83 +304,39 @@ export default function HomePage() {
           '@keyframes bounce': {
             '0%, 100%': { transform: 'translateY(0px)' },
             '50%': { transform: 'translateY(-5px)' }
+          },
+          body: {
+            overflowX: 'hidden'
+          },
+          '*': {
+            boxSizing: 'border-box'
           }
         }}
       />
-      <Box sx={{ minHeight: "100vh", backgroundColor: "#FFFFFF" }}>
+      <Box sx={{ 
+        minHeight: "100vh", 
+        backgroundColor: "#FFFFFF",
+        width: "100%",
+        overflowX: "hidden"
+      }}>
         
-        {/* Header */}
-        <Box
-          sx={{
-            backgroundColor: "white",
-            py: 2,
-            px: 4,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            borderBottom: "1px solid #f0f0f0"
-          }}
-        >
-          {/* Logo */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <Box
-              sx={{
-                width: 60,
-                height: 60,
-                backgroundColor: "transparent",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                ml: 5
-              }}
-            >
-              <img 
-                src="/images/whatdadog_logo3.png" 
-                alt="logo" 
-                width={180} 
-                height={180} 
-                style={{ 
-                  objectFit: "contain",
-                  filter: "contrast(1.1) brightness(1.1)"
-                }} 
-              />
-            </Box>
-            
-          </Box>
-
-          {/* Navigation */}
-          <Box sx={{ display: "flex", gap: 4, alignItems: "center" }}>
-            
-            <Button
-              variant="outlined"
-              onClick={handleBookNow}
-              sx={{
-                borderColor: "#000",
-                color: "#000",
-                borderRadius: "20px",
-                px: 3,
-                py: 0.5,
-                fontSize: "14px",
-                textTransform: "none",
-                "&:hover": {
-                  borderColor: "#FF6B35",
-                  color: "#FF6B35"
-                }
-              }}
-            >
-              Shop Now
-            </Button>
-          </Box>
-        </Box>
+        {/* Responsive Header */}
+        <ResponsiveHeader 
+          showCartIcon={true}
+          onCartClick={() => setIsCartOpen(true)}
+          cartItemCount={cartItems.length}
+        />
 
         {/* Hero Section */}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
           <Box
             sx={{
               display: "flex",
               alignItems: "center",
-              gap: 6,
-              flexDirection: { xs: "column", md: "row" }
+              gap: { xs: 3, md: 6 },
+              flexDirection: { xs: "column", md: "row" },
+              width: "100%",
+              maxWidth: "100%"
             }}
           >
             {/* Left Content */}
@@ -330,25 +344,28 @@ export default function HomePage() {
               <Typography
                 variant="h1"
                 sx={{
-                  fontSize: { xs: "2rem", md: "2.5rem" },
+                  fontSize: { xs: "1.5rem", sm: "1.8rem", md: "2.5rem" },
                   fontWeight: "400",
                   color: "#000",
                   lineHeight: 1.5,
                   mb: 3,
-                  letterSpacing: "0.08em"
+                  letterSpacing: "0.08em",
+                  wordBreak: "break-word",
+                  hyphens: "auto"
                 }}
               >
                 จำหน่ายลูกสุนัขพันธุ์ คอร์กี้ และสัตว์เลี้ยงอื่นๆ<br />
-                <Box component="span" sx={{ color: "#FF6B6B", fontSize: "2rem" }}>❤️</Box>
+                <Box component="span" sx={{ color: "#FF6B6B", fontSize: { xs: "1.5rem", md: "2rem" } }}>❤️</Box>
               </Typography>
               
               <Typography
                 sx={{
                   color: "#666",
-                  fontSize: "22px",
+                  fontSize: { xs: "16px", sm: "18px", md: "22px" },
                   lineHeight: 1.6,
                   mb: 4,
-                  maxWidth: "400px"
+                  maxWidth: { xs: "100%", md: "400px" },
+                  wordBreak: "break-word"
                 }}
               >
                 เพราะน้องไม่ใช่แค่สัตว์เลี้ยง <br />
@@ -374,7 +391,7 @@ export default function HomePage() {
                     }
                   }}
                 >
-                  พาน้องกลับบ้าน
+                  เพิ่มเราเป็นเพื่อน
                 </Button>
                 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -482,8 +499,14 @@ export default function HomePage() {
 
         
         {/* Special Cards Section */}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
-          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
+        <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
+          <Box sx={{ 
+            display: "flex", 
+            gap: { xs: 2, md: 3 }, 
+            flexDirection: { xs: "column", md: "row" },
+            width: "100%",
+            maxWidth: "100%"
+          }}>
             {/* Card 1: LEARN HOW TO CARE PUPPY'S */}
             <Box sx={{ flex: 1 }}>
               <Card
@@ -712,8 +735,15 @@ export default function HomePage() {
         </Container>
 
         {/* Pet Collection Section */}
-        <Container maxWidth="lg" sx={{ pt: 4 }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
+        <Container maxWidth="lg" sx={{ pt: 4, px: { xs: 2, sm: 3, md: 4 } }}>
+          <Box sx={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center", 
+            mb: 4,
+            flexWrap: "wrap",
+            gap: 2
+          }}>
             <Typography
               variant="h3"
               sx={{
@@ -730,21 +760,31 @@ export default function HomePage() {
           <Box
               sx={{
                 display: "grid",
-                gap: 3,
+                gap: { xs: 1, sm: 1.5, md: 3 },
                 gridTemplateColumns: {
                   xs: "1fr 1fr", // mobile → 2 columns
-                  md: "1fr 1fr 1fr 1fr" // desktop → 4 columns (ปรับได้ตามต้องการ)
-                }
+                  sm: "1fr 1fr 1fr", // tablet → 3 columns  
+                  md: "1fr 1fr 1fr 1fr" // desktop → 4 columns
+                },
+                width: "100%",
+                maxWidth: "100%"
               }}
             >
             {petCollection.map((pet, index) => (
-              <Box key={index} sx={{ flex: 1 }}>
+              <Box key={index} sx={{ 
+                flex: 1, 
+                minWidth: 0,
+                width: "100%",
+                maxWidth: "100%"
+              }}>
                 <Card
                   sx={{
-                    borderRadius: 4,
+                    borderRadius: { xs: 3, sm: 4 },
                     overflow: "hidden",
                     boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
                     transition: "transform 0.3s ease",
+                    width: "100%",
+                    maxWidth: "100%",
                     "&:hover": {
                       transform: "translateY(-4px)"
                     }
@@ -753,23 +793,23 @@ export default function HomePage() {
                   <Box
                     sx={{
                       backgroundColor: pet.bgColor,
-                      height: 200,
+                      height: { xs: 100, sm: 140, md: 200 },
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: "80px",
+                      fontSize: { xs: "40px", sm: "50px", md: "80px" },
                       position: "relative",
-                      overflow: "visible",
+                      overflow: "hidden",
                       // เพิ่ม bubble effects สำหรับแต่ละ pet ตามสีพื้นหลัง
                       ...(pet.name === "BIRD" && {
                         // เพิ่มวงกลมสีส้มแบบ bubble สำหรับ BIRD (#FF8A50)
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          top: '-20px',
-                          left: '-20px',
-                          width: '80px',
-                          height: '80px',
+                          top: { xs: '-10px', sm: '-15px', md: '-20px' },
+                          left: { xs: '-10px', sm: '-15px', md: '-20px' },
+                          width: { xs: '40px', sm: '60px', md: '80px' },
+                          height: { xs: '40px', sm: '60px', md: '80px' },
                           backgroundColor: 'rgba(255, 138, 80, 0.6)',
                           borderRadius: '50%',
                           animation: 'float 3s ease-in-out infinite',
@@ -779,10 +819,10 @@ export default function HomePage() {
                         '&::after': {
                           content: '""',
                           position: 'absolute',
-                          bottom: '-15px',
-                          right: '-15px',
-                          width: '60px',
-                          height: '60px',
+                          bottom: { xs: '-8px', sm: '-12px', md: '-15px' },
+                          right: { xs: '-8px', sm: '-12px', md: '-15px' },
+                          width: { xs: '30px', sm: '45px', md: '60px' },
+                          height: { xs: '30px', sm: '45px', md: '60px' },
                           backgroundColor: 'rgba(255, 138, 80, 0.5)',
                           borderRadius: '50%',
                           animation: 'float 4s ease-in-out infinite reverse',
@@ -795,11 +835,11 @@ export default function HomePage() {
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          top: '-18px',
-                          right: '-18px',
-                          width: '70px',
-                          height: '70px',
-                          backgroundColor: 'rgba(15, 176, 158, 0.7)',
+                          top: { xs: '-9px', sm: '-14px', md: '-18px' },
+                          right: { xs: '-9px', sm: '-14px', md: '-18px' },
+                          width: { xs: '35px', sm: '52px', md: '70px' },
+                          height: { xs: '35px', sm: '52px', md: '70px' },
+                          backgroundColor: 'rgba(15, 176, 158, 0.3)',
                           borderRadius: '50%',
                           animation: 'bounce 3.5s ease-in-out infinite',
                           zIndex: 10,
@@ -808,10 +848,10 @@ export default function HomePage() {
                         '&::after': {
                           content: '""',
                           position: 'absolute',
-                          bottom: '-12px',
-                          left: '-12px',
-                          width: '50px',
-                          height: '50px',
+                          bottom: { xs: '-6px', sm: '-9px', md: '-12px' },
+                          left: { xs: '-6px', sm: '-9px', md: '-12px' },
+                          width: { xs: '25px', sm: '38px', md: '50px' },
+                          height: { xs: '25px', sm: '38px', md: '50px' },
                           backgroundColor: 'rgba(15, 176, 158, 0.6)',
                           borderRadius: '50%',
                           animation: 'float 4.5s ease-in-out infinite',
@@ -824,10 +864,10 @@ export default function HomePage() {
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          top: '-16px',
-                          left: '-16px',
-                          width: '65px',
-                          height: '65px',
+                          top: { xs: '-8px', sm: '-12px', md: '-16px' },
+                          left: { xs: '-8px', sm: '-12px', md: '-16px' },
+                          width: { xs: '33px', sm: '49px', md: '65px' },
+                          height: { xs: '33px', sm: '49px', md: '65px' },
                           backgroundColor: 'rgba(244, 208, 63, 0.7)',
                           borderRadius: '50%',
                           animation: 'float 3.2s ease-in-out infinite',
@@ -837,10 +877,10 @@ export default function HomePage() {
                         '&::after': {
                           content: '""',
                           position: 'absolute',
-                          bottom: '-10px',
-                          right: '-10px',
-                          width: '45px',
-                          height: '45px',
+                          bottom: { xs: '-5px', sm: '-8px', md: '-10px' },
+                          right: { xs: '-5px', sm: '-8px', md: '-10px' },
+                          width: { xs: '23px', sm: '34px', md: '45px' },
+                          height: { xs: '23px', sm: '34px', md: '45px' },
                           backgroundColor: 'rgba(244, 208, 63, 0.6)',
                           borderRadius: '50%',
                           animation: 'bounce 2.8s ease-in-out infinite',
@@ -854,10 +894,10 @@ export default function HomePage() {
                         '&::before': {
                           content: '""',
                           position: 'absolute',
-                          top: '-14px',
-                          right: '-14px',
-                          width: '68px',
-                          height: '68px',
+                          top: { xs: '-7px', sm: '-11px', md: '-14px' },
+                          right: { xs: '-7px', sm: '-11px', md: '-14px' },
+                          width: { xs: '34px', sm: '51px', md: '68px' },
+                          height: { xs: '34px', sm: '51px', md: '68px' },
                           backgroundColor: 'rgba(82, 196, 240, 0.7)',
                           borderRadius: '50%',
                           animation: 'float 3.8s ease-in-out infinite',
@@ -867,10 +907,10 @@ export default function HomePage() {
                         '&::after': {
                           content: '""',
                           position: 'absolute',
-                          bottom: '-8px',
-                          left: '-8px',
-                          width: '48px',
-                          height: '48px',
+                          bottom: { xs: '-4px', sm: '-6px', md: '-8px' },
+                          left: { xs: '-4px', sm: '-6px', md: '-8px' },
+                          width: { xs: '24px', sm: '36px', md: '48px' },
+                          height: { xs: '24px', sm: '36px', md: '48px' },
                           backgroundColor: 'rgba(82, 196, 240, 0.6)',
                           borderRadius: '50%',
                           animation: 'bounce 3.2s ease-in-out infinite',
@@ -955,7 +995,7 @@ export default function HomePage() {
                             left: '25px',
                             width: '25px',
                             height: '25px',
-                            backgroundColor: 'rgba(15, 176, 158, 0.8)',
+                            backgroundColor: 'rgba(15, 176, 158, 0.3)',
                             borderRadius: '50%',
                             animation: 'float 2.2s ease-in-out infinite',
                             zIndex: 15,
@@ -1108,7 +1148,7 @@ export default function HomePage() {
 
 
         {/* HOW WE SERVE OUR PET PARENTS Section */}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
           <Box sx={{ display: "flex", gap: 6, alignItems: "center", flexDirection: { xs: "column", lg: "row" } }}>
             {/* Left side - Services list */}
             <Box sx={{ flex: 1 }}>
@@ -1129,7 +1169,7 @@ export default function HomePage() {
               <Typography
                 sx={{
                   color: "#666",
-                  fontSize: "14px",
+                  fontSize: "16px",
                   lineHeight: 1.6,
                   mb: 4,
                   maxWidth: "300px"
@@ -1142,7 +1182,8 @@ export default function HomePage() {
                 {[
                   { text: "สายพันธุ์ที่มีสุขภาพดี", active: true },
                   { text: "ได้รับการฉีดวัคซีน", active: true },
-                  { text: "มีใบทะเบียนสุนัข (Registration Certificate)", active: true },
+                  { text: "ใบทะเบียนสุนัข (Registration Certificate)", active: true },
+                  { text: "ใบเพ็ดดีกรี (Pedigree Certificate)", active: true },
                   
                 ].map((item, index) => (
                   <Box key={index} sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -1164,7 +1205,7 @@ export default function HomePage() {
                         <Box sx={{ width: 6, height: 6, backgroundColor: "#000", borderRadius: "50%" }} />
                       )}
                     </Box>
-                    <Typography sx={{ fontSize: "16px", fontWeight: item.active ? 700 : 400, color: "#000" }}>
+                    <Typography sx={{ fontSize: "16px", fontWeight: item.active ? 500 : 400, color: "#000" }}>
                       {item.text}
                     </Typography>
                   </Box>
@@ -1302,7 +1343,7 @@ export default function HomePage() {
 
 
         {/* Featured Products Section */}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
             <Typography
               variant="h3"
@@ -1312,7 +1353,7 @@ export default function HomePage() {
                 color: "#000"
               }}
             >
-              หาบ้านใหม่ให้น้องๆ
+              รับน้องไปดูแล
             </Typography>
             <Button
               onClick={handleBookNow}
@@ -1328,6 +1369,14 @@ export default function HomePage() {
             </Button>
           </Box>
 
+          {/* Category Filter */}
+          <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
+            <CategoryFilter
+              selectedCategory={selectedCategory}
+              onCategoryChange={handleCategoryChange}
+            />
+          </Container>
+
           {loading ? (
             <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
               <CircularProgress size={48} sx={{ color: "#FF6B35" }} />
@@ -1336,16 +1385,18 @@ export default function HomePage() {
             <Box
               sx={{
                 display: "grid",
-                gap: 3,
+                gap: { xs: 1.5, sm: 1.5, md: 2 },
                 gridTemplateColumns: {
                   xs: "1fr 1fr", // mobile → 2 columns
-                  sm: "1fr 1fr", // tablet → 2 columns  
-                  md: "1fr 1fr 1fr", // medium → 3 columns
-                  lg: "1fr 1fr 1fr 1fr" // desktop → 4 columns
-                }
+                  sm: "1fr 1fr 1fr", // tablet → 3 columns  
+                  md: "1fr 1fr 1fr 1fr", // medium → 4 columns
+                  lg: "1fr 1fr 1fr 1fr" // desktop → 4 columns (เหมือนหน้า shop)
+                },
+                width: "100%",
+                maxWidth: "100%"
               }}
             >
-              {featuredProducts.map((product) => (
+              {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   product={product}
@@ -1356,18 +1407,36 @@ export default function HomePage() {
             </Box>
           )}
 
-          {!loading && featuredProducts.length === 0 && (
-            <Box sx={{ textAlign: "center", py: 8 }}>
-              <Typography sx={{ color: "#666", fontSize: 16 }}>
-                น้อง ๆ มีย้ายบ้านหมดแล้วครับ
-              </Typography>
-            </Box>
+          {!loading && filteredProducts.length === 0 && (
+            <Box
+  sx={{
+    textAlign: "center",
+    py: 8,
+    p: 4, // เพิ่ม padding ภายใน Box เพื่อให้มีพื้นที่ว่างระหว่างข้อความกับขอบ
+    border: '2px dashed', // กำหนดขอบเป็นเส้นปะ
+    borderColor: '#e0e0e0', // สีเทาอ่อนแบบ minimal
+    borderRadius: 2, // เพิ่มความโค้งมนเล็กน้อยที่มุม
+    maxWidth: 500, // กำหนดความกว้างสูงสุดเพื่อให้ดูดีขึ้น
+    mx: 'auto', // จัดให้อยู่กึ่งกลาง
+    backgroundColor: '#fdfdfd', // เพิ่มสีพื้นหลังอ่อนๆ ให้ดูมีมิติ
+  }}
+>
+  <Typography sx={{ color: "#666", fontSize: 18, fontWeight: 500 }}>
+    น้อง ๆ ย้ายบ้านหมดแล้วครับ
+  </Typography>
+  <Typography sx={{ color: "#999", fontSize: 14, mt: 1 }}>
+    แต่ไม่ต้องห่วง! เรากำลังเตรียมความพร้อมให้น้องใหม่เร็วๆ นี้
+  </Typography>
+  <Typography sx={{ color: "#999", fontSize: 14 }}>
+    โปรดติดตามข่าวสารได้ที่หน้าเพจของเรานะครับ
+  </Typography>
+</Box>
           )}
         </Container>
 
 
         {/* WHAT WE CARE THE MOST Section */}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
           <Box
             sx={{
               display: "grid",
@@ -1394,25 +1463,39 @@ export default function HomePage() {
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box sx={{ width: 44, height: 44, backgroundColor: "#4CAF50", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <Typography sx={{ color: "white", fontSize: "22px" }}>🐾</Typography>
-                </Box>
-                <Typography sx={{ fontSize: { xs: "1.3rem", md: "1.8rem" }, fontWeight: 800, lineHeight: 1 }}>
-                  WHAT WE CARE<br />THE MOST?
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  backgroundColor: "rgba(255, 255, 255, 1)", // ขาวโปร่งใส
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backdropFilter: "blur(8px)", // ทำให้ background ข้างหลังเบลอ
+                  WebkitBackdropFilter: "blur(8px)", // รองรับ Safari
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.3)" // เพิ่มมิติเล็กน้อย
+                }}
+              >
+                <Typography sx={{ color: "black", fontSize: "22px" }}>🐾</Typography>
+              </Box>
+
+                <Typography sx={{ fontSize: { xs: "1.3rem", md: "1.8rem" }, fontWeight: 500, lineHeight: 1.2, letterSpacing: "0.05em" }}>
+                ลูกสุนัขสุขภาพดี <br />จากฟาร์มของเรา
                 </Typography>
               </Box>
               <Box>
-                <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#000", mb: 1 }}>PUPP'S —</Typography>
-                <Typography sx={{ color: "#666", fontSize: 14, lineHeight: 1.6 }}>
-                  has a unique pet service, starts with anatomic research, analyzes, and provides precise growth, and health.
+                <Typography sx={{ fontSize: 18, fontWeight: 600, color: "#000", mb: 1 }}>บ้านคอร์กี้นครปฐม —</Typography>
+                <Typography sx={{ color: "#666", fontSize: 16, lineHeight: 1.6 }}>
+                ค้นพบลูกสุนัขสายพันธุ์แท้หลากหลายสายพันธุ์ ที่ได้รับการเลี้ยงดูอย่างพิถีพิถันในสภาพแวดล้อมที่สะอาดและปลอดภัย ในนครปฐม เราใส่ใจทุกรายละเอียดเพื่อมอบลูกสุนัขที่ดีที่สุดให้คุณ
                 </Typography>
               </Box>
             </Box>
 
             {/* Middle-Top: Counter */}
             <Box sx={{ p: 3, gridColumn: { lg: 2 }, gridRow: { lg: 1 }, display: "flex", flexDirection: "column", justifyContent: "center", backgroundColor: "#FFFFFF" }}>
-              <Typography sx={{ fontSize: 12, color: "#666", mb: 1 }}>Clients Testimonial</Typography>
-              <Typography sx={{ fontSize: 28, fontWeight: 800 }}>01 -</Typography>
+              
+              <Typography sx={{ fontSize: 24, fontWeight: 800 }}>พบกับลูกสุนัขพร้อมย้ายบ้าน</Typography>
             </Box>
 
             {/* Right-Top: Media card spanning two rows (dog image with play) */}
@@ -1430,12 +1513,12 @@ export default function HomePage() {
                   position: "relative"
                 }}
               >
-                <Image src="/images/cat1_nobg.png" alt="cat" width={214} height={250} style={{ objectFit: "contain", borderRadius: 8 }} />
+                <Image src="/images/dak.png" alt="cat" width={214} height={250} style={{ objectFit: "contain", borderRadius: 8 }} />
                 <Box sx={{ position: "absolute", top: "50%", right: -14, transform: "translateY(-50%)", width: 36, height: 36, backgroundColor: "#FF7A32", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 10px rgba(0,0,0,0.15)" }}>
                   <Typography sx={{ color: "white", fontSize: 16 }}>▶</Typography>
                 </Box>
               </Box>
-              <Typography sx={{ fontSize: 12, color: "#666", mt: 0.5 }}>Never miss a moment!</Typography>
+              <Typography sx={{ fontSize: 14, color: "#666", mt: 0.5 }}>พบกับลูกสุนัขพร้อมย้ายบ้าน</Typography>
             </Box>
 
             {/* Middle-Middle: Testimonial text */}
@@ -1445,15 +1528,15 @@ export default function HomePage() {
                   <Typography sx={{ color: "white", fontSize: 16 }}>❝</Typography>
                 </Box>
               </Box>
-              <Typography sx={{ fontSize: 14, color: "#666", lineHeight: 1.6 }}>
-                Thanks for your patient to take care my Pudding for the whole week. Great care taker. Will definitely send my Pudding to you for home boarding again.
+              <Typography sx={{ fontSize: 16, color: "#666", lineHeight: 1.6 }}>
+              เลือกดูสมาชิกใหม่จากฟาร์มของเราได้เลย ทุกตัวผ่านการตรวจสุขภาพและฉีดวัคซีนครบถ้วนตามช่วงวัย พร้อมใบรับรองสายพันธุ์แท้จากสมาคม และสมุดสุขภาพประจำตัว
               </Typography>
             </Box>
 
             {/* Middle-Bottom: Author */}
             <Box sx={{ p: 3, gridColumn: { lg: 2 }, gridRow: { lg: 3 }, backgroundColor: "#FFFFFF" }}>
-              <Typography sx={{ fontSize: 14, fontWeight: 600, color: "#000" }}>SHANNON PAPPERT</Typography>
-              <Typography sx={{ fontSize: 12, color: "#666" }}>Adventure Travellers</Typography>
+              <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#000" }}>WHAT DA DOG</Typography>
+              <Typography sx={{ fontSize: 14, color: "#666" }}>บ้านคอร์กี้นครปฐม</Typography>
             </Box>
 
             {/* Right-Bottom: CTA row */}
@@ -1473,7 +1556,7 @@ export default function HomePage() {
                   '&:hover': { backgroundColor: "#FFE4B3" }
                 }}
               >
-                <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#000" }}>Book a Schedule</Typography>
+                <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#000" }}>ติดต่อสอบถาม</Typography>
                 <Typography sx={{ color: "#999" }}>|</Typography>
                 <Typography sx={{ fontSize: 14 }}>🐾</Typography>
               </Box>
@@ -1484,7 +1567,7 @@ export default function HomePage() {
 
 
         {/* Blog Section */}
-        <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
             <Typography
               variant="h3"
@@ -1496,292 +1579,238 @@ export default function HomePage() {
             >
               มาทำความรู้จักกับน้องๆ ให้มากขึ้น
             </Typography>
+            <Button
+              onClick={() => router.push('/blog')}
+              sx={{
+                color: "#FF6B35",
+                fontSize: "14px",
+                textTransform: "none",
+                fontWeight: "600",
+                "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
+              }}
+            >
+              ดูทั้งหมด →
+            </Button>
+            
           </Box>
 
-          <Box sx={{ display: "flex", gap: 3, flexDirection: { xs: "column", md: "row" } }}>
-            {/* Blog Post 1 */}
-            <Box sx={{ flex: 1 }}>
-              <Card
-                sx={{
-                  borderRadius: 3,
-                  overflow: "hidden",
-                  border: "3px solid #000",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                  transition: "transform 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)"
-                  }
-                }}
-              >
-                <Box
-                  sx={{
-                    height: 200,
-                    backgroundColor: "#FF8A50",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}
-                >
-                  <Image 
-                    src="/images/lovecorgi1.png" 
-                    alt="สุขภาพสุนัข" 
-                    width={180} 
-                    height={180} 
-                    style={{ objectFit: "contain" }}
-                  />
-                  {/* Badge */}
-                  <Box
+          <Box sx={{ 
+            display: "grid", 
+            gridTemplateColumns: { 
+              xs: "1fr", 
+              sm: "repeat(2, 1fr)", 
+              md: "repeat(3, 1fr)", 
+              lg: "repeat(4, 1fr)" 
+            }, 
+            gap: { xs: 1.5, sm: 2, md: 2 },
+            width: "100%",
+            maxWidth: "100%"
+          }}>
+            {blogLoading ? (
+              // Loading state
+              Array.from({ length: 4 }).map((_, index) => (
+                <Box key={index}>
+                  <Card
                     sx={{
-                      position: "absolute",
-                      top: 16,
-                      right: 16,
-                      backgroundColor: "#FFD700",
-                      borderRadius: "20px",
-                      px: 2,
-                      py: 0.5,
-                      border: "2px solid #000"
+                      borderRadius: 3,
+                      overflow: "hidden",
+                      border: "3px solid #000",
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.1)"
                     }}
                   >
-                    <Typography sx={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>
-                      สุขภาพ
-                    </Typography>
-                  </Box>
+                    <Box
+                      sx={{
+                        position: 'relative',
+                        width: '100%',
+                        paddingTop: '56.25%', // 16:9 aspect ratio
+                        backgroundColor: "#f0f0f0"
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}
+                      >
+                        <CircularProgress size={40} />
+                      </Box>
+                    </Box>
+                    <CardContent sx={{ p: 3 }}>
+                      <Box sx={{ height: 20, backgroundColor: "#f0f0f0", borderRadius: 1, mb: 2 }} />
+                      <Box sx={{ height: 40, backgroundColor: "#f0f0f0", borderRadius: 1, mb: 2 }} />
+                      <Box sx={{ height: 16, backgroundColor: "#f0f0f0", borderRadius: 1, width: "60%" }} />
+                    </CardContent>
+                  </Card>
                 </Box>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography
-                    sx={{
-                      fontSize: "18px",
-                      fontWeight: "700",
-                      color: "#000",
-                      mb: 2,
-                      lineHeight: 1.3
-                    }}
-                  >
-                    วิธีดูแลสุขภาพลูกสุนัขคอร์กี้
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: "#666",
-                      fontSize: "14px",
-                      lineHeight: 1.6,
-                      mb: 2
-                    }}
-                  >
-                    เทคนิคการดูแลสุขภาพลูกสุนัขคอร์กี้ตั้งแต่เล็กจนโต รวมถึงการฉีดวัคซีนและการตรวจสุขภาพ
-                  </Typography>
-                  <Button
-                    onClick={handleReadArticle}
-                    sx={{
-                      color: "#FF6B35",
-                      fontSize: "14px",
-                      textTransform: "none",
-                      p: 0,
-                      minWidth: "auto",
-                      fontWeight: "600",
-                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
-                    }}
-                  >
-                    อ่านต่อ →
-                  </Button>
-                </CardContent>
-              </Card>
-            </Box>
+              ))
+            ) : (
+              // Blog posts from API
+              blogPosts.map((post, index) => {
+                // Use category color from database or fallback colors
+                const fallbackColors = [
+                  { bg: "#FF8A50", badge: "#FFD700", button: "#FF6B35" },
+                  { bg: "#4CAF50", badge: "#E8F5E8", button: "#4CAF50" },
+                  { bg: "#52C4F0", badge: "#E3F2FD", button: "#52C4F0" }
+                ];
+                const fallbackColor = fallbackColors[index] || fallbackColors[0];
+                
+                // Function to lighten color for badge background
+                const lightenColor = (hex: string, percent: number) => {
+                  const num = parseInt(hex.replace("#", ""), 16);
+                  const amt = Math.round(2.55 * percent);
+                  const R = (num >> 16) + amt;
+                  const G = (num >> 8 & 0x00FF) + amt;
+                  const B = (num & 0x0000FF) + amt;
+                  return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+                    (G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+                    (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
+                };
 
-            {/* Blog Post 2 */}
-            <Box sx={{ flex: 1 }}>
-              <Card
-                sx={{
-                  borderRadius: 3,
-                  overflow: "hidden",
-                  border: "3px solid #000",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                  transition: "transform 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)"
-                  }
-                }}
-              >
-                <Box
-                  sx={{
-                    height: 200,
-                    backgroundColor: "#4CAF50",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}
-                >
-                  <Image 
-                    src="/images/dog1-1.png" 
-                    alt="อาหารสุนัข" 
-                    width={180} 
-                    height={180} 
-                    style={{ objectFit: "contain" }}
-                  />
-                  {/* Badge */}
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 16,
-                      right: 16,
-                      backgroundColor: "#E8F5E8",
-                      borderRadius: "20px",
-                      px: 2,
-                      py: 0.5,
-                      border: "2px solid #000"
-                    }}
-                  >
-                    <Typography sx={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>
-                      โภชนาการ
-                    </Typography>
-                  </Box>
-                </Box>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography
-                    sx={{
-                      fontSize: "18px",
-                      fontWeight: "700",
-                      color: "#000",
-                      mb: 2,
-                      lineHeight: 1.3
-                    }}
-                  >
-                    เลือกอาหารสุนัขอย่างไรให้เหมาะสม
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: "#666",
-                      fontSize: "14px",
-                      lineHeight: 1.6,
-                      mb: 2
-                    }}
-                  >
-                    คู่มือการเลือกอาหารสุนัขที่มีคุณภาพ พร้อมสารอาหารครบถ้วนสำหรับแต่ละช่วงวัย
-                  </Typography>
-                  <Button
-                    onClick={handleReadArticle}
-                    sx={{
-                      color: "#4CAF50",
-                      fontSize: "14px",
-                      textTransform: "none",
-                      p: 0,
-                      minWidth: "auto",
-                      fontWeight: "600",
-                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
-                    }}
-                  >
-                    อ่านต่อ →
-                  </Button>
-                </CardContent>
-              </Card>
-            </Box>
+                const categoryColor = post.category.color || fallbackColor.bg;
+                const color = {
+                  bg: categoryColor,
+                  badge: lightenColor(categoryColor, 40), // Lighter version for badge background
+                  button: categoryColor
+                };
 
-            {/* Blog Post 3 */}
-            <Box sx={{ flex: 1 }}>
-              <Card
-                sx={{
-                  borderRadius: 3,
-                  overflow: "hidden",
-                  border: "3px solid #000",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                  transition: "transform 0.3s ease",
-                  "&:hover": {
-                    transform: "translateY(-4px)"
-                  }
-                }}
-              >
-                <Box
-                  sx={{
-                    height: 200,
-                    backgroundColor: "#52C4F0",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    position: "relative",
-                    overflow: "hidden"
-                  }}
-                >
-                  <Image 
-                    src="/images/dog_fashion1.png" 
-                    alt="ฝึกสุนัข" 
-                    width={180} 
-                    height={180} 
-                    style={{ objectFit: "contain" }}
-                  />
-                  {/* Badge */}
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: 16,
-                      right: 16,
-                      backgroundColor: "#E3F2FD",
-                      borderRadius: "20px",
-                      px: 2,
-                      py: 0.5,
-                      border: "2px solid #000"
-                    }}
-                  >
-                    <Typography sx={{ fontSize: "12px", fontWeight: "bold", color: "#000" }}>
-                      พฤติกรรม
-                    </Typography>
+                return (
+                  <Box key={post.id}>
+                    <Card
+                      sx={{
+                        borderRadius: 3,
+                        overflow: "hidden",
+                        border: "3px solid #000",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                        transition: "transform 0.3s ease",
+                        cursor: "pointer",
+                        "&:hover": {
+                          transform: "translateY(-4px)"
+                        }
+                      }}
+                      onClick={() => handleReadArticle(post.slug)}
+                    >
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          width: '100%',
+                          paddingTop: '56.25%', // 16:9 aspect ratio
+                          backgroundColor: color.bg,
+                          overflow: "hidden"
+                        }}
+                      >
+                        {post.imageUrl && (
+                          <Image 
+                            src={post.imageUrl} 
+                            alt={post.title} 
+                            width={400} 
+                            height={225} 
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover"
+                            }}
+                          />
+                        )}
+                      </Box>
+                      <CardContent sx={{ p: 3 }}>
+                        {/* Badge - เล็กและประหยัดพื้นที่ */}
+                        <Box
+                          sx={{
+                            backgroundColor: post.category.color || color.badge,
+                            borderRadius: "12px",
+                            px: 1.5,
+                            py: 0.25,
+                            border: "1px solid #000",
+                            display: "inline-block",
+                            mb: 1
+                          }}
+                        >
+                          <Typography sx={{ 
+                            fontSize: "10px", 
+                            fontWeight: "600", 
+                            color: "#fff",
+                            lineHeight: 1.2
+                          }}>
+                            {post.category.name}
+                          </Typography>
+                        </Box>
+                        
+                        <Typography
+                          sx={{
+                            fontSize: "18px",
+                            fontWeight: "700",
+                            color: "#000",
+                            mb: 2,
+                            lineHeight: 1.3,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden"
+                          }}
+                        >
+                          {post.title}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            color: "#666",
+                            fontSize: "14px",
+                            lineHeight: 1.6,
+                            mb: 2,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            wordBreak: "break-word"
+                          }}
+                        >
+                          {post.excerpt}
+                        </Typography>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReadArticle(post.slug);
+                          }}
+                          sx={{
+                            color: color.button,
+                            fontSize: "14px",
+                            textTransform: "none",
+                            p: 0,
+                            minWidth: "auto",
+                            fontWeight: "600",
+                            "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
+                          }}
+                        >
+                          อ่านต่อ →
+                        </Button>
+                      </CardContent>
+                    </Card>
                   </Box>
-                </Box>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography
-                    sx={{
-                      fontSize: "18px",
-                      fontWeight: "700",
-                      color: "#000",
-                      mb: 2,
-                      lineHeight: 1.3
-                    }}
-                  >
-                    เทคนิคฝึกสุนัขให้เชื่อฟัง
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: "#666",
-                      fontSize: "14px",
-                      lineHeight: 1.6,
-                      mb: 2
-                    }}
-                  >
-                    วิธีการฝึกสุนัขขั้นพื้นฐาน สร้างความเข้าใจและสัมพันธ์ที่ดีระหว่างคุณกับน้องหมา
-                  </Typography>
-                  <Button
-                    onClick={handleReadArticle}
-                    sx={{
-                      color: "#52C4F0",
-                      fontSize: "14px",
-                      textTransform: "none",
-                      p: 0,
-                      minWidth: "auto",
-                      fontWeight: "600",
-                      "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
-                    }}
-                  >
-                    อ่านต่อ →
-                  </Button>
-                </CardContent>
-              </Card>
-            </Box>
+                );
+              })
+            )}
           </Box>
         </Container>
 
 
         {/* Footer Services Section */}
         <Box sx={{ backgroundColor: "#F4D03F", py: 4 }}>
-          <Container maxWidth="lg">
+          <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
             <Box sx={{ display: "flex", justifyContent: "space-around", alignItems: "center", flexWrap: "wrap", gap: 2 }}>
               {[
-                { name: "GROOMING", icon: "🎀", color: "#FF69B4" },
-                { name: "HEALTH", icon: "🏥", color: "#FFD700" },
-                { name: "FEEDING", icon: "🍖", color: "#FF8A50" },
-                { name: "LOVE", icon: "❤️", color: "#FF6B6B" },
-                { name: "SITTING", icon: "🪑", color: "#8A2BE2" }
+{ name: "ครอบครัว", icon: "👪", color: "#FFB6C1" }, // Light Pink
+{ name: "สุขภาพ", icon: "🏥", color: "#F0E68C" }, // Khaki / Mellow Yellow
+{ name: "อาหาร", icon: "🍖", color: "#FFDAB9" }, // Peach Puff
+{ name: "ความรัก", icon: "💕", color: "#FFC0CB" }, // Pink
+{ name: "เพื่อน", icon: "👬", color: "#B0E0E6" }  // Powder Blue
               ].map((service, index) => (
                 <Box key={index} sx={{ display: "flex", alignItems: "center", gap: 1.5, color: "white" }}>
                   <Box
@@ -1808,12 +1837,12 @@ export default function HomePage() {
 
         {/* Footer - Minimal */}
         <Box sx={{ backgroundColor: "#2d2d2d", py: 3 }}>
-          <Container maxWidth="lg">
+          <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
             <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 2, flexDirection: { xs: "column", sm: "row" } }}>
               {/* Logo */}
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Image
-                  src="/images/whatdadog_logo4.png"
+                  src="/images/whatdadog_logo_white.png"
                   alt="What Da Dog Pet Shop"
                   width={140}
                   height={60}
@@ -1851,33 +1880,6 @@ export default function HomePage() {
           onClose={() => setIsRegistrationSheetOpen(false)}
         />
 
-        {/* Floating Cart Button */}
-        {totalItems > 0 && (
-          <IconButton
-            onClick={handleCartClick}
-            sx={{
-              position: "fixed",
-              bottom: 100,
-              right: 20,
-              backgroundColor: colors.primary.main,
-              color: "white",
-              width: 60,
-              height: 60,
-              zIndex: 1000,
-              boxShadow: "0 4px 20px rgba(255, 107, 53, 0.3)",
-              "&:hover": {
-                backgroundColor: colors.primary.dark,
-                transform: "scale(1.1)"
-              },
-              transition: "all 0.2s ease"
-            }}
-          >
-            <Badge badgeContent={totalItems} color="error">
-              <ShoppingCart />
-            </Badge>
-          </IconButton>
-        )}
-
         {/* Cart Drawer */}
         <Cart
           open={isCartOpen}
@@ -1889,6 +1891,13 @@ export default function HomePage() {
         />
 
       </Box>
+      
+      {/* Floating Actions (Back to Top only) */}
+      <FloatingActions 
+        cartItemCount={0}
+        onCartClick={handleCartClick}
+        showCart={false}
+      />
     </>
   );
 }
