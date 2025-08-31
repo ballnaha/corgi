@@ -460,18 +460,15 @@ export default function ImageCropModal({
                 position: 'relative'
               }}>
                 <ReactCrop
-                  src={src}
                   crop={crop}
-                  onChange={(_, percentCrop) => setCrop(percentCrop)}
-                  onComplete={(c) => {
+                  onChange={(crop, percentCrop) => setCrop(percentCrop)}
+                  onComplete={(crop) => {
                     // Guard: ignore empty/invalid crop
-                    if (!c || !Number.isFinite(c.width || 0) || !Number.isFinite(c.height || 0) || (c.width || 0) <= 0 || (c.height || 0) <= 0) {
+                    if (!crop || !Number.isFinite(crop.width || 0) || !Number.isFinite(crop.height || 0) || (crop.width || 0) <= 0 || (crop.height || 0) <= 0) {
                       return;
                     }
-                    setCompletedCrop(c);
+                    setCompletedCrop(crop);
                   }}
-                  minWidth={100}
-                  minHeight={aspect ? 100 / aspect : 50}
                   style={{
                     maxWidth: '100%',
                     maxHeight: '450px'
