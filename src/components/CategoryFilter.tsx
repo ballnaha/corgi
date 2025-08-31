@@ -42,6 +42,7 @@ const getCategoryDisplay = (key: string) => {
     reptiles: { image: "/images/icon-toys.png", bgColor: colors.categories.rabbit },
     "small-pets": { image: "/images/icon-toys.png", bgColor: colors.categories.rabbit },
     accessories: { image: "/images/icon-toys.png", bgColor: colors.categories.rabbit },
+    food: { image: "/images/icon-food.png", bgColor: colors.categories.dogs },
   };
   
   return categoryMap[key] || { image: "/images/icon-toys.png", bgColor: colors.categories.rabbit };

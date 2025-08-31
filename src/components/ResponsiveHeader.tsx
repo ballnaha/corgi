@@ -16,11 +16,13 @@ import {
   MenuItem,
   ListItemIcon,
   ListItemText,
-  Divider
+  Divider,
+  Tooltip
 } from "@mui/material";
 import { ShoppingCart, Logout, Menu, Close, Person, AccountCircle } from "@mui/icons-material";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut, signIn } from "next-auth/react";
 import { useUserDisplayName } from "@/hooks/useUserDisplayName";
+import LineIcon from "./LineIcon";
 
 interface ResponsiveHeaderProps {
   showCartIcon?: boolean;
@@ -75,6 +77,10 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
   const handleLogoutClick = () => {
     handleUserMenuClose();
     handleLogout();
+  };
+
+  const handleLineLogin = () => {
+    signIn("line", { callbackUrl: "/shop" });
   };
 
   // Prevent body scroll when menu is open
@@ -165,6 +171,31 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
             >
               Shop Now
             </Button>
+
+            {/* LINE Login Icon for Desktop - Show only when not logged in */}
+            {!session?.user && (
+              <Tooltip 
+                title="เข้าสู่ระบบด้วย LINE" 
+                arrow
+                placement="bottom"
+              >
+                <IconButton
+                  onClick={handleLineLogin}
+                  sx={{
+                    color: "#00B900",
+                    padding: "8px",
+                    "&:hover": {
+                      color: "#009900",
+                      backgroundColor: "rgba(0, 185, 0, 0.1)",
+                      transform: "scale(1.05)",
+                    },
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <LineIcon sx={{ fontSize: "1.5rem" }} />
+                </IconButton>
+              </Tooltip>
+            )}
 
             {/* Cart Icon for Desktop */}
             {showCartIcon && (
@@ -387,6 +418,40 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
                       {cartItemCount > 99 ? '99+' : cartItemCount}
                     </Box>
                   )}
+                </Button>
+              )}
+
+              {/* LINE Login for Mobile - Show only when not logged in */}
+              {!session?.user && (
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    handleLineLogin();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  sx={{
+                    backgroundColor: "#00B900",
+                    color: "white",
+                    borderRadius: "20px",
+                    py: 1.2,
+                    px: 2,
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    textTransform: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    boxShadow: "0 2px 8px rgba(0, 185, 0, 0.3)",
+                    "&:hover": {
+                      backgroundColor: "#009900",
+                      boxShadow: "0 4px 12px rgba(0, 185, 0, 0.4)",
+                      transform: "translateY(-1px)",
+                    },
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  <LineIcon sx={{ fontSize: "1.2rem" }} />
+                  เข้าสู่ระบบด้วย LINE
                 </Button>
               )}
 

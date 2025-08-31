@@ -84,7 +84,6 @@ export default function ProductCard({
         transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         position: "relative",
         "&:hover": {
-          transform: "translateY(-8px) scale(1.02)",
           boxShadow: "0 16px 40px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.1)",
         },
         "&:active": {

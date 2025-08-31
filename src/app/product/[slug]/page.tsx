@@ -3,7 +3,7 @@ import ProductPageClient from "./ProductPageClient";
 import Script from "next/script";
 
 interface Props {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }
 
 // ฟังก์ชันสำหรับ fetch ข้อมูล product สำหรับ SEO
@@ -27,7 +27,8 @@ async function getProduct(slug: string) {
 
 // Generate dynamic metadata for SEO
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const product = await getProduct(params.slug);
+  const { slug } = await params;
+  const product = await getProduct(slug);
 
   if (!product) {
     return {
@@ -42,7 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     : `ซื้อ ${product.name} ราคา ฿${product.price.toLocaleString()} จาก WhatdaDog ร้านขายสัตว์เลี้ยงและอุปกรณ์คุณภาพ`;
 
   const imageUrl = product.imageUrl || product.image || '/images/whatdadog_logo_full.png';
-  const productUrl = `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/product/${params.slug}`;
+  const productUrl = `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/product/${slug}`;
 
   return {
     title,
@@ -120,7 +121,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ProductDetailPage({ params }: Props) {
-  const product = await getProduct(params.slug);
+  const { slug } = await params;
+  const product = await getProduct(slug);
 
   // Generate JSON-LD structured data
   const jsonLd = product ? {
@@ -139,7 +141,7 @@ export default async function ProductDetailPage({ params }: Props) {
       price: product.price,
       priceCurrency: 'THB',
       availability: product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/product/${params.slug}`,
+      url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/product/${slug}`,
       seller: {
         '@type': 'Organization',
         name: 'WhatdaDog',
