@@ -73,8 +73,8 @@ export async function GET(request: NextRequest) {
         id: post.category.id,
         name: post.category.name,
         slug: post.category.slug,
-        description: post.category.description,
-        color: post.category.color
+        description: post.category.description || undefined,
+        color: post.category.color || undefined
       },
       author: post.author,
       publishedAt: post.publishedAt?.toISOString() || new Date().toISOString(),

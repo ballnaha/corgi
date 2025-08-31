@@ -19,8 +19,8 @@ export async function GET() {
       id: category.id,
       name: category.name,
       slug: category.slug,
-      description: category.description,
-      color: category.color
+      description: category.description || undefined,
+      color: category.color || undefined
     }));
 
     return NextResponse.json({

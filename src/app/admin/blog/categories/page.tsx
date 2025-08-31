@@ -390,7 +390,7 @@ export default function AdminBlogCategoriesPage() {
                         <IconButton
                           size="small"
                           onClick={() => setDeleteDialog({ open: true, category })}
-                          sx={{ color: colors.error.main }}
+                          sx={{ color: colors.error }}
                         >
                           <Delete />
                         </IconButton>

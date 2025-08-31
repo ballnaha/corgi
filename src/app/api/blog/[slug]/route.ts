@@ -48,14 +48,13 @@ export async function GET(
         id: post.category.id,
         name: post.category.name,
         slug: post.category.slug,
-        description: post.category.description,
-        color: post.category.color
+        description: post.category.description || undefined,
+        color: post.category.color || undefined
       },
       author: post.author,
       publishedAt: post.publishedAt?.toISOString() || new Date().toISOString(),
       updatedAt: post.updatedAt.toISOString(),
-      tags: post.tags ? JSON.parse(post.tags) : [],
-      featured: post.featured
+      tags: post.tags ? JSON.parse(post.tags) : []
     };
 
     return NextResponse.json({

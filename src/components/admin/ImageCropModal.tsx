@@ -20,7 +20,7 @@ import {
   Select,
   MenuItem
 } from '@mui/material';
-import ReactCrop, { Crop, PixelCrop, centerCrop, makeAspectCrop } from 'react-image-crop';
+import ReactCrop, { Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import {
   loadImageFromFile,
@@ -50,7 +50,7 @@ export default function ImageCropModal({
 }: ImageCropModalProps) {
   const [src, setSrc] = useState<string>('');
   const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<PixelCrop>();
+  const [completedCrop, setCompletedCrop] = useState<Crop>();
   const [scale, setScale] = useState(1);
   const [rotate, setRotate] = useState(0);
   const [aspect, setAspect] = useState<number | undefined>(aspectRatio);
@@ -64,14 +64,14 @@ export default function ImageCropModal({
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Validate pixel crop object
-  const isValidPixelCrop = (c?: PixelCrop): c is PixelCrop => {
+  const isValidCrop = (c?: Crop): c is Crop => {
     if (!c) return false;
-    const { x, y, width, height } = c as PixelCrop;
+    const { x, y, width, height } = c;
     return (
-      Number.isFinite(x) &&
-      Number.isFinite(y) &&
-      Number.isFinite(width) && width > 0 &&
-      Number.isFinite(height) && height > 0
+      typeof x === 'number' && Number.isFinite(x) &&
+      typeof y === 'number' && Number.isFinite(y) &&
+      typeof width === 'number' && Number.isFinite(width) && width > 0 &&
+      typeof height === 'number' && Number.isFinite(height) && height > 0
     );
   };
 
@@ -133,30 +133,24 @@ export default function ImageCropModal({
     
     if (aspect) {
       // Always create a default crop area
-      const crop = centerCrop(
-        makeAspectCrop(
-          {
-            unit: '%',
-            width: 90,
-          },
-          aspect,
-          width,
-          height,
-        ),
-        width,
-        height,
-      );
+      const crop: Crop = {
+        unit: '%',
+        x: 5,
+        y: 5,
+        width: 90,
+        height: 90 / aspect,
+      };
       
       console.log('Setting initial crop:', crop);
       setCrop(crop);
       
       // Convert to pixel crop
-      const pixelCrop = {
+      const pixelCrop: Crop = {
         unit: 'px' as const,
-        x: (crop.x / 100) * width,
-        y: (crop.y / 100) * height,
-        width: (crop.width / 100) * width,
-        height: (crop.height / 100) * height,
+        x: ((crop.x || 0) / 100) * width,
+        y: ((crop.y || 0) / 100) * height,
+        width: ((crop.width || 0) / 100) * width,
+        height: ((crop.height || 0) / 100) * height,
       };
       
       console.log('Setting initial pixel crop:', pixelCrop);
@@ -171,7 +165,7 @@ export default function ImageCropModal({
     // Ensure image is ready
     if (!image.complete || image.naturalWidth === 0) return;
 
-    const pixelCrop: PixelCrop = {
+    const pixelCrop: Crop = {
       unit: 'px',
       x: ((crop.x || 0) / 100) * image.naturalWidth,
       y: ((crop.y || 0) / 100) * image.naturalHeight,
@@ -180,7 +174,7 @@ export default function ImageCropModal({
     };
 
     // Guard against invalid crop
-    if (isValidPixelCrop(pixelCrop)) {
+    if (isValidCrop(pixelCrop)) {
       setCompletedCrop(pixelCrop);
     }
   }, [crop]);
@@ -227,8 +221,8 @@ export default function ImageCropModal({
 
                  // Use the actual crop dimensions for preview (1:1 scale)
          // This will show the exact pixels that will be cropped
-        const previewWidth = Math.max(1, Math.round(completedCrop.width));
-        const previewHeight = Math.max(1, Math.round(completedCrop.height));
+        const previewWidth = Math.max(1, Math.round(completedCrop.width || 0));
+        const previewHeight = Math.max(1, Math.round(completedCrop.height || 0));
         
         canvas.width = previewWidth;
         canvas.height = previewHeight;
@@ -244,7 +238,7 @@ export default function ImageCropModal({
         ctx.save();
 
         // Validate crop dimensions
-        if (!isValidPixelCrop(completedCrop)) {
+        if (!isValidCrop(completedCrop)) {
           console.error('Invalid crop dimensions:', completedCrop);
           setPreviewUrl('');
           return;
@@ -254,10 +248,10 @@ export default function ImageCropModal({
         // This ensures preview matches the actual crop result
         ctx.drawImage(
           image,
-          Math.max(0, completedCrop.x), 
-          Math.max(0, completedCrop.y), 
-          Math.min(completedCrop.width, image.naturalWidth - completedCrop.x), 
-          Math.min(completedCrop.height, image.naturalHeight - completedCrop.y),
+          Math.max(0, completedCrop.x || 0), 
+          Math.max(0, completedCrop.y || 0), 
+          Math.min(completedCrop.width || 0, image.naturalWidth - (completedCrop.x || 0)), 
+          Math.min(completedCrop.height || 0, image.naturalHeight - (completedCrop.y || 0)),
           0, 0, previewWidth, previewHeight
         );
 
@@ -336,10 +330,10 @@ export default function ImageCropModal({
       const croppedCanvas = createCroppedCanvas(
         image,
         {
-          x: completedCrop.x,
-          y: completedCrop.y,
-          width: completedCrop.width,
-          height: completedCrop.height,
+          x: completedCrop.x || 0,
+          y: completedCrop.y || 0,
+          width: completedCrop.width || 0,
+          height: completedCrop.height || 0,
         },
         targetWidth,
         targetHeight
@@ -466,16 +460,16 @@ export default function ImageCropModal({
                 position: 'relative'
               }}>
                 <ReactCrop
+                  src={src}
                   crop={crop}
                   onChange={(_, percentCrop) => setCrop(percentCrop)}
                   onComplete={(c) => {
                     // Guard: ignore empty/invalid crop
-                    if (!c || !Number.isFinite(c.width) || !Number.isFinite(c.height) || c.width <= 0 || c.height <= 0) {
+                    if (!c || !Number.isFinite(c.width || 0) || !Number.isFinite(c.height || 0) || (c.width || 0) <= 0 || (c.height || 0) <= 0) {
                       return;
                     }
                     setCompletedCrop(c);
                   }}
-                  aspect={aspect}
                   minWidth={100}
                   minHeight={aspect ? 100 / aspect : 50}
                   style={{
@@ -626,7 +620,7 @@ export default function ImageCropModal({
                )}
                <Typography variant="caption" display="block" sx={{ mt: 1, color: 'text.secondary' }}>
                  {completedCrop ? 
-                   `Preview: ${Math.round(completedCrop.width)} × ${Math.round(completedCrop.height)} px` :
+                                       `Preview: ${Math.round(completedCrop.width || 0)} × ${Math.round(completedCrop.height || 0)} px` :
                    'Preview: ไม่มี'
                  } | 
                  ขนาดจริง: {getOutputDimensions().width} × {getOutputDimensions().height} px
@@ -639,13 +633,13 @@ export default function ImageCropModal({
                   <strong>ข้อมูลการ Crop (จากรูปต้นฉบับ):</strong>
                 </Typography>
                 <Typography variant="caption" component="div">
-                  ตำแหน่ง: ({Math.round(completedCrop.x)}, {Math.round(completedCrop.y)})
+                  ตำแหน่ง: ({Math.round(completedCrop.x || 0)}, {Math.round(completedCrop.y || 0)})
                 </Typography>
                 <Typography variant="caption" component="div">
-                  ขนาด: {Math.round(completedCrop.width)} × {Math.round(completedCrop.height)}
+                  ขนาด: {Math.round(completedCrop.width || 0)} × {Math.round(completedCrop.height || 0)}
                 </Typography>
                 <Typography variant="caption" component="div">
-                  อัตราส่วน: {(completedCrop.width / completedCrop.height).toFixed(2)}:1
+                  อัตราส่วน: {((completedCrop.width || 0) / (completedCrop.height || 1)).toFixed(2)}:1
                 </Typography>
                 <Typography variant="caption" component="div">
                   Preview: {previewCanvasRef.current?.width || 0} × {previewCanvasRef.current?.height || 0}
@@ -665,7 +659,7 @@ export default function ImageCropModal({
                 Preview: {previewUrl ? '✅ Generated' : '❌ None'}
               </Typography>
               <Typography variant="caption" component="div" sx={{ fontSize: '10px' }}>
-                Crop Area: {completedCrop ? `${Math.round(completedCrop.width)}×${Math.round(completedCrop.height)}` : 'None'} | 
+                Crop Area: {completedCrop ? `${Math.round(completedCrop.width || 0)}×${Math.round(completedCrop.height || 0)}` : 'None'} | 
                 Display Scale: {scale}x | Aspect Lock: {enableAspectRatio ? 'ON' : 'OFF'}
               </Typography>
               <Typography variant="caption" component="div" sx={{ fontSize: '10px' }}>

@@ -81,8 +81,6 @@ export interface BlogPost {
   publishedAt: Date | string;
   updatedAt?: Date | string;
   tags?: string[];
-
-
 }
 
 export interface BlogCategory {
