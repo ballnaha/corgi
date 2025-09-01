@@ -127,5 +127,61 @@ export const theme = createTheme({
         },
       },
     },
+    MuiSnackbar: {
+      styleOverrides: {
+        root: {
+          '& .MuiSnackbarContent-root': {
+            borderRadius: 12,
+            fontFamily: 'Prompt, sans-serif',
+            fontWeight: 500,
+          },
+        },
+      },
+    },
+    MuiAlert: {
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+          fontFamily: 'Prompt, sans-serif',
+          fontWeight: 500,
+          '& .MuiAlert-message': {
+            fontSize: '0.95rem',
+            lineHeight: 1.4,
+          },
+        },
+        standardSuccess: {
+          backgroundColor: `${colors.success}15`,
+          color: colors.success,
+          border: `1px solid ${colors.success}40`,
+          '& .MuiAlert-icon': {
+            color: colors.success,
+          },
+        },
+        standardWarning: {
+          backgroundColor: `${colors.warning}15`,
+          color: colors.warning,
+          border: `1px solid ${colors.warning}40`,
+          '& .MuiAlert-icon': {
+            color: colors.warning,
+          },
+        },
+        standardError: {
+          backgroundColor: `${colors.error}15`,
+          color: colors.error,
+          border: `1px solid ${colors.error}40`,
+          '& .MuiAlert-icon': {
+            color: colors.error,
+          },
+        },
+        standardInfo: {
+          backgroundColor: `${colors.info}15`,
+          color: colors.info,
+          border: `1px solid ${colors.info}40`,
+          '& .MuiAlert-icon': {
+            color: colors.info,
+          },
+        },
+      },
+    },
   },
 });

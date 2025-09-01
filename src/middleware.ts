@@ -29,6 +29,11 @@ export async function middleware(request: NextRequest) {
     '/checkout',
     '/profile',
     '/favorites',
+    '/line-test',
+    '/debug',
+    '/test-order',
+    '/payment-notification',
+    '/order-success',
 
     '/unauthorized',
     '/',
@@ -115,7 +120,12 @@ export const config = {
      * - blog (blog pages) - completely public like home
      * - uploads (file uploads)
      * - checkout, profile, favorites (handled separately)
+     * - line-test (for testing LINE API)
+     * - debug (for debugging session)
+     * - test-order (for testing order flow)
+     * - payment-notification (for payment upload)
+     * - order-success (for order success page)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|auth|images|product|shop|home|blog|uploads|checkout|profile|favorites).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|auth|images|product|shop|home|blog|uploads|checkout|profile|favorites|line-test|debug|test-order|payment-notification|order-success).*)",
   ],
 };

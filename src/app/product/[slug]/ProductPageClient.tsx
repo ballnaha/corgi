@@ -6,8 +6,6 @@ import {
   Box,
   Typography,
   CircularProgress,
-  Snackbar,
-  Alert,
   Slide,
 } from "@mui/material";
 import type { SlideProps } from "@mui/material";
@@ -24,6 +22,7 @@ import {
   removeFromCartStorage,
 } from "@/lib/cart";
 import { handleLiffNavigation } from "@/lib/liff-navigation";
+import { useThemedSnackbar } from "@/components/ThemedSnackbar";
 
 export default function ProductPageClient() {
   const SlideUpTransition = React.forwardRef(function SlideUpTransition(
@@ -34,6 +33,7 @@ export default function ProductPageClient() {
   });
   const params = useParams();
   const router = useRouter();
+  const { showSnackbar, SnackbarComponent } = useThemedSnackbar();
   const slug = params.slug as string;
 
   const [product, setProduct] = useState<Product | null>(null);
@@ -43,13 +43,6 @@ export default function ProductPageClient() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
-
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error" | "warning" | "info";
-  }>({ open: false, message: "", severity: "success" });
-  const [snackbarKey, setSnackbarKey] = useState<number>(0);
   useEffect(() => {
     setCartCount(readCartFromStorage().reduce((s, i) => s + i.quantity, 0));
     
@@ -123,31 +116,20 @@ export default function ProductPageClient() {
     if (!product) return;
     const stock = typeof product.stock === "number" ? product.stock : 0;
     if (stock <= 0) {
-      setSnackbar({ open: true, message: "สินค้าหมด", severity: "error" });
-      setSnackbarKey((k) => k + 1);
+      showSnackbar("สินค้าหมด", "error");
       return;
     }
     const existingQty =
       readCartFromStorage().find((i) => i.product.id === product.id)
         ?.quantity ?? 0;
     if (existingQty >= stock) {
-      setSnackbar({
-        open: true,
-        message: "สินค้าเกินจำนวนคงเหลือ",
-        severity: "warning",
-      });
-      setSnackbarKey((k) => k + 1);
+      showSnackbar("สินค้าเกินจำนวนคงเหลือ", "warning");
       return;
     }
     addToCartStorage(product, 1);
     const newCount = readCartFromStorage().reduce((s, i) => s + i.quantity, 0);
     setCartCount(newCount);
-    setSnackbar({
-      open: true,
-      message: `เพิ่ม "${product.name}" ลงตะกร้าแล้ว`,
-      severity: "success",
-    });
-    setSnackbarKey((k) => k + 1);
+    showSnackbar(`เพิ่ม "${product.name}" ลงตะกร้าแล้ว`, "success");
   };
 
   const handleToggleFavorite = () => {
@@ -229,12 +211,7 @@ export default function ProductPageClient() {
         }}
         onCheckout={() => {
           if (readCartFromStorage().length === 0) {
-            setSnackbar({
-              open: true,
-              message: "ตะกร้าสินค้าว่างเปล่า",
-              severity: "warning",
-            });
-            setSnackbarKey((k) => k + 1);
+            showSnackbar("ตะกร้าสินค้าว่างเปล่า", "warning");
             return;
           }
 
@@ -243,118 +220,7 @@ export default function ProductPageClient() {
         }}
       />
 
-      <Snackbar
-        key={snackbarKey}
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-        TransitionComponent={SlideUpTransition}
-        sx={{ pointerEvents: "none" }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant="standard"
-          icon={false}
-          sx={{
-            pointerEvents: "all",
-            width: "auto",
-            maxWidth: "min(480px, calc(100vw - 32px))",
-            px: 2,
-            py: 1.25,
-            borderRadius: 3,
-            boxShadow:
-              snackbar.severity === "success"
-                ? "0 20px 40px rgba(46,125,50,0.18)"
-                : snackbar.severity === "warning"
-                ? "0 20px 40px rgba(240,180,0,0.18)"
-                : snackbar.severity === "error"
-                ? "0 20px 40px rgba(211,47,47,0.18)"
-                : "0 20px 40px rgba(25,118,210,0.18)",
-            backdropFilter: "saturate(180%) blur(12px)",
-            WebkitBackdropFilter: "saturate(180%) blur(12px)",
-            backgroundColor:
-              snackbar.severity === "success"
-                ? "rgba(46, 125, 50, 0.12)"
-                : snackbar.severity === "warning"
-                ? "rgba(240, 180, 0, 0.12)"
-                : snackbar.severity === "error"
-                ? "rgba(211, 47, 47, 0.12)"
-                : "rgba(25, 118, 210, 0.12)",
-            backgroundImage:
-              "linear-gradient(135deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.15) 100%)",
-            backgroundBlendMode: "overlay",
-            color:
-              snackbar.severity === "success"
-                ? "#1b5e20"
-                : snackbar.severity === "warning"
-                ? "#7a5c00"
-                : snackbar.severity === "error"
-                ? "#8e0000"
-                : "#0d47a1",
-            border:
-              snackbar.severity === "success"
-                ? "1px solid rgba(46, 125, 50, 0.28)"
-                : snackbar.severity === "warning"
-                ? "1px solid rgba(240, 180, 0, 0.28)"
-                : snackbar.severity === "error"
-                ? "1px solid rgba(211, 47, 47, 0.28)"
-                : "1px solid rgba(25, 118, 210, 0.28)",
-            borderLeft:
-              snackbar.severity === "success"
-                ? "4px solid rgba(46, 125, 50, 0.65)"
-                : snackbar.severity === "warning"
-                ? "4px solid rgba(240, 180, 0, 0.65)"
-                : snackbar.severity === "error"
-                ? "4px solid rgba(211, 47, 47, 0.65)"
-                : "4px solid rgba(25, 118, 210, 0.65)",
-            fontWeight: 600,
-            letterSpacing: 0.2,
-          }}
-        >
-          {snackbar.message}
-          <Box
-            sx={{
-              mt: 0.75,
-              height: 2,
-              borderRadius: 2,
-              backgroundColor:
-                snackbar.severity === "success"
-                  ? "rgba(46,125,50,0.2)"
-                  : snackbar.severity === "warning"
-                  ? "rgba(240,180,0,0.2)"
-                  : snackbar.severity === "error"
-                  ? "rgba(211,47,47,0.2)"
-                  : "rgba(25,118,210,0.2)",
-              overflow: "hidden",
-              position: "relative",
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: "100%",
-                backgroundColor:
-                  snackbar.severity === "success"
-                    ? "rgba(46,125,50,0.6)"
-                    : snackbar.severity === "warning"
-                    ? "rgba(240,180,0,0.6)"
-                    : snackbar.severity === "error"
-                    ? "rgba(211,47,47,0.6)"
-                    : "rgba(25,118,210,0.6)",
-                transformOrigin: "left",
-                animation: "snackGrow 3s linear forwards",
-              },
-              "@keyframes snackGrow": {
-                from: { transform: "scaleX(0)" },
-                to: { transform: "scaleX(1)" },
-              },
-            }}
-          />
-        </Alert>
-      </Snackbar>
+      <SnackbarComponent />
     </>
   );
 }

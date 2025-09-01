@@ -14,8 +14,6 @@ import {
   Avatar,
   IconButton,
   Chip,
-  Alert,
-  Snackbar,
   Slide,
   RadioGroup,
   FormControlLabel,
@@ -49,6 +47,7 @@ import { colors } from "@/theme/colors";
 import { CartItem } from "@/types";
 import { readCartFromStorage, clearCartStorage, updateQuantityInStorage, removeFromCartStorage } from "@/lib/cart";
 import { handleLiffNavigation } from "@/lib/liff-navigation";
+import { useThemedSnackbar } from "@/components/ThemedSnackbar";
 import { 
   analyzeOrder, 
   filterShippingOptions,
@@ -156,6 +155,7 @@ export default function CheckoutPage() {
 
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { showSnackbar, SnackbarComponent } = useThemedSnackbar();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [discountCode, setDiscountCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState<DiscountCode | null>(
@@ -182,12 +182,6 @@ export default function CheckoutPage() {
   const [loadingData, setLoadingData] = useState(true);
   const [isProcessingOrder, setIsProcessingOrder] = useState(false);
   const [orderSuccessful, setOrderSuccessful] = useState(false);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: "success" | "error" | "warning" | "info";
-  }>({ open: false, message: "", severity: "success" });
-  const [snackbarKey, setSnackbarKey] = useState<number>(0);
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     productName: string;
@@ -219,11 +213,7 @@ export default function CheckoutPage() {
     }
 
     if (newQuantity > maxStock) {
-      setSnackbar({
-        open: true,
-        message: `สินค้าในสต็อกเหลือเพียง ${maxStock} ชิ้น`,
-        severity: "warning",
-      });
+      showSnackbar(`สินค้าในสต็อกเหลือเพียง ${maxStock} ชิ้น`, "warning");
       return;
     }
 
@@ -237,12 +227,7 @@ export default function CheckoutPage() {
       setOrderAnalysis(analysis);
     }
 
-    setSnackbar({
-      open: true,
-      message: "อัปเดตจำนวนสินค้าแล้ว",
-      severity: "success",
-    });
-    setSnackbarKey(prev => prev + 1);
+    showSnackbar("อัปเดตจำนวนสินค้าแล้ว", "success");
   };
 
   const handleRemoveItem = (productId: string) => {
@@ -271,12 +256,7 @@ export default function CheckoutPage() {
     }
 
     setConfirmDialog({ open: false, productName: "", productId: "" });
-    setSnackbar({
-      open: true,
-      message: "ลบสินค้าออกจากตะกร้าแล้ว",
-      severity: "success",
-    });
-    setSnackbarKey(prev => prev + 1);
+    showSnackbar("ลบสินค้าออกจากตะกร้าแล้ว", "success");
 
     // ถ้าตะกร้าว่าง ให้กลับไปหน้าหลัก
     if (updatedItems.length === 0) {
@@ -513,27 +493,12 @@ export default function CheckoutPage() {
 
       if (response.ok && data.valid) {
         setAppliedDiscount(data.discountCode);
-        setSnackbar({
-          open: true,
-          message: "ใช้รหัสส่วนลดสำเร็จ!",
-          severity: "success",
-        });
-        setSnackbarKey((k) => k + 1);
+        showSnackbar("ใช้รหัสส่วนลดสำเร็จ!", "success");
       } else {
-        setSnackbar({
-          open: true,
-          message: data.error || "รหัสส่วนลดไม่ถูกต้อง",
-          severity: "error",
-        });
-        setSnackbarKey((k) => k + 1);
+        showSnackbar(data.error || "รหัสส่วนลดไม่ถูกต้อง", "error");
       }
     } catch {
-      setSnackbar({
-        open: true,
-        message: "เกิดข้อผิดพลาดในการตรวจสอบรหัสส่วนลด",
-        severity: "error",
-      });
-      setSnackbarKey((k) => k + 1);
+      showSnackbar("เกิดข้อผิดพลาดในการตรวจสอบรหัสส่วนลด", "error");
     }
   };
 
@@ -553,44 +518,28 @@ export default function CheckoutPage() {
       !customerInfo.phone ||
       !customerInfo.address
     ) {
-      setSnackbar({
-        open: true,
-        message: "กรุณากรอกข้อมูลให้ครบถ้วน",
-        severity: "error",
-      });
-      setSnackbarKey((k) => k + 1);
+      showSnackbar("กรุณากรอกข้อมูลให้ครบถ้วน", "warning");
+      
       return;
     }
 
     if (!selectedShipping) {
-      setSnackbar({
-        open: true,
-        message: "กรุณาเลือกวิธีการจัดส่ง",
-        severity: "error",
-      });
-      setSnackbarKey((k) => k + 1);
+      showSnackbar("กรุณาเลือกวิธีการจัดส่ง", "warning");
+      
       return;
     }
 
     if (!selectedShippingOption) {
       console.error("Selected shipping option not found:", selectedShipping);
       console.error("Available options:", filteredShippingOptions);
-      setSnackbar({
-        open: true,
-        message: "ไม่พบวิธีการจัดส่งที่เลือก กรุณาเลือกใหม่",
-        severity: "error",
-      });
-      setSnackbarKey((k) => k + 1);
+      showSnackbar("ไม่พบวิธีการจัดส่งที่เลือก กรุณาเลือกใหม่", "error");
+      
       return;
     }
 
     if (!orderAnalysis) {
-      setSnackbar({
-        open: true,
-        message: "เกิดข้อผิดพลาดในการคำนวณคำสั่งซื้อ",
-        severity: "error",
-      });
-      setSnackbarKey((k) => k + 1);
+      showSnackbar("เกิดข้อผิดพลาดในการคำนวณคำสั่งซื้อ", "error");
+      
       return;
     }
 
@@ -715,6 +664,9 @@ export default function CheckoutPage() {
       };
 
       // ส่งใบเสร็จไปที่ LINE
+      console.log("🚀 [CHECKOUT] ส่งใบเสร็จไปยัง LINE API...");
+      console.log("📊 [CHECKOUT] Receipt data:", receiptData);
+      
       const lineResponse = await fetch("/api/line/send-receipt", {
         method: "POST",
         headers: {
@@ -722,6 +674,8 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify(receiptData),
       });
+      
+      console.log("📡 [CHECKOUT] LINE API response status:", lineResponse.status);
 
       let lineSuccess = false;
       let lineSkipped = false;
@@ -729,19 +683,20 @@ export default function CheckoutPage() {
       try {
         if (lineResponse.ok) {
           const lineResult = await lineResponse.json();
+          console.log("✅ [CHECKOUT] LINE Response:", lineResult);
           if (lineResult.success) {
             lineSuccess = true;
-            console.log("Receipt sent to LINE successfully");
+            console.log("✅ [CHECKOUT] Receipt sent to LINE successfully");
           } else if (lineResult.skipLine) {
             lineSkipped = true;
-            console.warn("LINE messaging is not configured");
+            console.warn("⚠️ [CHECKOUT] LINE messaging is not configured");
           }
         } else {
           try {
             const errorText = await lineResponse.text();
-            console.error("Failed to send receipt to LINE:", errorText);
+            console.error("❌ [CHECKOUT] Failed to send receipt to LINE:", errorText);
           } catch (textError) {
-            console.error("Failed to send receipt to LINE (status:", lineResponse.status, ")");
+            console.error("❌ [CHECKOUT] Failed to send receipt to LINE (status:", lineResponse.status, ")");
           }
         }
       } catch (lineError) {
@@ -755,16 +710,15 @@ export default function CheckoutPage() {
       // Clear cart
       clearCartStorage();
 
-      setSnackbar({
-        open: true,
-        message: lineSuccess 
+      showSnackbar(
+        lineSuccess 
           ? "สั่งซื้อสำเร็จ! ใบเสร็จส่งไปยัง LINE แล้ว 🎉"
           : lineSkipped
           ? "สั่งซื้อสำเร็จ! (LINE messaging ยังไม่ได้ตั้งค่า)"
           : "สั่งซื้อสำเร็จ! กำลังเปลี่ยนหน้า...",
-        severity: "success",
-      });
-      setSnackbarKey((k) => k + 1);
+        "success"
+      );
+      
       
       // ทำให้ปุ่มชำระเงิน disabled ทันทีหลังจากสำเร็จ
       setOrderSuccessful(true);
@@ -800,12 +754,8 @@ export default function CheckoutPage() {
         }
       }
       
-      setSnackbar({
-        open: true,
-        message: errorMessage,
-        severity: "error",
-      });
-      setSnackbarKey((k) => k + 1);
+      showSnackbar(errorMessage, "error");
+      
       
       // รีเซ็ต isProcessingOrder เมื่อเกิด error เพื่อให้สามารถลองใหม่ได้
       setIsProcessingOrder(false);
@@ -837,19 +787,25 @@ export default function CheckoutPage() {
         sx={{
           minHeight: "100vh",
           backgroundColor: colors.background.default,
-          p: 3,
+          p: { xs: 1, sm: 2, md: 3 },
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", mb: { xs: 1.5, sm: 2, md: 3 } }}>
           <IconButton onClick={() => router.back()} sx={{ mr: 2 }}>
             <ArrowBack />
           </IconButton>
-          <Typography variant="h5" sx={{ fontWeight: "bold" }}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: "bold",
+              fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' }
+            }}
+          >
             ชำระเงิน
           </Typography>
         </Box>
         <Card>
-          <CardContent sx={{ textAlign: "center", py: 8 }}>
+          <CardContent sx={{ textAlign: "center", py: { xs: 4, sm: 6, md: 8 } }}>
             <Typography variant="h6" sx={{ mb: 2 }}>
               ตะกร้าสินค้าว่างเปล่า
             </Typography>
@@ -970,14 +926,14 @@ export default function CheckoutPage() {
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           zIndex: 100,
-          py: 3,
+          py: { xs: 1.5, sm: 2, md: 3 },
           borderBottom: "1px solid rgba(0,0,0,0.06)",
         }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+        <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto" }}>
           <Box
             sx={{
-              px: 3,
+              px: { xs: 0.5, sm: 1, md: 3 },
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -1016,37 +972,45 @@ export default function CheckoutPage() {
       <Box
         sx={{
           backgroundColor: "white",
-          py: 4,
+          py: { xs: 1.5, sm: 2.5, md: 4 },
           mb: 1,
-          borderBottom: "8px solid " + colors.background.default,
+          borderBottom: { xs: "4px solid " + colors.background.default, sm: "6px solid " + colors.background.default, md: "8px solid " + colors.background.default },
         }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
-          <Box sx={{ px: 3 }}>
+        <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto" }}>
+          <Box sx={{ px: { xs: 0.5, sm: 1, md: 3 } }}>
           <Typography
             variant="h6"
-            sx={{ mb: 3, fontWeight: 600, color: colors.text.primary }}
+            sx={{ 
+              mb: { xs: 1.5, sm: 2, md: 3 }, 
+              fontWeight: 600, 
+              color: colors.text.primary,
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+            }}
           >
             รายการสินค้า
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
+        <Box sx={{ display: "flex", flexDirection: "column", px: { xs: 0.5, sm: 1, md: 0 } }}>
           {cartItems.map((item, index) => (
             <Box
               key={item.product.id}
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 3,
-                py: 2,
-                px: 1,
+                gap: { xs: 2, sm: 2.5, md: 3 },
+                py: { xs: 1.5, sm: 2 },
+                px: { xs: 1, sm: 1.5, md: 2 },
                 borderTop: index > 0 ? "1px solid rgba(0,0,0,0.05)" : "none",
+                backgroundColor: index % 2 === 0 ? "transparent" : "rgba(0,0,0,0.01)",
+                borderRadius: { xs: 2, sm: 3 },
+                mb: { xs: 0.5, sm: 1 },
               }}
             >
               <Box
                 sx={{
-                  width: 64,
-                  height: 64,
+                  width: { xs: 56, sm: 64, md: 72 },
+                  height: { xs: 56, sm: 64, md: 72 },
                   borderRadius: 2,
                   background: `linear-gradient(135deg, ${getCardBgColor(item.product.id)} 0%, ${getCardBgColor(item.product.id)}DD 100%)`,
                   display: "flex",
@@ -1085,16 +1049,28 @@ export default function CheckoutPage() {
               <Box sx={{ flex: 1 }}>
                 <Typography
                   variant="subtitle1"
-                  sx={{ fontWeight: 600, mb: 0.5 }}
+                  sx={{ 
+                    fontWeight: 600, 
+                    mb: 0.5,
+                    fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                    lineHeight: 1.2
+                  }}
                 >
                   {item.product.name}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary" 
+                  sx={{ 
+                    mb: 1,
+                    fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' }
+                  }}
+                >
                   ฿{calculateUnitPrice(item.product).toLocaleString()} ต่อชิ้น
                 </Typography>
                 
                 {/* ควบคุมจำนวนสินค้า */}
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1, mt: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: { xs: 0.5, sm: 1 }, mt: 1 }}>
                   <IconButton
                     size="small"
                     onClick={() => handleUpdateQuantity(item.product.id, item.quantity - 1)}
@@ -1111,10 +1087,11 @@ export default function CheckoutPage() {
                   <Typography
                     variant="body1"
                     sx={{
-                      minWidth: 40,
+                      minWidth: { xs: 32, sm: 40 },
                       textAlign: "center",
                       fontWeight: 600,
-                      px: 1,
+                      px: { xs: 0.5, sm: 1 },
+                      fontSize: { xs: '0.9rem', sm: '1rem' }
                     }}
                   >
                     {item.quantity}
@@ -1137,9 +1114,11 @@ export default function CheckoutPage() {
                     size="small"
                     onClick={() => handleRemoveItem(item.product.id)}
                     sx={{
-                      ml: 1,
+                      ml: { xs: 0.5, sm: 1 },
                       color: "#f44336",
                       "&:hover": { backgroundColor: "#f4433610" },
+                      width: { xs: 32, sm: 40 },
+                      height: { xs: 32, sm: 40 }
                     }}
                   >
                     <Delete fontSize="small" />
@@ -1150,20 +1129,33 @@ export default function CheckoutPage() {
                 <Typography 
                   variant="caption" 
                   color="text.secondary"
-                  sx={{ mt: 0.5, display: "block" }}
+                  sx={{ 
+                    mt: 0.5, 
+                    display: "block",
+                    fontSize: { xs: '0.7rem', sm: '0.75rem' }
+                  }}
                 >
                   สต็อกคงเหลือ: {item.product.stock || 0} ชิ้น
                 </Typography>
               </Box>
               
-              <Box sx={{ textAlign: "right" }}>
+              <Box sx={{ textAlign: "right", minWidth: { xs: 80, sm: 100 } }}>
                 <Typography
                   variant="h6"
-                  sx={{ fontWeight: 700, color: colors.primary.main }}
+                  sx={{ 
+                    fontWeight: 700, 
+                    color: colors.primary.main,
+                    fontSize: { xs: '1rem', sm: '1.1rem', md: '1.25rem' },
+                    lineHeight: 1.2
+                  }}
                 >
                   ฿{(calculateUnitPrice(item.product) * item.quantity).toLocaleString()}
                 </Typography>
-                <Typography variant="caption" color="text.secondary">
+                <Typography 
+                  variant="caption" 
+                  color="text.secondary"
+                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                >
                   รวม {item.quantity} ชิ้น
                 </Typography>
               </Box>
@@ -1177,16 +1169,20 @@ export default function CheckoutPage() {
       <Box
         sx={{
           backgroundColor: "white",
-          py: 4,
+          py: { xs: 1.5, sm: 2.5, md: 4 },
           mb: 1,
-          borderBottom: "8px solid " + colors.background.default,
+          borderBottom: { xs: "4px solid " + colors.background.default, sm: "6px solid " + colors.background.default, md: "8px solid " + colors.background.default },
         }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
-          <Box sx={{ px: 3, mb: 3 }}>
+        <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto" }}>
+          <Box sx={{ px: { xs: 0.5, sm: 1, md: 3 }, mb: { xs: 1.5, sm: 2, md: 3 } }}>
           <Typography
             variant="h6"
-            sx={{ fontWeight: 600, color: colors.text.primary }}
+            sx={{ 
+              fontWeight: 600, 
+              color: colors.text.primary,
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+            }}
           >
             การจัดส่ง
           </Typography>
@@ -1199,20 +1195,19 @@ export default function CheckoutPage() {
           <RadioGroup
             value={selectedShipping}
             onChange={(e) => setSelectedShipping(e.target.value)}
-            sx={{ gap: 1 }}
+            sx={{ gap: { xs: 0.5, sm: 1 }, px: { xs: 0.5, sm: 1, md: 0 } }}
           >
             {filteredShippingOptions.map((option) => (
               <Box
                 key={option.id}
                 sx={{
-                  ml:2,
-                  mr:2,
+                  mx: { xs: 0, sm: 1, md: 2 },
                   border:
                     selectedShipping === option.id
                       ? `2px solid ${colors.primary.main}`
                       : "2px solid transparent",
                   borderRadius: 3,
-                  p: 2,
+                  p: { xs: 1, sm: 1.5, md: 2 },
                   backgroundColor:
                     selectedShipping === option.id
                       ? `${colors.primary.main}08`
@@ -1265,11 +1260,11 @@ export default function CheckoutPage() {
         sx={{
           backgroundColor: "white",
           mb: 1,
-          borderBottom: "8px solid " + colors.background.default,
+          borderBottom: { xs: "4px solid " + colors.background.default, sm: "6px solid " + colors.background.default, md: "8px solid " + colors.background.default },
           overflow: "hidden",
         }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+        <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto" }}>
           {/* Header ที่คลิกได้ */}
           <Box
             onClick={() => setShowDiscountSection(!showDiscountSection)}
@@ -1345,7 +1340,7 @@ export default function CheckoutPage() {
               </Box>
             ) : (
               <>
-                <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+                <Box sx={{ display: "flex", gap: { xs: 0.5, sm: 1, md: 2 }, mb: 3 }}>
                   <TextField
                     fullWidth
                     placeholder="กรอกรหัสส่วนลด"
@@ -1407,16 +1402,20 @@ export default function CheckoutPage() {
       <Box
         sx={{
           backgroundColor: "white",
-          py: 4,
+          py: { xs: 1.5, sm: 2.5, md: 4 },
           mb: 1,
-          borderBottom: "8px solid " + colors.background.default,
+          borderBottom: { xs: "4px solid " + colors.background.default, sm: "6px solid " + colors.background.default, md: "8px solid " + colors.background.default },
         }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
-          <Box sx={{ px: 3, mb: 3 }}>
+        <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto" }}>
+          <Box sx={{ px: { xs: 0.5, sm: 1, md: 3 }, mb: { xs: 1.5, sm: 2, md: 3 } }}>
           <Typography
             variant="h6"
-            sx={{ fontWeight: 600, color: colors.text.primary }}
+            sx={{ 
+              fontWeight: 600, 
+              color: colors.text.primary,
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+            }}
           >
             วิธีชำระเงิน
           </Typography>
@@ -1429,7 +1428,7 @@ export default function CheckoutPage() {
           <RadioGroup
             value={selectedPayment}
             onChange={(e) => setSelectedPayment(e.target.value)}
-            sx={{ gap: 1 }}
+            sx={{ gap: { xs: 0.5, sm: 1 }, px: { xs: 0.5, sm: 1, md: 0 } }}
           >
             {paymentMethods.map((method) => {
               const getPaymentIcon = () => {
@@ -1456,8 +1455,8 @@ export default function CheckoutPage() {
                         ? `2px solid ${colors.primary.main}`
                         : "2px solid transparent",
                     borderRadius: 3,
-                    p: 2,
-                    mx: 3,
+                    p: { xs: 1, sm: 1.5, md: 2 },
+                    mx: { xs: 0, sm: 1, md: 2 },
                     backgroundColor:
                       selectedPayment === method.id
                         ? `${colors.primary.main}08`
@@ -1520,17 +1519,21 @@ export default function CheckoutPage() {
       <Box
         sx={{
           backgroundColor: "white",
-          py: 4,
+          py: { xs: 1.5, sm: 2.5, md: 4 },
           mb: 1,
-          borderBottom: "8px solid " + colors.background.default,
+          borderBottom: { xs: "4px solid " + colors.background.default, sm: "6px solid " + colors.background.default, md: "8px solid " + colors.background.default },
         }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
-          <Box sx={{ px: 3, mb: 3 }}>
+        <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto" }}>
+          <Box sx={{ px: { xs: 0.5, sm: 1, md: 3 }, mb: { xs: 1.5, sm: 2, md: 3 } }}>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
             <Typography
               variant="h6"
-              sx={{ fontWeight: 600, color: colors.text.primary }}
+              sx={{ 
+                fontWeight: 600, 
+                color: colors.text.primary,
+                fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+              }}
             >
               ข้อมูลการจัดส่ง
             </Typography>
@@ -1549,7 +1552,7 @@ export default function CheckoutPage() {
             </Typography>
           )}
         </Box>
-        <Box sx={{ px: 3, display: "flex", flexDirection: "column", gap: 2.5 }}>
+        <Box sx={{ px: { xs: 0.5, sm: 1, md: 3 }, display: "flex", flexDirection: "column", gap: { xs: 1.5, sm: 2, md: 2.5 } }}>
           <TextField
             fullWidth
             label="ชื่อ-นามสกุล"
@@ -1562,10 +1565,13 @@ export default function CheckoutPage() {
               "& .MuiOutlinedInput-root": {
                 borderRadius: 3,
                 backgroundColor: colors.background.default,
+                "& input": {
+                  padding: { xs: "12px 14px", sm: "14px 16px", md: "16px 14px" }
+                }
               },
             }}
           />
-          <Box sx={{ display: "flex", gap: 2 }}>
+          <Box sx={{ display: "flex", gap: { xs: 1, sm: 1.5, md: 2 } }}>
             <TextField
               fullWidth
               label="อีเมล"
@@ -1585,6 +1591,9 @@ export default function CheckoutPage() {
                     `${colors.primary.main}08` : colors.background.default,
                   borderColor: userProfileLoaded && customerInfo.email ? 
                     `${colors.primary.main}30` : undefined,
+                  "& input": {
+                    padding: { xs: "12px 14px", sm: "14px 16px", md: "16px 14px" }
+                  }
                 },
               }}
             />
@@ -1622,6 +1631,9 @@ export default function CheckoutPage() {
                     `${colors.primary.main}08` : colors.background.default,
                   borderColor: userProfileLoaded && customerInfo.phone ? 
                     `${colors.primary.main}30` : undefined,
+                  "& input": {
+                    padding: { xs: "12px 14px", sm: "14px 16px", md: "16px 14px" }
+                  }
                 },
               }}
             />
@@ -1643,10 +1655,13 @@ export default function CheckoutPage() {
               "& .MuiOutlinedInput-root": {
                 borderRadius: 3,
                 backgroundColor: colors.background.default,
+                "& input": {
+                  padding: { xs: "12px 14px", sm: "14px 16px", md: "16px 14px" }
+                }
               },
             }}
           />
-          <Box sx={{ display: "flex", gap: 2 }}>
+          <Box sx={{ display: "flex", gap: { xs: 1, sm: 1.5, md: 2 } }}>
             <TextField
               fullWidth
               label="จังหวัด"
@@ -1690,11 +1705,11 @@ export default function CheckoutPage() {
             backgroundColor: "white",
             py: 4,
             mb: 1,
-            borderBottom: "8px solid " + colors.background.default,
+            borderBottom: { xs: "4px solid " + colors.background.default, sm: "6px solid " + colors.background.default, md: "8px solid " + colors.background.default },
           }}
         >
-          <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
-            <Box sx={{ px: 3, mb: 3 }}>
+          <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto" }}>
+            <Box sx={{ px: { xs: 0.5, sm: 1, md: 3 }, mb: 3 }}>
             <Typography
               variant="h6"
               sx={{ fontWeight: 600, color: colors.text.primary }}
@@ -1703,7 +1718,7 @@ export default function CheckoutPage() {
             </Typography>
           </Box>
           
-          <Box sx={{ px: 3 }}>
+          <Box sx={{ px: { xs: 0.5, sm: 1, md: 3 } }}>
             {/* รายการคำนวณ */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -1764,7 +1779,7 @@ export default function CheckoutPage() {
                     sx={{ 
                       fontWeight: 600, 
                       color: colors.primary.main,
-                      mb: 2,
+                      mb: { xs: 1, sm: 1.5, md: 2 },
                       textAlign: "center"
                     }}
                   >
@@ -1879,7 +1894,7 @@ export default function CheckoutPage() {
           
         }}
       >
-        <Container maxWidth={false} sx={{ maxWidth: "1200px", mx: "auto" }}>
+        <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto", px: { xs: 0.5, sm: 1, md: 3 } }}>
 
         <Button
           fullWidth
@@ -1917,114 +1932,7 @@ export default function CheckoutPage() {
       </Box>
 
       {/* Snackbar */}
-      <Snackbar
-        key={snackbarKey}
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
-        TransitionComponent={SlideUpTransition}
-        sx={{ pointerEvents: "none" }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant="standard"
-          icon={false}
-          sx={{
-            pointerEvents: "all",
-            width: "auto",
-            maxWidth: "min(480px, calc(100vw - 32px))",
-            px: 2,
-            py: 1.25,
-            borderRadius: 3,
-            boxShadow:
-              snackbar.severity === "success"
-                ? "0 20px 40px rgba(46,125,50,0.18)"
-                : snackbar.severity === "warning"
-                ? "0 20px 40px rgba(240,180,0,0.18)"
-                : snackbar.severity === "error"
-                ? "0 20px 40px rgba(211,47,47,0.18)"
-                : "0 20px 40px rgba(25,118,210,0.18)",
-            backdropFilter: "saturate(180%) blur(12px)",
-            WebkitBackdropFilter: "saturate(180%) blur(12px)",
-            backgroundColor:
-              snackbar.severity === "success"
-                ? "rgba(46, 125, 50, 0.12)"
-                : snackbar.severity === "warning"
-                ? "rgba(240, 180, 0, 0.12)"
-                : snackbar.severity === "error"
-                ? "rgba(211, 47, 47, 0.12)"
-                : "rgba(25, 118, 210, 0.12)",
-            backgroundImage:
-              "linear-gradient(135deg, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.15) 100%)",
-            backgroundBlendMode: "overlay",
-            color:
-              snackbar.severity === "success"
-                ? "#1b5e20"
-                : snackbar.severity === "warning"
-                ? "#7a5c00"
-                : snackbar.severity === "error"
-                ? "#8e0000"
-                : "#0d47a1",
-            border:
-              snackbar.severity === "success"
-                ? "1px solid rgba(46, 125, 50, 0.28)"
-                : snackbar.severity === "warning"
-                ? "1px solid rgba(240, 180, 0, 0.28)"
-                : snackbar.severity === "error"
-                ? "1px solid rgba(211, 47, 47, 0.28)"
-                : "1px solid rgba(25, 118, 210, 0.28)",
-            borderLeft:
-              snackbar.severity === "success"
-                ? "4px solid rgba(46, 125, 50, 0.65)"
-                : snackbar.severity === "warning"
-                ? "4px solid rgba(240, 180, 0, 0.65)"
-                : snackbar.severity === "error"
-                ? "4px solid rgba(211, 47, 47, 0.65)"
-                : "4px solid rgba(25, 118, 210, 0.65)",
-            fontWeight: 600,
-            letterSpacing: 0.2,
-          }}
-        >
-          {snackbar.message}
-          <Box
-            sx={{
-              mt: 0.75,
-              height: 2,
-              borderRadius: 2,
-              backgroundColor:
-                snackbar.severity === "success"
-                  ? "rgba(46,125,50,0.2)"
-                  : snackbar.severity === "warning"
-                  ? "rgba(240,180,0,0.2)"
-                  : snackbar.severity === "error"
-                  ? "rgba(211,47,47,0.2)"
-                  : "rgba(25,118,210,0.2)",
-              overflow: "hidden",
-              position: "relative",
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                left: 0,
-                top: 0,
-                bottom: 0,
-                width: "100%",
-                backgroundColor:
-                  snackbar.severity === "success"
-                    ? "rgba(46,125,50,0.6)"
-                    : snackbar.severity === "warning"
-                    ? "rgba(240,180,0,0.6)"
-                    : snackbar.severity === "error"
-                    ? "rgba(211,47,47,0.6)"
-                    : "rgba(25,118,210,0.6)",
-                transformOrigin: "left",
-                animation: `${snackGrowAnimation} 3s linear forwards`,
-              },
-            }}
-          />
-        </Alert>
-      </Snackbar>
+      <SnackbarComponent />
 
       {/* Dialog ยืนยันการลบสินค้า */}
       <Dialog

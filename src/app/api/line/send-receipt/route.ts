@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
               `คำสั่งซื้อ: #${receiptData.orderNumber}\n` +
               `ลูกค้า: ${receiptData.customerName}\n` +
               `ยอดเงิน: ฿${receiptData.total.toLocaleString()}\n` +
-              `กรุณาเข้าดูรายละเอียดและแจ้งชำระเงินที่: https://corgi.theredpotion.com/profile`
+              `กรุณาเข้าดูรายละเอียดและแจ้งชำระเงินที่: ${process.env.NEXTAUTH_URL || "https://corgi.theredpotion.com" || "https://red1.theredpotion.com"}/profile`
       };
       
       console.log("🔄 Using fallback text message");

@@ -38,6 +38,21 @@ export default function RootLayout({
   return (
     <html lang="th" suppressHydrationWarning>
       <head>
+        {/* Google tag (gtag.js) */}
+        <script 
+          async 
+          src="https://www.googletagmanager.com/gtag/js?id=G-HC3MM6TD4E"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-HC3MM6TD4E');
+            `,
+          }}
+        />
         <script 
           src="https://static.line-scdn.net/liff/edge/2/sdk.js"
           async
