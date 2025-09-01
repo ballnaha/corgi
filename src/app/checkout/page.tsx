@@ -256,7 +256,7 @@ export default function CheckoutPage() {
     }
 
     setConfirmDialog({ open: false, productName: "", productId: "" });
-    showSnackbar("ลบสินค้าออกจากตะกร้าแล้ว", "success");
+    showSnackbar("ลบสินค้าออกจากตะกร้า", "success");
 
     // ถ้าตะกร้าว่าง ให้กลับไปหน้าหลัก
     if (updatedItems.length === 0) {

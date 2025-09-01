@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "next build && npm run sitemap:generate",
+    "build:only": "next build",
+    "sitemap:generate": "echo 'Sitemap will be generated automatically by Next.js during build'",
     "start": "next start",
     "lint": "next lint",
     "db:setup": "node scripts/setup-database.js",

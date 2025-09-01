@@ -199,7 +199,7 @@ export default function ShopPage() {
     setCartItems((prevItems) =>
       prevItems.filter((item) => item.product.id !== productId)
     );
-    showSnackbar("ลบสินค้าออกจากตะกร้าแล้ว", "error");
+    showSnackbar("ลบสินค้าออกจากตะกร้า", "error");
   };
 
   const handleToggleFavorite = (productId: string) => {

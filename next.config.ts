@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true, // Disable ESLint during build
   },
+  serverExternalPackages: ['@prisma/client'], // For sitemap generation
   images: {
     remotePatterns: [
       {
