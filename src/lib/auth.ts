@@ -14,6 +14,7 @@ declare module "next-auth" {
       displayName?: string | null;
       role?: string;
       isAdmin?: boolean;
+      provider?: string;
     };
   }
 
@@ -32,6 +33,7 @@ declare module "next-auth/jwt" {
     displayName?: string;
     role?: string;
     isAdmin?: boolean;
+    provider?: string;
   }
 }
 
@@ -78,6 +80,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account, profile }) {
       if (account && user) {
         token.lineUserId = user.lineUserId;
+        token.provider = account.provider;
 
         // Create or update user in database after successful LINE login
         try {
@@ -186,6 +189,7 @@ export const authOptions: NextAuthOptions = {
         session.user.displayName = token.displayName;
         session.user.role = token.role;
         session.user.isAdmin = token.isAdmin;
+        session.user.provider = token.provider;
       }
       return session;
     },
