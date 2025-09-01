@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  // Skip middleware completely for static assets and uploads
+  // Skip middleware completely for static assets, uploads, and SEO files
   if (request.nextUrl.pathname.startsWith('/uploads/') ||
       request.nextUrl.pathname.startsWith('/images/') ||
       request.nextUrl.pathname.startsWith('/_next/') ||
       request.nextUrl.pathname.startsWith('/api/') ||
+      request.nextUrl.pathname === '/sitemap.xml' ||
+      request.nextUrl.pathname === '/robots.txt' ||
       request.nextUrl.pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf|eot)$/)) {
     return NextResponse.next();
   }
@@ -34,7 +36,8 @@ export async function middleware(request: NextRequest) {
     '/test-order',
     '/payment-notification',
     '/order-success',
-
+    '/sitemap.xml',
+    '/robots.txt',
     '/unauthorized',
     '/',
     '/liff',
@@ -126,6 +129,6 @@ export const config = {
      * - payment-notification (for payment upload)
      * - order-success (for order success page)
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|auth|images|product|shop|home|blog|uploads|checkout|profile|favorites|line-test|debug|test-order|payment-notification|order-success).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|auth|images|product|shop|home|blog|uploads|checkout|profile|favorites|line-test|debug|test-order|payment-notification|order-success|sitemap.xml|robots.txt).*)",
   ],
 };
