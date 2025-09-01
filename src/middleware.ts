@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Skip middleware completely for static assets and uploads
+  if (request.nextUrl.pathname.startsWith('/uploads/') ||
+      request.nextUrl.pathname.startsWith('/images/') ||
+      request.nextUrl.pathname.startsWith('/_next/') ||
+      request.nextUrl.pathname.startsWith('/api/') ||
+      request.nextUrl.pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|woff|woff2|ttf|eot)$/)) {
+    return NextResponse.next();
+  }
+  
   // Skip middleware completely for blog routes (make them fully public like /home)
   if (request.nextUrl.pathname.startsWith('/blog')) {
     return NextResponse.next();

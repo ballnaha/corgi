@@ -7,6 +7,7 @@ import Image from "next/image";
 import { colors } from "@/theme/colors";
 import { Product } from "@/types";
 import { LocationOn } from "@mui/icons-material";
+import { getProductImageUrl } from "@/utils/imageUtils";
 
 interface ProductCardProps {
   product: Product;
@@ -121,7 +122,7 @@ export default function ProductCard({
       >
                  <CardMedia
           component="img"
-          image={product.image || product.imageUrl || ""}
+          image={getProductImageUrl(product)}
           alt={product.name}
           sx={{
             objectFit: "contain",

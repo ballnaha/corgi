@@ -1,222 +1,107 @@
 /**
- * Image utilities for cropping and resizing images
+ * Utility functions for handling image URLs in production and development
  */
-
-export interface CropArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface ResizeOptions {
-  maxWidth?: number;
-  maxHeight?: number;
-  quality?: number;
-  format?: 'jpeg' | 'png' | 'webp';
-}
 
 /**
- * Create a cropped canvas from an image element and crop area
+ * Get optimized image URL that works in both development and production
+ * @param imagePath - The original image path (e.g., "/uploads/products/image.jpg")
+ * @param fallbackToApi - Whether to use API route as fallback for production
+ * @returns Optimized image URL
  */
-export const createCroppedCanvas = (
-  image: HTMLImageElement,
-  cropArea: CropArea,
-  targetWidth: number = cropArea.width,
-  targetHeight: number = cropArea.height
-): HTMLCanvasElement => {
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
+export function getImageUrl(imagePath: string | null | undefined, fallbackToApi: boolean = true): string {
+  if (!imagePath) return '';
   
-  if (!ctx) {
-    throw new Error('Could not get canvas context');
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
   }
 
-  // Set canvas size to target dimensions
-  canvas.width = targetWidth;
-  canvas.height = targetHeight;
-
-  // Draw the cropped image
-  ctx.drawImage(
-    image,
-    cropArea.x,
-    cropArea.y,
-    cropArea.width,
-    cropArea.height,
-    0,
-    0,
-    targetWidth,
-    targetHeight
-  );
-
-  return canvas;
-};
+  // Ensure path starts with /
+  const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  
+  // In production, if fallbackToApi is true, use the API route
+  if (typeof window !== 'undefined' && fallbackToApi && process.env.NODE_ENV === 'production') {
+    // For client-side in production, try static first, fallback to API
+    return normalizedPath;
+  }
+  
+  // For development or when not using API fallback, use direct path
+  return normalizedPath;
+}
 
 /**
- * Convert canvas to blob
+ * Get product image URL with proper fallback handling
+ * @param product - Product object with image or images array
+ * @returns Main product image URL
  */
-export const canvasToBlob = (
-  canvas: HTMLCanvasElement,
-  format: 'jpeg' | 'png' | 'webp' = 'jpeg',
-  quality: number = 0.9
-): Promise<Blob | null> => {
+export function getProductImageUrl(product: {
+  image?: string;
+  imageUrl?: string | null;
+  images?: Array<{ imageUrl: string; isMain?: boolean }>;
+}): string {
+  // Priority: main image from images array > first image > imageUrl > image
+  const mainImage = product.images?.find(img => img.isMain)?.imageUrl ||
+                   product.images?.[0]?.imageUrl ||
+                   product.imageUrl ||
+                   product.image ||
+                   '';
+  
+  return getImageUrl(mainImage);
+}
+
+/**
+ * Preload critical images for better performance
+ * @param imageUrls - Array of image URLs to preload
+ */
+export function preloadImages(imageUrls: string[]): void {
+  if (typeof window === 'undefined') return;
+  
+  imageUrls.forEach(url => {
+    if (url) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = getImageUrl(url);
+      document.head.appendChild(link);
+    }
+  });
+}
+
+/**
+ * Check if image URL is valid and accessible
+ * @param imageUrl - Image URL to check
+ * @returns Promise resolving to boolean indicating if image is accessible
+ */
+export async function isImageAccessible(imageUrl: string): Promise<boolean> {
+  if (!imageUrl) return false;
+  
+  try {
+    const response = await fetch(getImageUrl(imageUrl), { method: 'HEAD' });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get image dimensions from URL
+ * @param imageUrl - Image URL
+ * @returns Promise resolving to {width, height} or null if failed
+ */
+export function getImageDimensions(imageUrl: string): Promise<{width: number; height: number} | null> {
   return new Promise((resolve) => {
-    canvas.toBlob(
-      (blob) => resolve(blob),
-      `image/${format}`,
-      quality
-    );
-  });
-};
-
-/**
- * Convert canvas to file
- */
-export const canvasToFile = async (
-  canvas: HTMLCanvasElement,
-  filename: string,
-  format: 'jpeg' | 'png' | 'webp' = 'jpeg',
-  quality: number = 0.9
-): Promise<File | null> => {
-  const blob = await canvasToBlob(canvas, format, quality);
-  if (!blob) return null;
-
-  return new File([blob], filename, {
-    type: `image/${format}`,
-    lastModified: Date.now(),
-  });
-};
-
-/**
- * Load image from file
- */
-export const loadImageFromFile = (file: File): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
-  });
-};
-
-/**
- * Calculate crop area for 16:9 aspect ratio
- */
-export const calculateAspectRatioCrop = (
-  imageWidth: number,
-  imageHeight: number,
-  aspectWidth: number = 16,
-  aspectHeight: number = 9
-): CropArea => {
-  const targetRatio = aspectWidth / aspectHeight;
-  const imageRatio = imageWidth / imageHeight;
-
-  let width, height, x, y;
-
-  if (imageRatio > targetRatio) {
-    // Image is wider than target ratio
-    height = imageHeight;
-    width = height * targetRatio;
-    x = (imageWidth - width) / 2;
-    y = 0;
-  } else {
-    // Image is taller than target ratio
-    width = imageWidth;
-    height = width / targetRatio;
-    x = 0;
-    y = (imageHeight - height) / 2;
-  }
-
-  return { x, y, width, height };
-};
-
-/**
- * Resize image while maintaining aspect ratio
- */
-export const resizeImage = (
-  image: HTMLImageElement,
-  options: ResizeOptions = {}
-): HTMLCanvasElement => {
-  const { maxWidth = 1600, maxHeight = 900, quality = 0.9 } = options;
-  
-  let { width, height } = image;
-  
-  // Calculate new dimensions while maintaining aspect ratio
-  if (width > maxWidth) {
-    height = (height * maxWidth) / width;
-    width = maxWidth;
-  }
-  
-  if (height > maxHeight) {
-    width = (width * maxHeight) / height;
-    height = maxHeight;
-  }
-  
-  const canvas = document.createElement('canvas');
-  const ctx = canvas.getContext('2d');
-  
-  if (!ctx) {
-    throw new Error('Could not get canvas context');
-  }
-  
-  canvas.width = width;
-  canvas.height = height;
-  
-  // Use image smoothing for better quality
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  
-  ctx.drawImage(image, 0, 0, width, height);
-  
-  return canvas;
-};
-
-/**
- * Get image dimensions from file
- */
-export const getImageDimensions = (file: File): Promise<{ width: number; height: number }> => {
-  return new Promise((resolve, reject) => {
+    if (!imageUrl) {
+      resolve(null);
+      return;
+    }
+    
     const img = new Image();
     img.onload = () => {
       resolve({ width: img.naturalWidth, height: img.naturalHeight });
-      URL.revokeObjectURL(img.src);
     };
-    img.onerror = reject;
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      resolve(null);
+    };
+    img.src = getImageUrl(imageUrl);
   });
-};
-
-/**
- * Check if image needs cropping for 16:9 ratio
- */
-export const needsCropping = (width: number, height: number, tolerance: number = 0.1): boolean => {
-  const currentRatio = width / height;
-  const targetRatio = 16 / 9;
-  const difference = Math.abs(currentRatio - targetRatio);
-  
-  return difference > tolerance;
-};
-
-/**
- * Validate image file
- */
-export const validateImageFile = (file: File): { isValid: boolean; error?: string } => {
-  // Check file type
-  if (!file.type.startsWith('image/')) {
-    return { isValid: false, error: 'ไฟล์ต้องเป็นรูปภาพเท่านั้น' };
-  }
-
-  // Check file size (max 10MB)
-  const maxSize = 10 * 1024 * 1024; // 10MB
-  if (file.size > maxSize) {
-    return { isValid: false, error: 'ไฟล์รูปภาพต้องมีขนาดไม่เกิน 10MB' };
-  }
-
-  // Check supported formats
-  const supportedFormats = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  if (!supportedFormats.includes(file.type)) {
-    return { isValid: false, error: 'รองรับเฉพาะไฟล์ JPEG, PNG และ WebP' };
-  }
-
-  return { isValid: true };
-};
+}

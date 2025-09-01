@@ -30,6 +30,7 @@ import Image from "next/image";
 import { colors } from "@/theme/colors";
 import { Product } from "@/types";
 import VaccinationSchedule from "./VaccinationSchedule";
+import { getImageUrl } from "@/utils/imageUtils";
 
 interface ProductDetailDesktopProps {
   product: Product;
@@ -70,9 +71,9 @@ export default function ProductDetailDesktop({
   // Use product images if available, otherwise use main image
   const productImages = React.useMemo(() => {
     if (product.images && product.images.length > 0) {
-      return product.images.map((img) => img.imageUrl);
+      return product.images.map((img) => getImageUrl(img.imageUrl));
     }
-    return [product.image || product.imageUrl || ""];
+    return [getImageUrl(product.image || product.imageUrl || "")];
   }, [product.images, product.image, product.imageUrl]);
 
 

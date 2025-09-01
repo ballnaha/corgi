@@ -44,6 +44,24 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Static file headers for uploads
+        source: "/uploads/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: "/uploads/:path*",
+        destination: "/uploads/:path*",
+      },
     ];
   },
 };
