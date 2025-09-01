@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
-import { headers } from "next/headers";
+
+interface RouteParams {
+  params: Promise<{ path: string[] }>;
+}
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: RouteParams
 ) {
+  const resolvedParams = await params;
   try {
-    const imagePath = params.path.join('/');
+    const imagePath = resolvedParams.path.join('/');
     
     // Security check: prevent directory traversal
     if (imagePath.includes('..') || imagePath.includes('\\')) {
@@ -52,7 +56,7 @@ export async function GET(
           break;
       }
 
-      return new NextResponse(fileBuffer, {
+      return new NextResponse(fileBuffer as unknown as BodyInit, {
         headers: {
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000, immutable',

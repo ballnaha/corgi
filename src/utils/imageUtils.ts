@@ -105,3 +105,189 @@ export function getImageDimensions(imageUrl: string): Promise<{width: number; he
     img.src = getImageUrl(imageUrl);
   });
 }
+
+/**
+ * Load image from file for cropping
+ * @param file - File object
+ * @returns Promise resolving to Image element
+ */
+export function loadImageFromFile(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Failed to load image'));
+    };
+    
+    img.src = url;
+  });
+}
+
+/**
+ * Create cropped canvas from image
+ * @param image - Source image element
+ * @param crop - Crop coordinates
+ * @param targetWidth - Optional target width for resizing
+ * @param targetHeight - Optional target height for resizing
+ * @returns Canvas element with cropped image
+ */
+export function createCroppedCanvas(
+  image: HTMLImageElement,
+  crop: { x: number; y: number; width: number; height: number },
+  targetWidth?: number,
+  targetHeight?: number
+): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  if (!ctx) {
+    throw new Error('Could not get canvas context');
+  }
+  
+  // Use target dimensions if provided, otherwise use crop dimensions
+  canvas.width = targetWidth || crop.width;
+  canvas.height = targetHeight || crop.height;
+  
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  
+  ctx.drawImage(
+    image,
+    crop.x,
+    crop.y,
+    crop.width,
+    crop.height,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+  
+  return canvas;
+}
+
+/**
+ * Convert canvas to file
+ * @param canvas - Canvas element
+ * @param fileName - Output file name
+ * @param type - Output type ('jpeg' or 'png')
+ * @param quality - Quality for JPEG (0-1)
+ * @returns Promise resolving to File object
+ */
+export function canvasToFile(
+  canvas: HTMLCanvasElement,
+  fileName: string,
+  type: 'jpeg' | 'png' = 'jpeg',
+  quality: number = 0.9
+): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const mimeType = type === 'png' ? 'image/png' : 'image/jpeg';
+    
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create blob from canvas'));
+          return;
+        }
+        
+        const file = new File([blob], fileName, { type: mimeType });
+        resolve(file);
+      },
+      mimeType,
+      type === 'jpeg' ? quality : undefined
+    );
+  });
+}
+
+/**
+ * Calculate aspect ratio crop
+ * @param aspectRatio - Target aspect ratio
+ * @param imageWidth - Image width
+ * @param imageHeight - Image height
+ * @returns Crop object
+ */
+export function calculateAspectRatioCrop(
+  aspectRatio: number,
+  imageWidth: number,
+  imageHeight: number
+): { x: number; y: number; width: number; height: number } {
+  const imageAspectRatio = imageWidth / imageHeight;
+  
+  let cropWidth: number;
+  let cropHeight: number;
+  
+  if (imageAspectRatio > aspectRatio) {
+    // Image is wider than target ratio
+    cropHeight = imageHeight;
+    cropWidth = cropHeight * aspectRatio;
+  } else {
+    // Image is taller than target ratio
+    cropWidth = imageWidth;
+    cropHeight = cropWidth / aspectRatio;
+  }
+  
+  const x = (imageWidth - cropWidth) / 2;
+  const y = (imageHeight - cropHeight) / 2;
+  
+  return { x, y, width: cropWidth, height: cropHeight };
+}
+
+/**
+ * Check if image needs cropping
+ * @param file - File object
+ * @param targetAspectRatio - Target aspect ratio
+ * @param tolerance - Tolerance for aspect ratio difference
+ * @returns Promise resolving to boolean
+ */
+export async function needsCropping(
+  file: File,
+  targetAspectRatio: number,
+  tolerance: number = 0.1
+): Promise<boolean> {
+  try {
+    const img = await loadImageFromFile(file);
+    const imageAspectRatio = img.width / img.height;
+    const difference = Math.abs(imageAspectRatio - targetAspectRatio);
+    return difference > tolerance;
+  } catch {
+    return true; // If we can't load the image, assume it needs cropping
+  }
+}
+
+/**
+ * Validate image file
+ * @param file - File to validate
+ * @returns Validation result
+ */
+export function validateImageFile(file: File): { isValid: boolean; error?: string } {
+  // Check if file exists
+  if (!file) {
+    return { isValid: false, error: 'ไม่พบไฟล์' };
+  }
+  
+  // Check file type
+  if (!file.type.startsWith('image/')) {
+    return { isValid: false, error: 'ไฟล์ต้องเป็นรูปภาพเท่านั้น' };
+  }
+  
+  // Check file size (10MB limit)
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    return { isValid: false, error: 'ไฟล์รูปภาพต้องมีขนาดไม่เกิน 10MB' };
+  }
+  
+  // Check supported formats
+  const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  if (!supportedTypes.includes(file.type)) {
+    return { isValid: false, error: 'รองรับเฉพาะไฟล์ JPG, PNG และ WebP เท่านั้น' };
+  }
+  
+  return { isValid: true };
+}
