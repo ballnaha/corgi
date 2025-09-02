@@ -23,6 +23,7 @@ import { useUserDisplayName } from "@/hooks/useUserDisplayName";
 import Link from "next/link";
 import Image from "next/image";
 import LineIcon from "./LineIcon";
+import { useRouter } from "next/navigation";
 
 const MobileHeader = styled(Box)(({ theme }) => ({
   padding: theme.spacing(2),
@@ -106,7 +107,7 @@ export default function Header({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
+  const router = useRouter();
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const query = event.target.value;
     setSearchQuery(query);
@@ -123,6 +124,10 @@ export default function Header({
 
   const handleLineLogin = () => {
     signIn("line", { callbackUrl: "/shop" });
+  };
+
+  const handleLogoClick = () => {
+    router.push('/home');
   };
 
   if (isMobile) {
@@ -228,7 +233,7 @@ export default function Header({
               </Box>
             )}
 
-            <Box sx={{ display: "flex", gap: 1 }}>
+            <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
               <IconButton
                 onClick={handleSearchToggle}
                 sx={{
@@ -279,6 +284,31 @@ export default function Header({
                   />
                 </Badge>
               </IconButton>
+
+              {/* Paw Icon for Mobile - Link to Favorites */}
+              <Link href="/favorites" style={{ textDecoration: "none" }}>
+                <IconButton
+                  sx={{
+                    backgroundColor: colors.background.default,
+                    color: colors.text.secondary,
+                    width: 40,
+                    height: 40,
+                    "&:hover": {
+                      backgroundColor: colors.background.accent,
+                    },
+                  }}
+                >
+                  <Image
+                    src="/images/icon-paw.png"
+                    alt="Favorites"
+                    width={20}
+                    height={20}
+                    style={{
+                      filter: "brightness(0) saturate(100%) invert(35%) sepia(75%) saturate(1676%) hue-rotate(15deg) brightness(97%) contrast(101%)",
+                    }}
+                  />
+                </IconButton>
+              </Link>
             </Box>
           </Box>
 
@@ -326,6 +356,7 @@ export default function Header({
                   width={140}
                   height={60}
                   style={{ objectFit: "contain" }}
+                  onClick={handleLogoClick}
                 />
               ) : (
                 <Typography
@@ -336,10 +367,10 @@ export default function Header({
                     fontSize: "1.5rem",
                   }}
                 >
-                  🐕 Corgi Shop
+                  🐕 What da dog
                 </Typography>
               )}
-              
+
               {/* Search Bar */}
               <SearchBox sx={{ width: 300, mt: 0 }}>
                 <SearchIconWrapper>
@@ -419,6 +450,31 @@ export default function Header({
                   />
                 </Badge>
               </IconButton>
+
+              {/* Paw Icon for Desktop - Link to Favorites */}
+              <Link href="/favorites" style={{ textDecoration: "none" }}>
+                <IconButton
+                  sx={{
+                    backgroundColor: colors.background.default,
+                    color: colors.text.secondary,
+                    width: 48,
+                    height: 48,
+                    "&:hover": {
+                      backgroundColor: colors.background.accent,
+                    },
+                  }}
+                >
+                  <Image
+                    src="/images/icon-paw.png"
+                    alt="Favorites"
+                    width={24}
+                    height={24}
+                    style={{
+                      filter: "brightness(0) saturate(100%) invert(35%) sepia(75%) saturate(1676%) hue-rotate(15deg) brightness(97%) contrast(101%)",
+                    }}
+                  />
+                </IconButton>
+              </Link>
 
               {/* User Avatar and Name - Show only when logged in */}
               {session?.user && (

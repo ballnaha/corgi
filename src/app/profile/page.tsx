@@ -1062,6 +1062,16 @@ export default function ProfilePage() {
               value={selectedCategory}
               label="กรองตามหมวดหมู่"
               onChange={(e) => setSelectedCategory(e.target.value)}
+              MenuProps={{
+                disableScrollLock: true,
+                PaperProps: {
+                  style: {
+                    maxHeight: 300,
+                    overflow: 'auto',
+                    overflowX: 'hidden',
+                  },
+                },
+              }}
               sx={{
                 borderRadius: { xs: 1.5, sm: 2 },
                 fontSize: { xs: "0.875rem", sm: "1rem" },
@@ -1103,6 +1113,16 @@ export default function ProfilePage() {
               value={statusFilter}
               label="กรองตามสถานะ"
               onChange={(e) => setStatusFilter(e.target.value)}
+              MenuProps={{
+                disableScrollLock: true,
+                PaperProps: {
+                  style: {
+                    maxHeight: 300,
+                    overflow: 'auto',
+                    overflowX: 'hidden',
+                  },
+                },
+              }}
               sx={{
                 borderRadius: { xs: 1.5, sm: 2 },
                 fontSize: { xs: "0.875rem", sm: "1rem" },
@@ -1818,7 +1838,9 @@ export default function ProfilePage() {
                                 transition: "all 0.2s ease",
                               }}
                             >
-                              แจ้งชำระเงิน
+                              {(order.paymentNotifications && order.paymentNotifications.length > 0) 
+                                ? "แจ้งชำระอีกครั้ง" 
+                                : "แจ้งชำระเงิน"}
                             </Button>
                           </Box>
                         )}
@@ -2965,7 +2987,9 @@ export default function ProfilePage() {
                       },
                     }}
                   >
-                    แจ้งชำระเงิน
+                    {(selectedOrder.paymentNotifications && selectedOrder.paymentNotifications.length > 0) 
+                      ? "แจ้งชำระอีกครั้ง" 
+                      : "แจ้งชำระเงิน"}
                   </Button>
                 )}
 

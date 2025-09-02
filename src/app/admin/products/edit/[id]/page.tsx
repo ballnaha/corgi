@@ -141,10 +141,13 @@ interface Category {
   description?: string;
 }
 
-export default function EditProductPage() {
+interface EditProductPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function EditProductPage({ params }: EditProductPageProps) {
   const router = useRouter();
-  const params = useParams();
-  const productId = params.id as string;
+  const { id: productId } = React.use(params);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 

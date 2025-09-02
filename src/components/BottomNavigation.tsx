@@ -60,7 +60,6 @@ export default function BottomNavigation({
   const tabs = [
     { id: "home", icon: "custom", label: "หน้าหลัก" },
     { id: "shop", icon: "custom", label: "ร้านค้า" },
-    { id: "favorites", icon: "custom", label: "รายการโปรด" },
     { id: "profile", icon: "custom", label: "ข้อมูลส่วนตัว" },
   ];
 

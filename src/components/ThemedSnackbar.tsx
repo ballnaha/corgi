@@ -94,6 +94,9 @@ export default function ThemedSnackbar({
           px: 3,
           py: 1.5,
           borderRadius: 3,
+          overflow: "hidden",
+          overflowX: "hidden",
+          overflowY: "hidden",
           
           // Modern shadow with theme colors
           boxShadow: `0 8px 32px ${snackbarColors.shadowColor}, 0 2px 8px rgba(0,0,0,0.05)`,
@@ -142,6 +145,11 @@ export default function ThemedSnackbar({
             fontSize: "inherit",
             fontWeight: "inherit",
             lineHeight: 1.4,
+            wordWrap: "break-word",
+            wordBreak: "break-word",
+            overflowWrap: "break-word",
+            whiteSpace: "pre-wrap",
+            overflow: "hidden",
           },
           
           // Animation
@@ -164,6 +172,15 @@ export default function ThemedSnackbar({
             px: 2,
             py: 1.25,
             fontSize: "0.9rem",
+            overflow: "hidden",
+            "& .MuiAlert-message": {
+              wordWrap: "break-word",
+              wordBreak: "break-word",
+              overflowWrap: "break-word",
+              whiteSpace: "pre-wrap",
+              overflow: "hidden",
+              lineHeight: 1.3,
+            },
           },
         }}
       >

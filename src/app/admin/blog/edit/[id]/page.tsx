@@ -80,10 +80,13 @@ interface BlogFormData {
   seoDescription: string;
 }
 
-export default function EditBlogPage() {
+interface EditBlogPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default function EditBlogPage({ params }: EditBlogPageProps) {
   const router = useRouter();
-  const params = useParams();
-  const postId = params.id as string;
+  const { id: postId } = React.use(params);
 
   const [post, setPost] = useState<BlogPost | null>(null);
   const [categories, setCategories] = useState<BlogCategory[]>([]);

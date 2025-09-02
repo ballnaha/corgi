@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Typography, CircularProgress, Slide } from '@mui/material';
+import { Box, Typography, CircularProgress, Slide, Container } from '@mui/material';
 import type { SlideProps } from '@mui/material';
 import { colors } from '@/theme/colors';
 import Navigation from '@/components/Navigation';
@@ -13,6 +13,7 @@ import { Product, CartItem } from '@/types';
 import { generateSlug } from '@/lib/products';
 import { readFavoriteIds, toggleFavoriteId } from '@/lib/favorites';
 import { readCartFromStorage, writeCartToStorage, addToCartStorage, updateQuantityInStorage, removeFromCartStorage } from '@/lib/cart';
+import { handleLiffNavigation } from '@/lib/liff-navigation';
 import { useThemedSnackbar } from '@/components/ThemedSnackbar';
 
 export default function FavoritesPage() {
@@ -29,6 +30,7 @@ export default function FavoritesPage() {
 	const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 	const [cartItems, setCartItems] = useState<CartItem[]>([]);
 	const [isCartOpen, setIsCartOpen] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
 
 	useEffect(() => {
 		setFavoriteIds(readFavoriteIds());
@@ -101,8 +103,19 @@ export default function FavoritesPage() {
 
 	const favoriteProducts = useMemo(() => {
 		const idSet = new Set(favoriteIds);
-		return products.filter(p => idSet.has(p.id));
-	}, [products, favoriteIds]);
+		let filtered = products.filter(p => idSet.has(p.id));
+		
+		// Filter by search query
+		if (searchQuery.trim()) {
+			filtered = filtered.filter(
+				(product) =>
+					product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+					(product.description && product.description.toLowerCase().includes(searchQuery.toLowerCase()))
+			);
+		}
+		
+		return filtered;
+	}, [products, favoriteIds, searchQuery]);
 
 	const calculateUnitPrice = (product: Product) => {
 		const hasSalePrice = product.salePrice != null;
@@ -172,55 +185,109 @@ export default function FavoritesPage() {
 		}
 		
 		setIsCartOpen(false);
-		router.push("/checkout");
+		handleLiffNavigation(router, "/checkout");
 	};
 
 	const cartItemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
 	return (
-		<Box sx={{ minHeight: '100vh', backgroundColor: colors.background.default, display: 'flex', flexDirection: 'column' }}>
+		<Box
+			sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}
+		>
 			<Navigation />
-			<Header cartItemCount={cartItemCount} onCartClick={() => setIsCartOpen(true)} onSearchChange={() => {}} />
-			<Box component="main" sx={{ px: 2, py: 5, flex: 1 }}>
-				<Typography variant="h6" sx={{ color: colors.text.primary, fontWeight: 'bold', mb: 2 }}>
-					รายการโปรด
-				</Typography>
-				{loading ? (
-					<Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-						<CircularProgress color="primary" />
-					</Box>
-				) : favoriteProducts.length === 0 ? (
-					<Typography sx={{ color: colors.text.secondary }}>
-						ยังไม่มีสินค้าในรายการโปรด
-					</Typography>
-				) : (
-					<Box sx={{
-						display: 'grid',
-						gridTemplateColumns: 'repeat(2, 1fr)',
-						gap: 2
+			<Header
+				cartItemCount={cartItemCount}
+				onCartClick={() => setIsCartOpen(true)}
+				onSearchChange={setSearchQuery}
+				showLogo={true}
+				logoSrc="/images/whatdadog_logo6.png"
+			/>
+
+			<Box 
+				component="main" 
+				sx={{ 
+					flexGrow: 1,
+					backgroundColor: colors.background.default,
+					minHeight: '100vh',
+					pt: 8, // Space for fixed header
+					pb: 2, // Reduce bottom space after removing bottom navigation
+				}}
+			>
+				<Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
+					<Box sx={{ 
+						display: 'flex', 
+						justifyContent: 'space-between', 
+						alignItems: 'center',
+						mb: 2
 					}}>
-					{favoriteProducts.map((product) => (
-							<ProductCard
-								key={product.id}
-								product={product}
-								isFavorite={favoriteIds.includes(product.id)}
-								onToggleFavorite={(id) => {
-									const wasFavorite = favoriteIds.includes(id);
-									setFavoriteIds(toggleFavoriteId(id));
-																	showSnackbar(
-									`${wasFavorite ? 'นำออก' : 'เพิ่ม'} "${product.name}" ${wasFavorite ? 'จาก' : 'เข้า'} รายการโปรด`,
-									wasFavorite ? 'error' : 'success'
-								);
-								}}
-							onAddToCart={() => handleAddToCart(product)}
-							onProductClick={() => {
-								const slug = generateSlug(product.name, product.id);
-								router.push(`/product/${slug}`);
+						<Typography
+							variant="h6"
+							sx={{
+								color: colors.text.primary,
+								fontWeight: "bold",
+								fontSize: "1.1rem",
 							}}
-							/>
-						))}
+						>
+							รายการโปรด
+						</Typography>
+						<Typography
+							variant="body2"
+							sx={{ color: colors.text.secondary }}
+						>
+							{favoriteProducts.length} {favoriteProducts.length === 1 ? 'item' : 'items'}
+						</Typography>
 					</Box>
-				)}
+
+					{loading ? (
+						<Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+							<CircularProgress color="primary" />
+						</Box>
+					) : favoriteProducts.length === 0 ? (
+						<Box sx={{ textAlign: "center", py: 8, px: 2 }}>
+							<Typography variant="h6" sx={{ mb: 2 }}>
+								{searchQuery.trim() ? "ไม่พบสินค้า" : "ยังไม่มีสินค้าในรายการโปรด"}
+							</Typography>
+							<Typography variant="body1" color="text.secondary">
+								{searchQuery.trim() ? "ลองเปลี่ยนคำค้นหา" : "เพิ่มสินค้าที่ชอบจากหน้าร้านค้า"}
+							</Typography>
+						</Box>
+					) : (
+						<Box
+							sx={{
+								display: 'grid',
+								gridTemplateColumns: { 
+									xs: 'repeat(2, 1fr)', 
+									sm: 'repeat(3, 1fr)', 
+									md: 'repeat(4, 1fr)', 
+									lg: 'repeat(4, 1fr)' 
+								},
+								gap: { xs: 2, md: 3 },
+								mb: 10,
+							}}
+						>
+							{favoriteProducts.map((product) => (
+								<ProductCard
+									key={product.id}
+									product={product}
+									isFavorite={favoriteIds.includes(product.id)}
+									onToggleFavorite={(id) => {
+										const wasFavorite = favoriteIds.includes(id);
+										setFavoriteIds(toggleFavoriteId(id));
+										showSnackbar(
+											`${wasFavorite ? 'นำออก' : 'เพิ่ม'} "${product.name}" ${wasFavorite ? 'จาก' : 'เข้า'} รายการโปรด`,
+											wasFavorite ? 'error' : 'success'
+										);
+									}}
+									onAddToCart={() => handleAddToCart(product)}
+									onProductClick={() => {
+										const slug = generateSlug(product.name, product.id);
+										handleLiffNavigation(router, `/product/${slug}`);
+									}}
+								/>
+							))}
+						</Box>
+					)}
+				</Container>
 			</Box>
 
 			

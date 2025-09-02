@@ -139,8 +139,8 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
             <img 
               src="/images/whatdadog_logo6.png" 
               alt="logo" 
-              width={isMobile ? 140 : 180} 
-              height={isMobile ? 50 : 80} 
+              width={isMobile ? 140 : 160} 
+              height={isMobile ? 50 : 60} 
               style={{ 
                 objectFit: "contain",
                 filter: "contrast(1.1) brightness(1.1)"
@@ -239,18 +239,7 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
 
             {session?.user && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                {!userLoading && (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      fontWeight: 500,
-                      color: "#333",
-                      fontSize: "0.95rem"
-                    }}
-                  >
-                    สวัสดี! {displayName}
-                  </Typography>
-                )}
+
 
                 <IconButton
                   onClick={handleUserMenuOpen}
@@ -280,6 +269,18 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
                     {!session.user.image && (displayName?.charAt(0) || "U")}
                   </Avatar>
                 </IconButton>
+                {!userLoading && (
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      fontWeight: 500,
+                      color: "#333",
+                      fontSize: "0.95rem"
+                    }}
+                  >
+                    สวัสดี! {displayName}
+                  </Typography>
+                )}
               </Box>
             )}
           </Box>

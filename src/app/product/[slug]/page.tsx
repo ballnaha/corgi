@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${product.description.slice(0, 160)}...`
     : `ซื้อ ${product.name} ราคา ฿${product.price.toLocaleString()} จาก WhatdaDog ร้านขายสัตว์เลี้ยงและอุปกรณ์คุณภาพ`;
 
-  const imageUrl = product.imageUrl || product.image || '/images/whatdadog_logo_full.png';
+  const imageUrl = product.imageUrl || product.image || '/images/whatdadog_logo6.png';
   const productUrl = `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/product/${slug}`;
 
   return {
