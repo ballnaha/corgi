@@ -121,11 +121,15 @@ export default function AdminBlogCategoriesPage() {
   };
 
   const generateSlug = (name: string) => {
-    return name
+    // Keep Unicode letters (L), marks (M) for combining accents, and numbers (N)
+    // Replace other chars with '-'; trim leading/trailing '-'
+    const base = name
       .toLowerCase()
-      .replace(/[^a-z0-9ก-ฮ\s]/g, '')
-      .replace(/\s+/g, '-')
+      .normalize('NFC')
+      .replace(/[^\p{L}\p{M}\p{N}]+/gu, '-')
+      .replace(/(^-|-$)+/g, '')
       .substring(0, 50);
+    return base;
   };
 
   const handleInputChange = (field: keyof CategoryFormData, value: any) => {

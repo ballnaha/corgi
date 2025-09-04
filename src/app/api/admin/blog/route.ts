@@ -125,10 +125,13 @@ export async function POST(request: NextRequest) {
     // Generate slug if not provided
     let finalSlug = slug;
     if (!finalSlug) {
+      // Keep Unicode letters (L), marks (M) for combining accents, and numbers (N)
+      // Replace other chars with '-'; trim leading/trailing '-'
       finalSlug = title
         .toLowerCase()
-        .replace(/[^a-z0-9ก-ฮ\s]/g, '')
-        .replace(/\s+/g, '-')
+        .normalize('NFC')
+        .replace(/[^\p{L}\p{M}\p{N}]+/gu, '-')
+        .replace(/(^-|-$)+/g, '')
         .substring(0, 100);
     }
 
