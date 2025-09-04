@@ -57,14 +57,50 @@ export async function GET(
       }
 
       return new NextResponse(fileBuffer as unknown as BodyInit, {
+        status: 200,
         headers: {
           'Content-Type': contentType,
           'Cache-Control': 'public, max-age=31536000, immutable',
           'X-Content-Type-Options': 'nosniff',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET',
         },
       });
     } catch (fileError) {
       console.error('File not found:', filePath, fileError);
+      
+      // Try alternative file paths for blog images
+      if (imagePath.includes('blog/')) {
+        try {
+          // Try with different extensions
+          const basePath = filePath.replace(/\.[^/.]+$/, '');
+          const extensions = ['.jpg', '.jpeg', '.png', '.webp'];
+          
+          for (const ext of extensions) {
+            try {
+              const altPath = basePath + ext;
+              const altBuffer = await readFile(altPath);
+              const contentType = ext === '.png' ? 'image/png' : 'image/jpeg';
+              
+              return new NextResponse(altBuffer as unknown as BodyInit, {
+                status: 200,
+                headers: {
+                  'Content-Type': contentType,
+                  'Cache-Control': 'public, max-age=31536000, immutable',
+                  'X-Content-Type-Options': 'nosniff',
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'GET',
+                },
+              });
+            } catch {
+              continue;
+            }
+          }
+        } catch {
+          // Ignore alternative path attempts
+        }
+      }
+      
       return new NextResponse('Image not found', { status: 404 });
     }
   } catch (error) {

@@ -8,7 +8,7 @@
  * @param fallbackToApi - Whether to use API route as fallback for production
  * @returns Optimized image URL
  */
-export function getImageUrl(imagePath: string | null | undefined, fallbackToApi: boolean = true): string {
+export function getImageUrl(imagePath: string | null | undefined, fallbackToApi: boolean = false): string {
   if (!imagePath) return '';
   
   // If it's already a full URL, return as is
@@ -19,14 +19,48 @@ export function getImageUrl(imagePath: string | null | undefined, fallbackToApi:
   // Ensure path starts with /
   const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
   
-  // In production, if fallbackToApi is true, use the API route
+  // For production with fallback enabled, try API route first for better reliability
   if (typeof window !== 'undefined' && fallbackToApi && process.env.NODE_ENV === 'production') {
-    // For client-side in production, try static first, fallback to API
-    return normalizedPath;
+    // Remove /uploads/ prefix and use API route
+    const apiPath = normalizedPath.replace('/uploads/', 'uploads/');
+    return `/api/images/${apiPath}`;
   }
   
-  // For development or when not using API fallback, use direct path
+  // For development or direct static serving, use direct path
   return normalizedPath;
+}
+
+/**
+ * Get blog image URL with fallback for production
+ * @param imagePath - The blog image path
+ * @returns Blog image URL with production fallback
+ */
+export function getBlogImageUrl(imagePath: string | null | undefined): string {
+  if (!imagePath) return '/images/placeholder.png';
+  
+  // If it's already a full URL, return as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+
+  // Ensure path starts with /
+  const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  
+  // In production, prefer direct static file access
+  return normalizedPath;
+}
+
+/**
+ * Get API fallback URL for images
+ * @param imagePath - The original image path
+ * @returns API route URL for serving images
+ */
+export function getApiImageUrl(imagePath: string | null | undefined): string {
+  if (!imagePath) return '';
+  
+  // Remove /uploads/ prefix and use API route
+  const apiPath = imagePath.replace('/uploads/', 'uploads/').replace(/^\//, '');
+  return `/api/images/${apiPath}`;
 }
 
 /**

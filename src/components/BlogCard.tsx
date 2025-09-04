@@ -15,6 +15,7 @@ import { Schedule } from '@mui/icons-material';
 import { BlogPost } from '@/types';
 import { colors } from '@/theme/colors';
 import { useRouter } from 'next/navigation';
+import { getBlogImageUrl, getApiImageUrl } from '@/utils/imageUtils';
 
 interface BlogCardProps {
   post: BlogPost;
@@ -56,10 +57,18 @@ export default function BlogCard({ post }: BlogCardProps) {
       <CardMedia
         component="img"
         height={160}
-        image={post.imageUrl || '/images/placeholder.png'}
+        image={getBlogImageUrl(post.imageUrl)}
         alt={post.title}
         sx={{
           objectFit: 'cover'
+        }}
+        onError={(e: any) => {
+          // Fallback to API route if direct static file fails
+          if (post.imageUrl && !e.target.src.includes('/api/images/')) {
+            e.target.src = getApiImageUrl(post.imageUrl);
+          } else {
+            e.target.src = '/images/placeholder.png';
+          }
         }}
       />
 

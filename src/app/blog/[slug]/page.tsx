@@ -28,6 +28,7 @@ import { BlogPost } from '@/types';
 import { colors } from '@/theme/colors';
 import BlogCard from '@/components/BlogCard';
 import ResponsiveHeader from '@/components/ResponsiveHeader';
+import { getBlogImageUrl, getApiImageUrl } from '@/utils/imageUtils';
 
 export default function BlogPostPage() {
   const params = useParams();
@@ -276,7 +277,7 @@ export default function BlogPostPage() {
                     {post.imageUrl && (
                       <Box
                         component="img"
-                        src={post.imageUrl}
+                        src={getBlogImageUrl(post.imageUrl)}
                         alt={post.title}
                         sx={{
                           width: '100%',
@@ -285,6 +286,14 @@ export default function BlogPostPage() {
                           borderRadius: 1,
                           mb: { xs: 1.5, md: 2 },
                           backgroundColor: '#f8f9fa'
+                        }}
+                        onError={(e: any) => {
+                          // Fallback to API route if direct static file fails
+                          if (post.imageUrl && !e.target.src.includes('/api/images/')) {
+                            e.target.src = getApiImageUrl(post.imageUrl);
+                          } else {
+                            e.target.src = '/images/placeholder.png';
+                          }
                         }}
                       />
                     )}
