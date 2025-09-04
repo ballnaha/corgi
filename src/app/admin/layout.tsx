@@ -1,97 +1,31 @@
-"use client";
+import { Metadata } from "next";
+import AdminClientLayout from "./AdminClientLayout";
 
-import React from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Box, CircularProgress, Typography, Button } from "@mui/material";
-import AdminLayout from "@/components/admin/AdminLayout";
-import { colors } from "@/theme/colors";
-import { handleLiffNavigation } from "@/lib/liff-navigation";
+// ป้องกัน Google Bot และ Search Engine crawler อื่นๆ ในหน้า admin
+export const metadata: Metadata = {
+  title: "Admin Panel",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+      "max-video-preview": -1,
+      "max-image-preview": "none",
+      "max-snippet": -1,
+    },
+  },
+  other: {
+    "X-Robots-Tag": "noindex, nofollow, noarchive, nosnippet, noimageindex",
+  },
+};
 
-interface AdminLayoutProviderProps {
+interface AdminLayoutProps {
   children: React.ReactNode;
 }
 
-export default function AdminLayoutProvider({
-  children,
-}: AdminLayoutProviderProps) {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (mounted && status === "unauthenticated") {
-      const callbackUrl = encodeURIComponent(window.location.pathname);
-      handleLiffNavigation(router, `/auth/signin?callbackUrl=${callbackUrl}`);
-    }
-  }, [mounted, status, router]);
-
-  // Show loading while checking authentication
-  if (!mounted || status === "loading") {
-    return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.background.default,
-        }}
-      >
-        <Box sx={{ textAlign: "center" }}>
-          <CircularProgress color="primary" size={60} sx={{ mb: 2 }} />
-          <Typography variant="h6" sx={{ color: colors.text.secondary }}>
-            กำลังตรวจสอบสิทธิ์...
-          </Typography>
-        </Box>
-      </Box>
-    );
-  }
-
-  // Show unauthorized if not admin
-  if (status === "authenticated" && !session?.user?.isAdmin && !session?.user?.role?.includes("ADMIN")) {
-    return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colors.background.default,
-          p: 3,
-        }}
-      >
-        <Box sx={{ textAlign: "center", maxWidth: 400 }}>
-          <Typography variant="h4" sx={{ mb: 2, color: colors.text.primary }}>
-            ไม่มีสิทธิ์เข้าถึง
-          </Typography>
-          <Typography variant="body1" sx={{ color: colors.text.secondary, mb: 3 }}>
-            คุณไม่มีสิทธิ์ในการเข้าถึงแผงควบคุมผู้ดูแลระบบ
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => handleLiffNavigation(router, "/")}
-            sx={{
-              backgroundColor: colors.primary.main,
-              "&:hover": { backgroundColor: colors.primary.dark },
-            }}
-          >
-            กลับหน้าหลัก
-          </Button>
-        </Box>
-      </Box>
-    );
-  }
-
-  // Show admin layout for authorized users
-  if (status === "authenticated" && (session?.user?.isAdmin || session?.user?.role?.includes("ADMIN"))) {
-    return <AdminLayout>{children}</AdminLayout>;
-  }
-
-  return null;
+export default function AdminLayout({ children }: AdminLayoutProps) {
+  return <AdminClientLayout>{children}</AdminClientLayout>;
 }
