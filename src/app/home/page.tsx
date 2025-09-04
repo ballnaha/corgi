@@ -32,6 +32,7 @@ import { CartItem } from "@/types";
 import FloatingActions from "@/components/FloatingActions";
 import { generateSlug } from "@/lib/products";
 import { useSession } from "next-auth/react";
+import { getBlogImageUrl, getApiImageUrl } from "@/utils/imageUtils";
 
 export default function HomePage() {
   const router = useRouter();
@@ -1706,7 +1707,7 @@ export default function HomePage() {
                       >
                         {post.imageUrl && (
                           <Image 
-                            src={post.imageUrl} 
+                            src={getBlogImageUrl(post.imageUrl)} 
                             alt={post.title} 
                             width={400} 
                             height={225} 
@@ -1717,6 +1718,14 @@ export default function HomePage() {
                               width: "100%",
                               height: "100%",
                               objectFit: "cover"
+                            }}
+                            onError={(e: any) => {
+                              // Fallback to API route if direct static file fails
+                              if (post.imageUrl && !e.target.src.includes('/api/images/')) {
+                                e.target.src = getApiImageUrl(post.imageUrl);
+                              } else {
+                                e.target.src = '/images/placeholder.png';
+                              }
                             }}
                           />
                         )}
