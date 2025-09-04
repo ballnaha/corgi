@@ -308,9 +308,7 @@ export default function ProductDetailDesktop({
                   </Typography>
                 )}
               </Box>
-              <Typography sx={{ color: "#666", fontSize: 14 }}>
-                รวมภาษีแล้ว ไม่รวมค่าขนส่ง
-              </Typography>
+              
             </Box>
 
             {/* Product Details */}
