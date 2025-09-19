@@ -33,7 +33,12 @@ export default function SignIn() {
 
   const handleSignIn = () => {
     setLoading(true);
-    signIn("line", { callbackUrl: "/shop" });
+    // ล้างคุกกี้เก่าก่อนเริ่ม OAuth เพื่อกัน state/PKCE ค้างจากการปิดหน้าต่าง
+    fetch("/api/auth/clear-line-cache", { method: "POST" })
+      .catch(() => {})
+      .finally(() => {
+        signIn("line", { callbackUrl: "/shop" });
+      });
   };
 
   const handleClearCache = async () => {

@@ -65,6 +65,10 @@ export const useLiff = () => {
       console.log("🔗 Triggering NextAuth LINE login for LIFF user...");
       
       // Trigger NextAuth LINE login
+      // Clear old auth cookies/state before starting OAuth to avoid 400/state mismatch
+      try {
+        await fetch('/api/auth/clear-line-cache', { method: 'POST' });
+      } catch {}
       await signIn('line', {
         callbackUrl: '/',
         redirect: true, // Redirect to homepage to avoid loops
