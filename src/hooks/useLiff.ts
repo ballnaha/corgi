@@ -129,7 +129,8 @@ export const useLiff = () => {
         
         await liff.init({ 
           liffId: process.env.NEXT_PUBLIC_LIFF_ID!,
-          withLoginOnExternalBrowser: true
+          // หลีกเลี่ยงการเปิดในเบราว์เซอร์ภายนอกเพราะฟีเจอร์ LIFF จะจำกัดและขึ้นแจ้งเตือน
+          withLoginOnExternalBrowser: false
         });
 
         // Enable LIFF client features for better navigation
@@ -154,8 +155,8 @@ export const useLiff = () => {
             console.log("⏭️ Skip auto login (already attempted in this session)");
           }
         } else if (!liffLoggedIn) {
-          // Handle LIFF login - only trigger login if not logged in
-          if (!isOnSigninPage) {
+          // เรียก LIFF login เฉพาะเมื่ออยู่ใน LIFF client เท่านั้น
+          if (!isOnSigninPage && liff.isInClient && liff.isInClient()) {
             liff.login();
           }
         }
