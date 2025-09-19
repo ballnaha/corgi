@@ -56,6 +56,24 @@ export default function AuthErrorPage() {
     signIn("line", { callbackUrl: "/shop" });
   };
 
+  const sendReport = async () => {
+    const rid = Math.random().toString(36).slice(2);
+    try {
+      await fetch("/api/logs/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-rid": rid },
+        body: JSON.stringify({
+          rid,
+          error,
+          location: typeof window !== 'undefined' ? window.location.href : '',
+          search: typeof window !== 'undefined' ? window.location.search : '',
+          userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+        }),
+      });
+      alert(`ส่งรายงานสำเร็จ (รหัส: ${rid})`);
+    } catch {}
+  };
+
   return (
     <Box
       sx={{
@@ -90,6 +108,7 @@ export default function AuthErrorPage() {
           >
             {clearing ? "กำลังเคลียร์และลองใหม่..." : "ล้างและลองเข้าสู่ระบบใหม่"}
           </Button>
+          <Button fullWidth variant="outlined" onClick={sendReport}>ส่งรายงานปัญหา</Button>
           <Button fullWidth variant="outlined" onClick={() => router.push("/auth/signin")}>ไปหน้าล็อกอิน</Button>
         </Stack>
       </Stack>

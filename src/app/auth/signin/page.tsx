@@ -34,10 +34,11 @@ export default function SignIn() {
   const handleSignIn = () => {
     setLoading(true);
     // ล้างคุกกี้เก่าก่อนเริ่ม OAuth เพื่อกัน state/PKCE ค้างจากการปิดหน้าต่าง
+    const rid = Math.random().toString(36).slice(2);
     fetch("/api/auth/clear-line-cache", { method: "POST" })
       .catch(() => {})
       .finally(() => {
-        signIn("line", { callbackUrl: "/shop" });
+        signIn("line", { callbackUrl: `/shop?rid=${rid}` });
       });
   };
 

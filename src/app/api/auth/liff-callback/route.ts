@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!tokenResponse.ok) {
-      console.error('❌ Token exchange failed:', tokenResponse.status, tokenResponse.statusText);
+      let details = '';
+      try { details = await tokenResponse.text(); } catch {}
+      console.error('❌ Token exchange failed:', tokenResponse.status, tokenResponse.statusText, details);
       const res = NextResponse.redirect(new URL('/auth/error?error=TokenExchange', request.url));
       res.cookies.delete('next-auth.state');
       res.cookies.delete('next-auth.pkce.code_verifier');
@@ -53,7 +55,9 @@ export async function GET(request: NextRequest) {
     });
 
     if (!profileResponse.ok) {
-      console.error('❌ Profile fetch failed:', profileResponse.status, profileResponse.statusText);
+      let details = '';
+      try { details = await profileResponse.text(); } catch {}
+      console.error('❌ Profile fetch failed:', profileResponse.status, profileResponse.statusText, details);
       const res = NextResponse.redirect(new URL('/auth/error?error=ProfileFetch', request.url));
       res.cookies.delete('next-auth.state');
       res.cookies.delete('next-auth.pkce.code_verifier');

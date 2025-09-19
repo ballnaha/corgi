@@ -38,6 +38,19 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
+  logger: {
+    error(code, metadata) {
+      console.error("[NextAuth][ERROR]", code, metadata);
+    },
+    warn(code) {
+      console.warn("[NextAuth][WARN]", code);
+    },
+    debug(code, metadata) {
+      if (process.env.NODE_ENV !== "production") {
+        console.debug("[NextAuth][DEBUG]", code, metadata);
+      }
+    },
+  },
   providers:
     process.env.LINE_CLIENT_ID && process.env.LINE_CLIENT_SECRET
       ? [
