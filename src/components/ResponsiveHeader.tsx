@@ -21,6 +21,7 @@ import {
 } from "@mui/material";
 import { ShoppingCart, Logout, Menu, Close, Person, AccountCircle } from "@mui/icons-material";
 import { useSession, signOut, signIn } from "next-auth/react";
+import { clearAuthCookies, logoutLiffIfAvailable, handleLiffNavigation } from "@/lib/liff-navigation";
 import { useUserDisplayName } from "@/hooks/useUserDisplayName";
 import LineIcon from "./LineIcon";
 
@@ -54,8 +55,10 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
 
   const handleLogout = async () => {
     try {
+      await clearAuthCookies();
       await signOut({ redirect: false });
-      router.push('/');
+      await logoutLiffIfAvailable();
+      handleLiffNavigation(router, '/');
     } catch (error) {
       console.error('Logout error:', error);
     }

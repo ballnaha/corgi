@@ -16,7 +16,7 @@ import {
 import { useState } from "react";
 import FavoriteBorderIcon from '@mui/icons-material/FavoriteBorder';
 import { colors } from "@/theme/colors";
-import { handleLiffNavigation } from "@/lib/liff-navigation";
+import { handleLiffNavigation, clearAuthCookies, logoutLiffIfAvailable } from "@/lib/liff-navigation";
 
 export default function Navigation() {
   const { data: session } = useSession();
@@ -36,8 +36,11 @@ export default function Navigation() {
     handleMenuClose();
   };
 
-  const handleSignOut = () => {
-    signOut();
+  const handleSignOut = async () => {
+    await clearAuthCookies();
+    await signOut({ redirect: false });
+    await logoutLiffIfAvailable();
+    handleLiffNavigation(router, "/");
     handleMenuClose();
   };
 
