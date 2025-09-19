@@ -67,6 +67,13 @@ export const useLiff = () => {
       // Trigger NextAuth LINE login
       // Clear old auth cookies/state before starting OAuth to avoid 400/state mismatch
       try {
+        // Skip auto login if a recent logout set a skip flag
+        const skip = typeof window !== 'undefined' && sessionStorage.getItem('skip_liff_auto_login') === '1';
+        if (skip) {
+          sessionStorage.removeItem('skip_liff_auto_login');
+          console.log('⏭️ Skip LIFF auto login due to recent logout');
+          return;
+        }
         await fetch('/api/auth/clear-line-cache', { method: 'POST' });
       } catch {}
       await signIn('line', {
@@ -160,7 +167,11 @@ export const useLiff = () => {
           }
         } else if (!liffLoggedIn) {
           // เรียก LIFF login เฉพาะเมื่ออยู่ใน LIFF client เท่านั้น
-          if (!isOnSigninPage && liff.isInClient && liff.isInClient()) {
+          const skip = typeof window !== 'undefined' && sessionStorage.getItem('skip_liff_auto_login') === '1';
+          if (skip) {
+            sessionStorage.removeItem('skip_liff_auto_login');
+            console.log('⏭️ Skip LIFF login due to recent logout');
+          } else if (!isOnSigninPage && liff.isInClient && liff.isInClient()) {
             liff.login();
           }
         }

@@ -437,7 +437,12 @@ export default function ProfilePage() {
         console.warn("Could not clear LINE cache:", lineError);
       }
 
-      // Clear NextAuth session
+      // ป้องกัน auto login กลับเข้า LIFF หลัง logout
+      try {
+        sessionStorage.setItem("skip_liff_auto_login", "1");
+      } catch {}
+
+      // Clear NextAuth session และไปหน้า /shop ทันที
       await signOut({ redirect: false });
 
       // Clear browser cache
@@ -466,18 +471,8 @@ export default function ProfilePage() {
           window.location.hostname;
       });
 
-      // Show success message before redirect
-      setSnackbar({
-        open: true,
-        message: "ออกจากระบบสำเร็จ! กำลังไปหน้าเข้าสู่ระบบ...",
-        severity: "success",
-      });
-      setSnackbarKey((k) => k + 1);
-
-      // Wait a moment for user to see the message, then redirect to sign in
-      setTimeout(() => {
-        window.location.href = "/auth/signin";
-      }, 1500);
+      // ไปหน้า shop ทันที (หลีกเลี่ยงการดีดไป access.line.me)
+      window.location.href = "/shop";
     } catch (error) {
       console.error("Error during logout:", error);
       setSnackbar({

@@ -42,7 +42,7 @@ import {
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { colors } from "@/theme/colors";
-import { handleLiffNavigation, clearAuthCookies, logoutLiffIfAvailable } from "@/lib/liff-navigation";
+import { handleLiffNavigation } from "@/lib/liff-navigation";
 
 const DRAWER_WIDTH = 280;
 
@@ -167,9 +167,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const handleSignOut = async () => {
-    await clearAuthCookies();
     await signOut({ redirect: false });
-    await logoutLiffIfAvailable();
     handleLiffNavigation(router, "/");
     handleUserMenuClose();
   };

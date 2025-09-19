@@ -41,27 +41,3 @@ export const handleLiffNavigation = (router: any, path: string) => {
     router.push(path);
   }
 };
-
-export const suppressLiffAutoLogin = (minutes: number = 5) => {
-  if (typeof window === "undefined") return;
-  try {
-    const until = Date.now() + minutes * 60 * 1000;
-    sessionStorage.setItem("liff_auto_login_suppress_until", String(until));
-  } catch {}
-};
-
-export const logoutLiffIfAvailable = async () => {
-  if (typeof window === "undefined") return;
-  try {
-    const anyWindow = window as any;
-    if (anyWindow.liff && typeof anyWindow.liff.logout === "function") {
-      anyWindow.liff.logout();
-    }
-  } catch {}
-};
-
-export const clearAuthCookies = async () => {
-  try {
-    await fetch('/api/auth/clear-line-cache', { method: 'POST' });
-  } catch {}
-};
