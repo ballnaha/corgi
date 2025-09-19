@@ -224,7 +224,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             fontSize: "1.5rem",
           }}
         >
-          <img src="/images/whatdadog_icon1.png" alt="What Da Dog Pet Shop" width={60} height={60} />
+          <img src="/images/natpi_logo.png" alt="What Da Dog Pet Shop" width={60} height={60} />
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>

@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next'
 
 const BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://whatdadog.com' 
-  : 'http://localhost:3000'
+  : 'http://red1.theredpotion.com'
 
 export default function robots(): MetadataRoute.Robots {
   return {
