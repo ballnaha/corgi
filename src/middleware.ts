@@ -11,10 +11,14 @@ export async function middleware(request: NextRequest) {
   if (isProd) {
     if (request.headers.get("x-forwarded-proto") === "http") {
       url.protocol = "https:";
+      // ลบพอร์ตออกเพื่อกัน :3000 ติดไปกับโดเมน
+      url.port = "";
       return NextResponse.redirect(url, 308);
     }
     if (!isCanonicalHost) {
       url.hostname = canonicalHost;
+      // ลบพอร์ตออกเพื่อกัน :3000 ติดไปกับโดเมน
+      url.port = "";
       return NextResponse.redirect(url, 308);
     }
   }
