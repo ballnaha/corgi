@@ -38,7 +38,7 @@ export const homePageMetadata: Metadata = {
     siteName: 'What Da Dog Pet Shop',
     images: [
       {
-        url: '/images/whatdadog_logo6.png',
+        url: '/images/natpi_logo.png',
         width: 1200,
         height: 630,
         alt: 'What Da Dog Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน',
@@ -56,7 +56,7 @@ export const homePageMetadata: Metadata = {
     card: 'summary_large_image',
     title: "What Da Dog Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
     description: "ยินดีต้อนรับสู่ What Da Dog Pet Shop ร้านขายลูกสุนัขคอร์กี้ สัตว์เลี้ยง และอุปกรณ์สัตว์เลี้ยงคุณภาพ",
-    images: ['/images/whatdadog_logo6.png'],
+    images: ['/images/natpi_logo.png'],
   },
   alternates: {
     canonical: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/home`,
@@ -77,12 +77,12 @@ export const structuredData = {
       "@type": "Organization",
       "@id": `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/#organization`,
       "name": "What Da Dog Pet Shop",
-      "alternateName": "WhatDaDog",
+      "alternateName": "Natpi & Corgi Farm and Pet Shop",
       "description": "ร้านขายสัตว์เลี้ยงและอุปกรณ์สัตว์เลี้ยงครบครัน ด้วยความรักและใส่ใจในทุกรายละเอียด",
       "url": process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com',
       "logo": {
         "@type": "ImageObject",
-        "url": `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/images/whatdadog_logo6.png`,
+        "url": `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/images/natpi_logo.png`,
         "width": 500,
         "height": 200
       },
@@ -93,7 +93,7 @@ export const structuredData = {
     {
       "@type": ["PetStore", "LocalBusiness"],
       "@id": `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/#localbusiness`,
-      "name": "What Da Dog Pet Shop",
+      "name": "Natpi & Corgi Farm and Pet Shop",
       "description": "ร้านขายสัตว์เลี้ยงและอุปกรณ์สัตว์เลี้ยงครบครัน ด้วยความรักและใส่ใจในทุกรายละเอียด",
       "url": process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com',
       "telephone": "+66-XX-XXX-XXXX", // ใส่เบอร์จริง
@@ -114,7 +114,7 @@ export const structuredData = {
       "openingHours": [
         "Mo-Su 09:00-18:00" // ปรับตามเวลาจริง
       ],
-      "image": `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/images/whatdadog_logo6.png`,
+      "image": `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/images/natpi_logo.png`,
       "hasOfferCatalog": {
         "@type": "OfferCatalog",
         "name": "สัตว์เลี้ยงและอุปกรณ์",
@@ -150,7 +150,7 @@ export const structuredData = {
       "@type": "WebSite",
       "@id": `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/#website`,
       "url": process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com',
-      "name": "What Da Dog Pet Shop",
+      "name": "Natpi & Corgi Farm and Pet Shop",
       "description": "ร้านขายสัตว์เลี้ยงและอุปกรณ์สัตว์เลี้ยงครบครัน",
       "inLanguage": "th-TH",
       "potentialAction": {

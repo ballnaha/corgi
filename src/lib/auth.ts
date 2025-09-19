@@ -45,6 +45,9 @@ export const authOptions: NextAuthOptions = {
             id: "line",
             name: "LINE",
             type: "oauth",
+            // เพิ่มความปลอดภัยและเสถียรภาพของ OAuth flow
+            // ใช้ทั้ง state และ PKCE ตามคำแนะนำของ LINE
+            checks: ["state", "pkce"],
             authorization: {
               url: "https://access.line.me/oauth2/v2.1/authorize",
               params: {
@@ -260,7 +263,9 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 10 * 60, // 10 minutes
+        // ขยายอายุ state cookie เพื่อกันผู้ใช้ค้างนานระหว่างขั้นตอนอนุญาตสิทธิ์
+        // ลดโอกาสเกิด 400 จาก state mismatch
+        maxAge: 30 * 60, // 30 minutes
       },
     },
     pkceCodeVerifier: {
@@ -270,7 +275,8 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        maxAge: 10 * 60, // 10 minutes
+        // ให้สอดคล้องกับ state cookie
+        maxAge: 30 * 60, // 30 minutes
       },
     },
   },

@@ -9,7 +9,12 @@ export async function GET(request: NextRequest) {
     const code = url.searchParams.get('code');
     
     if (!code) {
-      return NextResponse.redirect(new URL('/auth/signin?error=NoCode', request.url));
+      const res = NextResponse.redirect(new URL('/auth/error?error=NoCode', request.url));
+      res.cookies.delete('next-auth.state');
+      res.cookies.delete('next-auth.pkce.code_verifier');
+      res.cookies.delete('liff-login-success');
+      res.cookies.delete('liff-user-data');
+      return res;
     }
 
     console.log('🔄 LIFF Callback received with code:', code);
@@ -30,8 +35,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (!tokenResponse.ok) {
-      console.error('❌ Token exchange failed:', tokenResponse.statusText);
-      return NextResponse.redirect(new URL('/auth/signin?error=TokenExchange', request.url));
+      console.error('❌ Token exchange failed:', tokenResponse.status, tokenResponse.statusText);
+      const res = NextResponse.redirect(new URL('/auth/error?error=TokenExchange', request.url));
+      res.cookies.delete('next-auth.state');
+      res.cookies.delete('next-auth.pkce.code_verifier');
+      return res;
     }
 
     const tokenData = await tokenResponse.json();
@@ -45,8 +53,11 @@ export async function GET(request: NextRequest) {
     });
 
     if (!profileResponse.ok) {
-      console.error('❌ Profile fetch failed:', profileResponse.statusText);
-      return NextResponse.redirect(new URL('/auth/signin?error=ProfileFetch', request.url));
+      console.error('❌ Profile fetch failed:', profileResponse.status, profileResponse.statusText);
+      const res = NextResponse.redirect(new URL('/auth/error?error=ProfileFetch', request.url));
+      res.cookies.delete('next-auth.state');
+      res.cookies.delete('next-auth.pkce.code_verifier');
+      return res;
     }
 
     const profile = await profileResponse.json();
@@ -113,6 +124,11 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ LIFF callback error:', error);
-    return NextResponse.redirect(new URL('/auth/signin?error=CallbackError', request.url));
+    const res = NextResponse.redirect(new URL('/auth/error?error=CallbackError', request.url));
+    res.cookies.delete('next-auth.state');
+    res.cookies.delete('next-auth.pkce.code_verifier');
+    res.cookies.delete('liff-login-success');
+    res.cookies.delete('liff-user-data');
+    return res;
   }
 }

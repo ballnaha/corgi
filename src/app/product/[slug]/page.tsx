@@ -32,17 +32,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!product) {
     return {
-      title: 'Product Not Found | WhatdaDog',
+      title: 'Product Not Found | Natpi & Corgi Farm and Pet Shop',
       description: 'The requested product could not be found.',
     };
   }
 
-  const title = `${product.name} | WhatdaDog - ร้านขายสัตว์เลี้ยงและอุปกรณ์`;
+  const title = `${product.name} | Natpi & Corgi Farm and Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์`;
   const description = product.description 
     ? `${product.description.slice(0, 160)}...`
-    : `ซื้อ ${product.name} ราคา ฿${product.price.toLocaleString()} จาก WhatdaDog ร้านขายสัตว์เลี้ยงและอุปกรณ์คุณภาพ`;
+    : `ซื้อ ${product.name} ราคา ฿${product.price.toLocaleString()} จาก Natpi & Corgi Farm and Pet Shop ร้านขายสัตว์เลี้ยงและอุปกรณ์คุณภาพ`;
 
-  const imageUrl = product.imageUrl || product.image || '/images/whatdadog_logo6.png';
+  const imageUrl = product.imageUrl || product.image || '/images/natpi_logo.png';
   const productUrl = `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/product/${slug}`;
 
   return {
@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       'สัตว์เลี้ยง',
       'อุปกรณ์สัตว์เลี้ยง',
       'ร้านสัตว์เลี้ยง',
-      'WhatdaDog',
+      'Natpi & Corgi Farm and Pet Shop',
       'คอร์กี้',
       'Corgi',
       product.category === 'dogs' ? 'สุนัข' : '',
@@ -62,9 +62,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       product.category === 'birds' ? 'นก' : '',
       'ซื้อออนไลน์'
     ].filter(Boolean).join(', '),
-    authors: [{ name: 'WhatdaDog' }],
-    creator: 'WhatdaDog',
-    publisher: 'WhatdaDog',
+    authors: [{ name: 'Natpi & Corgi Farm and Pet Shop' }],
+    creator: 'Natpi & Corgi Farm and Pet Shop',
+    publisher: 'Natpi & Corgi Farm and Pet Shop',
     robots: {
       index: true,
       follow: true,
@@ -81,7 +81,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       title,
       description,
       url: productUrl,
-      siteName: 'WhatdaDog',
+      siteName: 'Natpi & Corgi Farm and Pet Shop',
       images: [
         {
           url: imageUrl,
@@ -114,7 +114,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       'product:price:currency': 'THB',
       'product:availability': product.stock > 0 ? 'in stock' : 'out of stock',
       'product:condition': 'new',
-      'product:brand': 'WhatdaDog',
+      'product:brand': 'Natpi & Corgi Farm and Pet Shop',
       'product:category': product.category,
     },
   };
@@ -129,11 +129,11 @@ export default async function ProductDetailPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    description: product.description || `${product.name} from WhatdaDog`,
+    description: product.description || `${product.name} from Natpi & Corgi Farm and Pet Shop`,
     image: product.imageUrl || product.image,
     brand: {
       '@type': 'Brand',
-      name: 'WhatdaDog'
+      name: 'Natpi & Corgi Farm and Pet Shop'
     },
     category: product.category,
     offers: {
@@ -144,7 +144,7 @@ export default async function ProductDetailPage({ params }: Props) {
       url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/product/${slug}`,
       seller: {
         '@type': 'Organization',
-        name: 'WhatdaDog',
+        name: 'Natpi & Corgi Farm and Pet Shop',
         url: process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'
       }
     },

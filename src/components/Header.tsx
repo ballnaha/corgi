@@ -355,7 +355,7 @@ export default function Header({
                   alt="Logo"
                   width={140}
                   height={60}
-                  style={{ objectFit: "contain" }}
+                  style={{ objectFit: "contain" , cursor: "pointer"}}
                   onClick={handleLogoClick}
                 />
               ) : (

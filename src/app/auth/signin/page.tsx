@@ -2,7 +2,7 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Button, Typography, CircularProgress, Alert, Card, CardContent, Divider } from "@mui/material";
 import Image from "next/image";
 import { useLiff } from "@/hooks/useLiff";
@@ -12,9 +12,11 @@ export default function SignIn() {
   const { data: session, status } = useSession();
   const { isInLiff, isReady, liffError } = useLiff();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [clearingCache, setClearingCache] = useState(false);
+  const error = searchParams?.get("error");
 
   useEffect(() => {
     setMounted(true);
@@ -80,8 +82,8 @@ export default function SignIn() {
       {/* Logo */}
       <Box sx={{ mb: 2 }}>
         <Image
-          src="/images/whatdadog_logo3.png"
-          alt="What Da Dog Pet Shop"
+          src="/images/natpi_logo.png"
+          alt="NATPI & Corgi Farm and Pet Shop"
           width={250}
           height={150}
           style={{
@@ -96,9 +98,11 @@ export default function SignIn() {
         แนะนำให้ใช้งานด้วย line application เพื่อประสบการณ์ที่ดีที่สุด
       </Typography>
 
-      {isInLiff && (
+      {(isInLiff || error) && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          คุณกำลังใช้งานผ่าน LINE Application
+          {error
+            ? `เกิดข้อผิดพลาดระหว่างเข้าสู่ระบบ: ${error}`
+            : "คุณกำลังใช้งานผ่าน LINE Application"}
         </Alert>
       )}
 
@@ -124,7 +128,7 @@ export default function SignIn() {
         {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย LINE"}
       </Button>
 
-      {/* <Button
+      <Button
         variant="outlined"
         size="medium"
         onClick={handleClearCache}
@@ -139,8 +143,8 @@ export default function SignIn() {
           minWidth: 200,
         }}
       >
-        {clearingCache ? "กำลังล้าง Cache..." : "ล้าง Cache LINE Login"}
-      </Button> */}
+        {clearingCache ? "กำลังล้าง Cache..." : "ล้าง Cache แล้วลองใหม่"}
+      </Button>
 
       {/* LINE Official Account Section */}
       <Card sx={{ maxWidth: 400, width: "100%", mt: 3 }}>

@@ -729,8 +729,8 @@ export default function ProfilePage() {
             mb: 2 
           }}>
             <Image
-              src="/images/whatdadog_logo3.png"
-              alt="What Da Dog Pet Shop"
+              src="/images/natpi_logo.png"
+              alt="NATPI & Corgi Farm and Pet Shop"
               width={200}
               height={100}
               style={{

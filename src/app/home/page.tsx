@@ -1851,7 +1851,7 @@ export default function HomePage() {
               {/* Logo */}
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Image
-                  src="/images/whatdadog_logo_white.png"
+                  src="/images/natpi_logo_white.png"
                   alt="What Da Dog Pet Shop"
                   width={140}
                   height={60}

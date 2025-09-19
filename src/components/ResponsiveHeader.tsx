@@ -137,7 +137,7 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
             }}
           >
             <img 
-              src="/images/whatdadog_logo6.png" 
+              src="/images/natpi_logo.png" 
               alt="logo" 
               width={isMobile ? 140 : 160} 
               height={isMobile ? 50 : 60} 

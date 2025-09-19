@@ -244,7 +244,7 @@ export default function ShopPage() {
         onCartClick={() => setIsCartOpen(true)}
         onSearchChange={setSearchQuery}
         showLogo={true}
-        logoSrc="/images/whatdadog_logo6.png"
+        logoSrc="/images/natpi_logo.png"
       />
 
       <Box 

@@ -17,6 +17,12 @@ export async function POST(request: NextRequest) {
     response.cookies.delete('next-auth.session-token');
     response.cookies.delete('next-auth.callback-url');
     response.cookies.delete('next-auth.csrf-token');
+    // Clear OAuth flow state/PKCE cookies to avoid state mismatch after long idle
+    response.cookies.delete('next-auth.state');
+    response.cookies.delete('next-auth.pkce.code_verifier');
+    // Clear LIFF helper cookies
+    response.cookies.delete('liff-login-success');
+    response.cookies.delete('liff-user-data');
 
     return response;
   } catch (error) {
