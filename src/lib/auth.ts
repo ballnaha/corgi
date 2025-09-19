@@ -38,8 +38,6 @@ declare module "next-auth/jwt" {
 }
 
 export const authOptions: NextAuthOptions = {
-  // อนุญาตให้ NextAuth ใช้ host ตามที่คำขอเข้ามา (เช่นอยู่หลัง proxy/หลายโดเมน)
-  trustHost: true,
   providers:
     process.env.LINE_CLIENT_ID && process.env.LINE_CLIENT_SECRET
       ? [
