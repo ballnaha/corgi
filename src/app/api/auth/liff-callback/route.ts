@@ -6,6 +6,13 @@ const prisma = new PrismaClient();
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
+    // Build a reliable origin (behind proxy, NextRequest.url may be localhost)
+    const forwardedProto = request.headers.get('x-forwarded-proto');
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const host = forwardedHost || request.headers.get('host') || url.host;
+    const proto = forwardedProto || url.protocol.replace(':','') || 'https';
+    const envOrigin = process.env.NEXT_PUBLIC_SITE_URL;
+    const origin = envOrigin || `${proto}://${host}`;
     const code = url.searchParams.get('code');
     
     if (!code) {
@@ -28,7 +35,7 @@ export async function GET(request: NextRequest) {
       body: new URLSearchParams({
         grant_type: 'authorization_code',
         code: code,
-        redirect_uri: `${url.origin}/api/auth/liff-callback`,
+        redirect_uri: `${origin}/api/auth/liff-callback`,
         client_id: process.env.LINE_CLIENT_ID!,
         client_secret: process.env.LINE_CLIENT_SECRET!,
       }),
@@ -100,7 +107,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Create NextAuth session manually
-    const response = NextResponse.redirect(new URL('/shop', request.url));
+    const response = NextResponse.redirect(new URL('/shop', origin));
     
     // Set session cookie manually (simplified approach)
     response.cookies.set('liff-login-success', '1', {
@@ -128,7 +135,13 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ LIFF callback error:', error);
-    const res = NextResponse.redirect(new URL('/auth/error?error=CallbackError', request.url));
+    const forwardedProto = request.headers.get('x-forwarded-proto');
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const host = forwardedHost || request.headers.get('host') || new URL(request.url).host;
+    const proto = forwardedProto || new URL(request.url).protocol.replace(':','') || 'https';
+    const envOrigin = process.env.NEXT_PUBLIC_SITE_URL;
+    const origin = envOrigin || `${proto}://${host}`;
+    const res = NextResponse.redirect(new URL('/auth/error?error=CallbackError', origin));
     res.cookies.delete('next-auth.state');
     res.cookies.delete('next-auth.pkce.code_verifier');
     res.cookies.delete('liff-login-success');
