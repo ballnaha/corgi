@@ -54,8 +54,9 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
 
   const handleLogout = async () => {
     try {
+      try { sessionStorage.setItem('skip_liff_auto_login','1'); } catch {}
       await signOut({ redirect: false });
-      router.push('/');
+      router.push('/shop');
     } catch (error) {
       console.error('Logout error:', error);
     }

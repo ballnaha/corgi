@@ -1,11 +1,13 @@
 "use client";
 
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Box, Avatar, Typography, Button } from "@mui/material";
 import { colors } from "@/theme/colors";
 
 export default function UserProfile() {
   const { data: session, status } = useSession();
+  const router = useRouter();
 
   if (status === "loading") {
     return null;
@@ -54,7 +56,11 @@ export default function UserProfile() {
       <Button
         variant="outlined"
         size="small"
-        onClick={() => signOut()}
+        onClick={async () => {
+          try { sessionStorage.setItem('skip_liff_auto_login','1'); } catch {}
+          await signOut({ redirect: false });
+          router.push('/shop');
+        }}
         sx={{
           color: colors.text.secondary,
           borderColor: colors.text.disabled,

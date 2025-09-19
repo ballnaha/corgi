@@ -36,9 +36,16 @@ export default function Navigation() {
     handleMenuClose();
   };
 
-  const handleSignOut = () => {
-    signOut();
-    handleMenuClose();
+  const handleSignOut = async () => {
+    try {
+      try { sessionStorage.setItem("skip_liff_auto_login", "1"); } catch {}
+      await signOut({ redirect: false });
+      handleLiffNavigation(router, "/shop");
+    } catch (e) {
+      console.error("Logout error:", e);
+    } finally {
+      handleMenuClose();
+    }
   };
 
   return (

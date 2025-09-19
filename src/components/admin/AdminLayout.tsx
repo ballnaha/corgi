@@ -167,8 +167,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const handleSignOut = async () => {
+    try { sessionStorage.setItem('skip_liff_auto_login','1'); } catch {}
     await signOut({ redirect: false });
-    handleLiffNavigation(router, "/");
+    handleLiffNavigation(router, "/shop");
     handleUserMenuClose();
   };
 
