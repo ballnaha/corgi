@@ -1,40 +1,23 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
-  const url = request.nextUrl.clone();
-
-  // Force https and canonical host in production
+export async function middleware(request: NextRequest) {
+  // Enforce https and canonical host in production
   const canonicalHost = process.env.NEXT_PUBLIC_SITE_HOST || "whatdadog.com";
   const isProd = process.env.NODE_ENV === "production";
-  const isHttps = url.protocol === "https:";
+  const url = request.nextUrl.clone();
   const isCanonicalHost = url.hostname === canonicalHost || url.hostname === `www.${canonicalHost}`;
 
   if (isProd) {
-    // Enforce https
     if (request.headers.get("x-forwarded-proto") === "http") {
       url.protocol = "https:";
       return NextResponse.redirect(url, 308);
     }
-    // Enforce canonical hostname without changing subpaths
     if (!isCanonicalHost) {
       url.hostname = canonicalHost;
       return NextResponse.redirect(url, 308);
     }
   }
-
-  return NextResponse.next();
-}
-
-export const config = {
-  matcher: [
-    "/((?!_next|static|favicon.ico|robots.txt|sitemap.xml|uploads).*)",
-  ],
-};
-
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
-
-export async function middleware(request: NextRequest) {
   // Skip middleware completely for static assets, uploads, and SEO files
   if (request.nextUrl.pathname.startsWith('/uploads/') ||
       request.nextUrl.pathname.startsWith('/images/') ||
