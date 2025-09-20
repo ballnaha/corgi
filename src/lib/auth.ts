@@ -242,7 +242,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: "lax", 
+          sameSite: "none", 
         path: "/",
         secure: process.env.NODE_ENV === "production",
         maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -252,7 +252,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.callback-url`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+          sameSite: "none",
         path: "/",
         secure: process.env.NODE_ENV === "production",
         maxAge: 10 * 60, // 10 minutes
@@ -262,7 +262,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.csrf-token`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+          sameSite: "none",
         path: "/",
         secure: process.env.NODE_ENV === "production",
         maxAge: 10 * 60, // 10 minutes
@@ -272,7 +272,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.state`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+          sameSite: "none",
         path: "/",
         secure: process.env.NODE_ENV === "production",
         // ขยายอายุ state cookie เพื่อกันผู้ใช้ค้างนานระหว่างขั้นตอนอนุญาตสิทธิ์
@@ -284,7 +284,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.pkce.code_verifier`,
       options: {
         httpOnly: true,
-        sameSite: "lax",
+          sameSite: "none",
         path: "/",
         secure: process.env.NODE_ENV === "production",
         // ให้สอดคล้องกับ state cookie
