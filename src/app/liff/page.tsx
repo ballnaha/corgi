@@ -32,7 +32,7 @@ export default function LiffPage() {
   }, [mounted, status, isReady, isLoggedIn, liffError, isInLiff, router]);
 
   if (!mounted || !isReady) {
-    return <LoadingScreen message="กำลังเชื่อมต่อ LINE..." fullScreen={false} />;
+    return <LoadingScreen message="กำลังเชื่อมต่อ LINE..." fullScreen={true} />;
   }
 
   if (liffError) {
@@ -40,7 +40,7 @@ export default function LiffPage() {
   }
 
   if (status === "loading" || (isLoggedIn && status === "unauthenticated")) {
-    return <LoadingScreen message="กำลังเข้าสู่ระบบ..." fullScreen={false} />;
+    return <LoadingScreen message="กำลังเข้าสู่ระบบ..." fullScreen={true} />;
   }
 
   return <LoadingScreen message="กำลังโหลด..." fullScreen={false} />;
