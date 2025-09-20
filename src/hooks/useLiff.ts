@@ -191,15 +191,26 @@ export const useLiff = () => {
         setIsLoggedIn(liffLoggedIn);
         setIsReady(true);
 
-        // Always ensure NextAuth session when in LIFF (use LINE OAuth via NextAuth)
+        // In LIFF: ensure LIFF login first, then ensure NextAuth session
         if (!isOnSigninPage && isInLiff) {
-          if (!autoLoginTriggeredThisMountRef.current) {
-            const urlNow = new URL(window.location.href);
-            const hasOAuthParams = urlNow.searchParams.has('code') || urlNow.searchParams.has('state');
+          const urlNow = new URL(window.location.href);
+          const hasOAuthParams = urlNow.searchParams.has('code') || urlNow.searchParams.has('state') ||
+                                 urlNow.searchParams.has('liff.state') || urlNow.searchParams.has('liffRedirectUri');
+
+          if (!liffLoggedIn) {
+            const skip = sessionStorage.getItem('skip_liff_auto_login') === '1';
+            if (skip) {
+              sessionStorage.removeItem('skip_liff_auto_login');
+              console.log('⏭️ Skip LIFF login due to recent logout');
+            } else if (liff.isInClient && liff.isInClient() && !hasOAuthParams) {
+              try { sessionStorage.setItem('liff_login_in_progress', '1'); } catch {}
+              liff.login({ redirectUri: getStableRedirectUri() });
+            }
+          } else {
             const loginInProgress = sessionStorage.getItem('liff_login_in_progress') === '1';
             const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
             const nextAuthUnauthed = status !== 'authenticated';
-            if (nextAuthUnauthed && !hasOAuthParams && !loginInProgress && !oauthInProgress) {
+            if (nextAuthUnauthed && !hasOAuthParams && !loginInProgress && !oauthInProgress && !autoLoginTriggeredThisMountRef.current) {
               autoLoginTriggeredThisMountRef.current = true;
               setAutoLoginAttempted(true);
               await handleAutoLogin(liff);
