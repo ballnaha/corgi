@@ -58,8 +58,8 @@ export const authOptions: NextAuthOptions = {
             id: "line",
             name: "LINE",
             type: "oauth",
-            // ใช้ทั้ง state และ PKCE ตามคำแนะนำของ LINE/NextAuth
-            checks: ["state", "pkce"],
+            // ใช้เฉพาะ PKCE เพื่อลด state mismatch ใน LIFF
+            checks: ["pkce"],
             authorization: {
               url: "https://access.line.me/oauth2/v2.1/authorize",
               params: {

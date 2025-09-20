@@ -47,6 +47,7 @@ export default function LiffPage() {
       const rid = Math.random().toString(36).slice(2);
       fetch('/api/auth/clear-line-cache', { method: 'POST' })
         .catch(() => {})
+        .then(() => new Promise(resolve => setTimeout(resolve, 500))) // Wait for cookies to clear
         .finally(() => {
           signIn('line', { callbackUrl: `/shop?rid=${rid}` });
         });

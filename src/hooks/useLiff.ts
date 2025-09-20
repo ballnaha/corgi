@@ -84,10 +84,11 @@ export const useLiff = () => {
           console.log('⏭️ Skip LIFF auto login due to recent logout');
           return;
         }
+        // Always clear cookies before OAuth to prevent state mismatch
         await fetch('/api/auth/clear-line-cache', { method: 'POST' });
       } catch {}
-      // Small delay to ensure Set-Cookie deletions are applied before starting OAuth
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Longer delay to ensure Set-Cookie deletions are fully applied
+      await new Promise(resolve => setTimeout(resolve, 500));
       const rid = Math.random().toString(36).slice(2);
       try { sessionStorage.setItem('line_oauth_in_progress', '1'); } catch {}
       await signIn('line', {
