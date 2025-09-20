@@ -136,6 +136,20 @@ export const useLiff = () => {
         return;
       }
 
+      // Proactively clear stale OAuth cookies on each fresh LIFF entry when unauthenticated
+      // Skip if OAuth is in progress or URL already has OAuth params
+      try {
+        const urlNow = new URL(window.location.href);
+        const hasOAuthParams =
+          urlNow.searchParams.has('code') ||
+          urlNow.searchParams.has('state');
+        const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
+        const isUnauthed = status !== 'authenticated';
+        if (isUnauthed && !hasOAuthParams && !oauthInProgress) {
+          await fetch('/api/auth/clear-line-cache', { method: 'POST' });
+        }
+      } catch {}
+
       // Only initialize LIFF if we're in LIFF environment and LIFF_ID is configured
       if (!process.env.NEXT_PUBLIC_LIFF_ID) {
         setLiffError("LIFF ID not configured");
