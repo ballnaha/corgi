@@ -210,7 +210,7 @@ export const useLiff = () => {
             const loginInProgress = sessionStorage.getItem('liff_login_in_progress') === '1';
             const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
             const nextAuthUnauthed = status !== 'authenticated';
-            if (nextAuthUnauthed && !hasOAuthParams && !loginInProgress && !oauthInProgress && !autoLoginTriggeredThisMountRef.current) {
+            if (nextAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current) {
               autoLoginTriggeredThisMountRef.current = true;
               setAutoLoginAttempted(true);
               await handleAutoLogin(liff);
@@ -234,10 +234,12 @@ export const useLiff = () => {
           if (changed) {
             window.history.replaceState(null, '', urlToClean.toString());
           }
-          // clear any stale in-progress flag
+          // clear OAuth in-progress flag เมื่อ session พร้อมเท่านั้น
           try {
-            sessionStorage.removeItem('liff_login_in_progress');
-            sessionStorage.removeItem('line_oauth_in_progress');
+            if (status === 'authenticated') {
+              sessionStorage.removeItem('liff_login_in_progress');
+              sessionStorage.removeItem('line_oauth_in_progress');
+            }
           } catch {}
         } catch {}
       } catch (error: unknown) {
