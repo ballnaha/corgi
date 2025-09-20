@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 
@@ -38,6 +38,7 @@ export const useLiff = () => {
   const [isInLiff, setIsInLiff] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
+  const autoLoginTriggeredThisMountRef = React.useRef(false);
   const { data: session, status } = useSession();
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   const isOnSigninPage = pathname === "/auth/signin";
@@ -192,17 +193,17 @@ export const useLiff = () => {
 
         // Auto login to NextAuth if LIFF is logged in but NextAuth session doesn't exist
         if (liffLoggedIn && !isOnSigninPage) {
-          // ใช้ cooldown ระยะสั้นแทนการบล็อกทั้ง session/tab
-          const lastTsStr = typeof window !== 'undefined' ? sessionStorage.getItem('liff_auto_login_last_ts') : null;
-          const lastTs = lastTsStr ? Number(lastTsStr) : 0;
-          const now = Date.now();
-          const withinCooldown = now - lastTs < 3000; // 3 วินาที
-          if (!withinCooldown) {
-            try { sessionStorage.setItem('liff_auto_login_last_ts', String(now)); } catch {}
-            setAutoLoginAttempted(true);
-            await handleAutoLogin(liff);
-          } else {
-            console.log('⏭️ Skip auto login due to cooldown');
+          // กันการยิงซ้ำภายในรอบ mount เดียวกัน แต่ตรวจทุกครั้งที่เข้าใหม่
+          if (!autoLoginTriggeredThisMountRef.current) {
+            const urlNow = new URL(window.location.href);
+            const hasOAuthParams = urlNow.searchParams.has('code') || urlNow.searchParams.has('state');
+            const loginInProgress = sessionStorage.getItem('liff_login_in_progress') === '1';
+            const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
+            if (!hasOAuthParams && !loginInProgress && !oauthInProgress) {
+              autoLoginTriggeredThisMountRef.current = true;
+              setAutoLoginAttempted(true);
+              await handleAutoLogin(liff);
+            }
           }
         } else if (!liffLoggedIn) {
           // เรียก LIFF login เฉพาะเมื่ออยู่ใน LIFF client เท่านั้น
