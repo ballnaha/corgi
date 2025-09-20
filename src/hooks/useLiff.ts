@@ -85,9 +85,13 @@ export const useLiff = () => {
         }
         await fetch('/api/auth/clear-line-cache', { method: 'POST' });
       } catch {}
+      // Small delay to ensure Set-Cookie deletions are applied before starting OAuth
+      await new Promise(resolve => setTimeout(resolve, 200));
+      const rid = Math.random().toString(36).slice(2);
+      try { sessionStorage.setItem('line_oauth_in_progress', '1'); } catch {}
       await signIn('line', {
-        callbackUrl: '/',
-        redirect: true, // Redirect to homepage to avoid loops
+        callbackUrl: `/shop?rid=${rid}`,
+        redirect: true,
       });
 
     } catch (error) {
