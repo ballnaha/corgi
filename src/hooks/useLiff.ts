@@ -144,6 +144,15 @@ export const useLiff = () => {
       }
 
       try {
+        // First time in this tab: clear stale OAuth cookies to prevent 400
+        try {
+          const bootCleared = sessionStorage.getItem('liff_boot_cleared') === '1';
+          if (!bootCleared) {
+            sessionStorage.setItem('liff_boot_cleared', '1');
+            await fetch('/api/auth/clear-line-cache', { method: 'POST' });
+          }
+        } catch {}
+
         // Load LIFF SDK
         const liff = (await import("@line/liff")).default;
         
@@ -192,7 +201,10 @@ export const useLiff = () => {
 
             if (!hasLiffParams) {
               // guard against multiple login triggers
-              try { sessionStorage.setItem('liff_login_in_progress', '1'); } catch {}
+              try {
+                sessionStorage.setItem('liff_login_in_progress', '1');
+                sessionStorage.setItem('line_oauth_in_progress', '1');
+              } catch {}
               liff.login({ redirectUri: getStableRedirectUri() });
             }
           }
@@ -215,7 +227,10 @@ export const useLiff = () => {
             window.history.replaceState(null, '', urlToClean.toString());
           }
           // clear any stale in-progress flag
-          try { sessionStorage.removeItem('liff_login_in_progress'); } catch {}
+          try {
+            sessionStorage.removeItem('liff_login_in_progress');
+            sessionStorage.removeItem('line_oauth_in_progress');
+          } catch {}
         } catch {}
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "LIFF initialization failed";
