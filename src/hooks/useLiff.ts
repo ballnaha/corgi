@@ -87,7 +87,7 @@ export const useLiff = () => {
         await fetch('/api/auth/clear-line-cache', { method: 'POST' });
       } catch {}
       // Small delay to ensure Set-Cookie deletions are applied before starting OAuth
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 300));
       const rid = Math.random().toString(36).slice(2);
       try { sessionStorage.setItem('line_oauth_in_progress', '1'); } catch {}
       await signIn('line', {
@@ -232,7 +232,10 @@ export const useLiff = () => {
             }
           });
           if (changed) {
-            window.history.replaceState(null, '', urlToClean.toString());
+            // เลี่ยงการเขียนทับทันทีหลัง redirect เพื่อกัน race กับ webview
+            setTimeout(() => {
+              try { window.history.replaceState(null, '', urlToClean.toString()); } catch {}
+            }, 200);
           }
           // clear OAuth in-progress flag เมื่อ session พร้อมเท่านั้น
           try {
