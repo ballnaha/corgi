@@ -191,43 +191,18 @@ export const useLiff = () => {
         setIsLoggedIn(liffLoggedIn);
         setIsReady(true);
 
-        // Auto login to NextAuth if LIFF is logged in but NextAuth session doesn't exist
-        if (liffLoggedIn && !isOnSigninPage) {
-          // กันการยิงซ้ำภายในรอบ mount เดียวกัน แต่ตรวจทุกครั้งที่เข้าใหม่
+        // Always ensure NextAuth session when in LIFF (use LINE OAuth via NextAuth)
+        if (!isOnSigninPage && isInLiff) {
           if (!autoLoginTriggeredThisMountRef.current) {
             const urlNow = new URL(window.location.href);
             const hasOAuthParams = urlNow.searchParams.has('code') || urlNow.searchParams.has('state');
             const loginInProgress = sessionStorage.getItem('liff_login_in_progress') === '1';
             const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
-            if (!hasOAuthParams && !loginInProgress && !oauthInProgress) {
+            const nextAuthUnauthed = status !== 'authenticated';
+            if (nextAuthUnauthed && !hasOAuthParams && !loginInProgress && !oauthInProgress) {
               autoLoginTriggeredThisMountRef.current = true;
               setAutoLoginAttempted(true);
               await handleAutoLogin(liff);
-            }
-          }
-        } else if (!liffLoggedIn) {
-          // เรียก LIFF login เฉพาะเมื่ออยู่ใน LIFF client เท่านั้น
-          const skip = typeof window !== 'undefined' && sessionStorage.getItem('skip_liff_auto_login') === '1';
-          if (skip) {
-            sessionStorage.removeItem('skip_liff_auto_login');
-            console.log('⏭️ Skip LIFF login due to recent logout');
-          } else if (!isOnSigninPage && liff.isInClient && liff.isInClient()) {
-            // Avoid re-login loop when code/state already present
-            const currentUrl = new URL(window.location.href);
-            const hasLiffParams =
-              currentUrl.searchParams.has('code') ||
-              currentUrl.searchParams.has('state') ||
-              currentUrl.searchParams.has('liff.state') ||
-              currentUrl.searchParams.has('liffRedirectUri') ||
-              currentUrl.searchParams.has('liffClientId');
-
-            if (!hasLiffParams) {
-              // guard against multiple login triggers
-              try {
-                sessionStorage.setItem('liff_login_in_progress', '1');
-                sessionStorage.setItem('line_oauth_in_progress', '1');
-              } catch {}
-              liff.login({ redirectUri: getStableRedirectUri() });
             }
           }
         }
