@@ -1,6 +1,6 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Button, Typography, CircularProgress, Alert, Card, CardContent, Divider } from "@mui/material";
@@ -9,7 +9,7 @@ import { useLiff } from "@/hooks/useLiff";
 import LoadingScreen from "@/components/LoadingScreen";
 
 export default function SignIn() {
-  const { data: session, status } = useSession();
+  const { isAuthenticated, isLoading } = useSimpleAuth();
   const { isInLiff, isReady, liffError } = useLiff();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,24 +23,17 @@ export default function SignIn() {
   }, []);
 
   useEffect(() => {
-    if (mounted && status === "authenticated") {
+    if (mounted && isAuthenticated) {
       // Wait a bit to ensure everything is ready before redirecting
       setTimeout(() => {
         router.push("/shop");
       }, 500);
     }
-  }, [status, router, mounted]);
+  }, [isAuthenticated, router, mounted]);
 
   const handleSignIn = () => {
-    setLoading(true);
-    // ล้างคุกกี้เก่าก่อนเริ่ม OAuth เพื่อกัน state/PKCE ค้างจากการปิดหน้าต่าง
-    const rid = Math.random().toString(36).slice(2);
-    try { sessionStorage.setItem('line_oauth_in_progress', '1'); } catch {}
-    fetch("/api/auth/clear-line-cache", { method: "POST" })
-      .catch(() => {})
-      .finally(() => {
-        signIn("line", { callbackUrl: `/shop?rid=${rid}` });
-      });
+    // For external browser users, redirect to LIFF for proper authentication
+    window.location.href = '/liff';
   };
 
   const handleClearCache = async () => {
@@ -66,11 +59,11 @@ export default function SignIn() {
     }
   };
 
-  if (!mounted || status === "loading") {
+  if (!mounted || isLoading) {
     return <LoadingScreen message="กำลังตรวจสอบการเข้าสู่ระบบ..." fullScreen={false} />;
   }
 
-  if (status === "authenticated") {
+  if (isAuthenticated) {
     return <LoadingScreen message="เข้าสู่ระบบสำเร็จ กำลังเปลี่ยนหน้า..." fullScreen={false} />;
   }
 

@@ -6,6 +6,7 @@ import '@fontsource/prompt/600.css';
 import '@fontsource/prompt/700.css';
 import "./globals.css";
 import LineAuthProvider from "@/components/LineAuthProvider";
+import { AuthProvider } from "@/hooks/useSimpleAuth";
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import ThemeProvider from "@/components/ThemeProvider";
 import ClientOnly from "@/components/ClientOnly";
@@ -62,10 +63,12 @@ export default function RootLayout({
         <ClientOnly>
           <AppRouterCacheProvider>
             <ThemeProvider>
-              <LineAuthProvider>
-                {children}
-                <BottomNavigation />
-              </LineAuthProvider>
+              <AuthProvider>
+                <LineAuthProvider>
+                  {children}
+                  <BottomNavigation />
+                </LineAuthProvider>
+              </AuthProvider>
             </ThemeProvider>
           </AppRouterCacheProvider>
         </ClientOnly>

@@ -1,6 +1,6 @@
 "use client";
 
-import { SessionProvider, useSession } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { ReactNode, useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useLiff } from "@/hooks/useLiff";
@@ -14,7 +14,7 @@ interface LineAuthProviderProps {
 }
 
 function AuthGuard({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, isLoading } = useSimpleAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -51,7 +51,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
     
     // In LIFF, require auth before showing /shop
     const isShopRoute = pathname === "/shop" || pathname.startsWith("/shop/");
-    if (isLikelyInLiffEnvironment && isShopRoute && status === "unauthenticated") {
+    if (isLikelyInLiffEnvironment && isShopRoute && !isAuthenticated && !isLoading) {
       setIsRedirecting(true);
       router.replace("/liff");
       return;
@@ -61,7 +61,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
     if (isPublicRoute) return;
     
     // Handle protected routes and other non-public routes
-    if (status === "unauthenticated") {
+    if (!isAuthenticated && !isLoading) {
       // Set redirecting state immediately to prevent content flash
       setIsRedirecting(true);
       
@@ -88,10 +88,10 @@ function AuthGuard({ children }: { children: ReactNode }) {
         router.replace("/auth/signin");
       }
     }
-  }, [status, router, pathname, mounted, isRedirecting, isLikelyInLiffEnvironment, isPublicRoute, isProtectedRoute]);
+  }, [isAuthenticated, isLoading, router, pathname, mounted, isRedirecting, isLikelyInLiffEnvironment, isPublicRoute, isProtectedRoute]);
 
-  // Show loading until mounted and session is determined
-  if (!mounted || status === "loading") {
+  // Show loading until mounted and auth is determined
+  if (!mounted || isLoading) {
     return <LoadingScreen message="กำลังตรวจสอบการเข้าสู่ระบบ..." fullScreen={true} />;
   }
 
@@ -101,7 +101,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   // Handle protected routes for non-LIFF users - prevent content flash
-  if (!isLikelyInLiffEnvironment && (isProtectedRoute || !isPublicRoute) && status === "unauthenticated") {
+  if (!isLikelyInLiffEnvironment && (isProtectedRoute || !isPublicRoute) && !isAuthenticated) {
     return <LoadingScreen message="กำลังเปลี่ยนหน้า..." fullScreen={true} />;
   }
 
@@ -111,7 +111,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   }
 
   // Show content when authenticated
-  if (status === "authenticated") {
+  if (isAuthenticated) {
     return <>{children}</>;
   }
 
@@ -123,7 +123,7 @@ function LiffWrapper({ children }: { children: ReactNode }) {
   const { isReady, isInLiff, liffError, closeWindow, liff, isLoggedIn } = useLiff();
   const [showLiffLoading, setShowLiffLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const { data: session, status } = useSession();
+  const { isAuthenticated, isLoading } = useSimpleAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -134,14 +134,14 @@ function LiffWrapper({ children }: { children: ReactNode }) {
     if (!isInLiff) {
       setShowLiffLoading(false);
     } else if (isReady) {
-      // For LIFF environment, wait for both LIFF ready and session authenticated
-      if (isLoggedIn && status === "authenticated") {
+      // For LIFF environment, wait for both LIFF ready and auth authenticated
+      if (isLoggedIn && isAuthenticated) {
         setShowLiffLoading(false);
       } else if (!isLoggedIn) {
         setShowLiffLoading(false);
       }
     }
-  }, [isInLiff, isReady, isLoggedIn, status]);
+  }, [isInLiff, isReady, isLoggedIn, isAuthenticated]);
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {
@@ -196,7 +196,7 @@ function LiffWrapper({ children }: { children: ReactNode }) {
 
   // Show different loading messages based on LIFF state with full screen overlay
   if (isInLiff && showLiffLoading) {
-    if (isLoggedIn && status === "loading") {
+    if (isLoggedIn && isLoading) {
       return <LoadingScreen message="กำลังเข้าสู่ระบบ..." fullScreen={true} />;
     }
     return <LoadingScreen message="กำลังเชื่อมต่อ LINE..." fullScreen={true} />;
@@ -209,11 +209,9 @@ export default function LineAuthProvider({ children }: LineAuthProviderProps) {
   return (
     <ErrorBoundary>
       <NoSSR fallback={<LoadingScreen message="กำลังโหลด..." fullScreen={true} />}>
-        <SessionProvider>
-          <AuthGuard>
-            <LiffWrapper>{children}</LiffWrapper>
-          </AuthGuard>
-        </SessionProvider>
+        <AuthGuard>
+          <LiffWrapper>{children}</LiffWrapper>
+        </AuthGuard>
       </NoSSR>
     </ErrorBoundary>
   );
