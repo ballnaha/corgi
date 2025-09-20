@@ -17,9 +17,6 @@ import { readCartFromStorage, writeCartToStorage, addToCartStorage } from "@/lib
 import { readFavoriteIds, toggleFavoriteId } from "@/lib/favorites";
 import { Product, CartItem } from "@/types";
 import { useThemedSnackbar } from "@/components/ThemedSnackbar";
-import LoadingScreen from "@/components/LoadingScreen";
-import { useSession } from "next-auth/react";
-import { useLiff } from "@/hooks/useLiff";
 
 export default function ShopPage() {
   const SlideUpTransition = React.forwardRef(function SlideUpTransition(
@@ -30,23 +27,6 @@ export default function ShopPage() {
   });
   const router = useRouter();
   const { showSnackbar, SnackbarComponent } = useThemedSnackbar();
-  const { data: session, status } = useSession();
-  const { isInLiff, isReady: isLiffReady, isLoggedIn: isLiffLoggedIn } = useLiff();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Gate rendering when inside LIFF: require LIFF ready and NextAuth authenticated
-  if (!mounted) {
-    return <LoadingScreen message="กำลังโหลด..." fullScreen={true} />;
-  }
-
-  if (isInLiff) {
-    if (!isLiffReady || !isLiffLoggedIn || status !== "authenticated") {
-      return <LoadingScreen message="กำลังเข้าสู่ระบบ..." fullScreen={true} />;
-    }
-  }
   const [selectedCategory, setSelectedCategory] = useState("dogs");
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);

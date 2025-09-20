@@ -49,6 +49,14 @@ function AuthGuard({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!mounted || isRedirecting) return;
     
+    // In LIFF, require auth before showing /shop
+    const isShopRoute = pathname === "/shop" || pathname.startsWith("/shop/");
+    if (isLikelyInLiffEnvironment && isShopRoute && status === "unauthenticated") {
+      setIsRedirecting(true);
+      router.replace("/liff");
+      return;
+    }
+    
     // For public routes, allow access without authentication
     if (isPublicRoute) return;
     
