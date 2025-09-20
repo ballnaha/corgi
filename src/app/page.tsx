@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { isInLiffEnvironment, safeLiffNavigation } from "@/lib/liff-navigation";
 import LoadingScreen from "@/components/LoadingScreen";
 
 export default function Home() {
@@ -11,17 +12,17 @@ export default function Home() {
   useEffect(() => {
     const checkLiffAndRedirect = async () => {
       try {
-        // Check if we're in LIFF environment
-        const isLiff = typeof window !== 'undefined' && (
-          window.location.href.includes('liff.line.me') ||
-          window.location.href.includes('liff-web.line.me') ||
-          window.location.search.includes('liff') ||
-          navigator.userAgent.includes('Line/')
-        );
+        const isLiff = isInLiffEnvironment();
 
         if (isLiff) {
-          // If from LIFF, redirect to shop page for authentication
-          router.replace("/shop");
+          // ใช้ window.location ใน LIFF เพื่อลดโอกาสค้าง
+          safeLiffNavigation("/shop");
+          // เผื่อว่า navigation ไม่ทำงาน ให้บังคับเปลี่ยนหน้าอีกครั้งหลังหน่วงสั้น ๆ
+          setTimeout(() => {
+            if (typeof window !== 'undefined' && window.location.pathname !== '/shop') {
+              window.location.href = '/shop';
+            }
+          }, 300);
         } else {
           // If normal web access, redirect to home page (public access)
           router.replace("/home");
