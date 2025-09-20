@@ -1,6 +1,6 @@
 export const DOMAINS = {
   production: "whatdadog.com",
-  test: "red1.theredpotion.com",
+  test: "corgi.theredpotion.com",
   local: "localhost:3000",
 } as const;
 

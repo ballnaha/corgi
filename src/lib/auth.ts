@@ -1,5 +1,4 @@
 import { NextAuthOptions } from "next-auth";
-import Credentials from "next-auth/providers/credentials";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -55,7 +54,6 @@ export const authOptions: NextAuthOptions = {
   providers:
     process.env.LINE_CLIENT_ID && process.env.LINE_CLIENT_SECRET
       ? [
-          // LINE OAuth (เดิม)
           {
             id: "line",
             name: "LINE",
@@ -83,42 +81,6 @@ export const authOptions: NextAuthOptions = {
               };
             },
           },
-          // LINE ID Token (Credentials) - สำหรับ LIFF auto-login แบบไม่ redirect
-          Credentials({
-            id: "line-idtoken",
-            name: "LINE ID Token",
-            credentials: {
-              idToken: { label: "idToken", type: "text" },
-            },
-            async authorize(credentials) {
-              try {
-                const idToken = credentials?.idToken as string | undefined;
-                if (!idToken) return null;
-
-                // Verify ID Token with LINE
-                const verifyUrl = new URL("https://api.line.me/oauth2/v2.1/verify");
-                verifyUrl.searchParams.set("id_token", idToken);
-                verifyUrl.searchParams.set("client_id", process.env.LINE_CLIENT_ID!);
-
-                const verifyRes = await fetch(verifyUrl.toString());
-                if (!verifyRes.ok) {
-                  return null;
-                }
-                const data = await verifyRes.json();
-                // data: { iss, sub (userId), name, picture, exp, ... }
-
-                return {
-                  id: data.sub,
-                  lineUserId: data.sub,
-                  name: data.name,
-                  image: data.picture,
-                  email: null,
-                } as any;
-              } catch (e) {
-                return null;
-              }
-            },
-          }),
         ]
       : [],
   callbacks: {
@@ -280,7 +242,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-          sameSite: "none", 
+        sameSite: "lax", 
         path: "/",
         secure: process.env.NODE_ENV === "production",
         maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -290,7 +252,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.callback-url`,
       options: {
         httpOnly: true,
-          sameSite: "none",
+        sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
         maxAge: 10 * 60, // 10 minutes
@@ -300,7 +262,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.csrf-token`,
       options: {
         httpOnly: true,
-          sameSite: "none",
+        sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
         maxAge: 10 * 60, // 10 minutes
@@ -310,7 +272,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.state`,
       options: {
         httpOnly: true,
-          sameSite: "none",
+        sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
         // ขยายอายุ state cookie เพื่อกันผู้ใช้ค้างนานระหว่างขั้นตอนอนุญาตสิทธิ์
@@ -322,7 +284,7 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.pkce.code_verifier`,
       options: {
         httpOnly: true,
-          sameSite: "none",
+        sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
         // ให้สอดคล้องกับ state cookie

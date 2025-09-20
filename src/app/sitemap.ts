@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
 
 const BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://whatdadog.com' 
-  : 'http://red1.theredpotion.com'
+  : 'http://corgi.theredpotion.com'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages

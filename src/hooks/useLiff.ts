@@ -87,7 +87,7 @@ export const useLiff = () => {
         await fetch('/api/auth/clear-line-cache', { method: 'POST' });
       } catch {}
       // Small delay to ensure Set-Cookie deletions are applied before starting OAuth
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 200));
       const rid = Math.random().toString(36).slice(2);
       try { sessionStorage.setItem('line_oauth_in_progress', '1'); } catch {}
       await signIn('line', {
@@ -141,23 +141,7 @@ export const useLiff = () => {
         return;
       }
 
-      // Proactively clear stale OAuth cookies and stale in-progress flags on fresh LIFF entry when unauthenticated
-      // Skip if OAuth is in progress or URL already has OAuth params
-      try {
-        const urlNow = new URL(window.location.href);
-        const hasOAuthParams =
-          urlNow.searchParams.has('code') ||
-          urlNow.searchParams.has('state');
-        const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
-        const isUnauthed = status !== 'authenticated';
-        if (isUnauthed && !hasOAuthParams && !oauthInProgress) {
-          await fetch('/api/auth/clear-line-cache', { method: 'POST' });
-          try {
-            sessionStorage.removeItem('line_oauth_in_progress');
-            sessionStorage.removeItem('liff_login_in_progress');
-          } catch {}
-        }
-      } catch {}
+      // ปิดการล้าง OAuth cookies ตอน init เพื่อลด state mismatch
 
       // Only initialize LIFF if we're in LIFF environment and LIFF_ID is configured
       if (!process.env.NEXT_PUBLIC_LIFF_ID) {
@@ -167,14 +151,7 @@ export const useLiff = () => {
       }
 
       try {
-        // First time in this tab: clear stale OAuth cookies to prevent 400
-        try {
-          const bootCleared = sessionStorage.getItem('liff_boot_cleared') === '1';
-          if (!bootCleared) {
-            sessionStorage.setItem('liff_boot_cleared', '1');
-            await fetch('/api/auth/clear-line-cache', { method: 'POST' });
-          }
-        } catch {}
+        // ปิดการล้าง boot cookies เพื่อลด state mismatch
 
         // Load LIFF SDK
         const liff = (await import("@line/liff")).default;
@@ -195,7 +172,7 @@ export const useLiff = () => {
         setIsLoggedIn(liffLoggedIn);
         setIsReady(true);
 
-        // In LIFF: ensure LIFF login first, then prefer ID Token flow for NextAuth session
+        // In LIFF: ensure LIFF login first, then ensure NextAuth session
         if (!isOnSigninPage && isInLiff) {
           const urlNow = new URL(window.location.href);
           const hasOAuthParams = urlNow.searchParams.has('code') || urlNow.searchParams.has('state') ||
@@ -211,26 +188,13 @@ export const useLiff = () => {
               liff.login({ redirectUri: getStableRedirectUri() });
             }
           } else {
+            const loginInProgress = sessionStorage.getItem('liff_login_in_progress') === '1';
+            const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
             const nextAuthUnauthed = status !== 'authenticated';
-            if (nextAuthUnauthed && !autoLoginTriggeredThisMountRef.current) {
+            if (nextAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current) {
               autoLoginTriggeredThisMountRef.current = true;
               setAutoLoginAttempted(true);
-              try {
-                // Try ID Token flow first
-                const idToken = (window as any).liff?.getIDToken?.();
-                if (idToken) {
-                  await signIn('line-idtoken', {
-                    idToken,
-                    redirect: false,
-                  });
-                } else {
-                  // Fallback to OAuth redirect only ifไม่มี idToken
-                  await handleAutoLogin(liff);
-                }
-              } catch (e) {
-                // Fallback on error
-                await handleAutoLogin(liff);
-              }
+              await handleAutoLogin(liff);
             }
           }
         }
@@ -249,10 +213,7 @@ export const useLiff = () => {
             }
           });
           if (changed) {
-            // เลี่ยงการเขียนทับทันทีหลัง redirect เพื่อกัน race กับ webview
-            setTimeout(() => {
-              try { window.history.replaceState(null, '', urlToClean.toString()); } catch {}
-            }, 200);
+            window.history.replaceState(null, '', urlToClean.toString());
           }
           // clear OAuth in-progress flag เมื่อ session พร้อมเท่านั้น
           try {
