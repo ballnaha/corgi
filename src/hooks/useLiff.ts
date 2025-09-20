@@ -41,6 +41,7 @@ export const useLiff = () => {
   const { data: session, status } = useSession();
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   const isOnSigninPage = pathname === "/auth/signin";
+  const isOnLiffPage = pathname === "/liff";
 
   // Use stable redirect uri to avoid random query/hash differences
   const getStableRedirectUri = () => {
@@ -184,6 +185,22 @@ export const useLiff = () => {
         if (liff.isInClient && liff.isInClient()) {
           console.log("Running in LIFF client mode");
         }
+
+        // Force re-auth on fresh entry to /liff within LIFF to always hit access.line.me
+        try {
+          const currentUrl = new URL(window.location.href);
+          const hasOAuthParams = currentUrl.searchParams.has('code') || currentUrl.searchParams.has('state');
+          const alreadyForced = sessionStorage.getItem('force_reauth_done') === '1';
+          const isUnauthed = status !== 'authenticated';
+          if (isOnLiffPage && liff.isInClient && liff.isInClient() && isUnauthed && !hasOAuthParams && !alreadyForced) {
+            sessionStorage.setItem('force_reauth_done', '1');
+            await fetch('/api/auth/clear-line-cache', { method: 'POST' }).catch(() => {});
+            try { liff.logout(); } catch {}
+            try { sessionStorage.setItem('liff_login_in_progress', '1'); sessionStorage.setItem('line_oauth_in_progress', '1'); } catch {}
+            liff.login({ redirectUri: getStableRedirectUri() });
+            return; // will redirect
+          }
+        } catch {}
 
         setLiffObject(liff);
         const liffLoggedIn = liff.isLoggedIn();
