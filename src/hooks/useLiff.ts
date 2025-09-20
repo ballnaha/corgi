@@ -101,6 +101,10 @@ export const useLiff = () => {
 
             if (response.ok) {
               console.log("✅ LIFF token auth successful, redirecting...");
+              // Store login success flag in localStorage for persistence
+              try {
+                localStorage.setItem('liff_login_success', Date.now().toString());
+              } catch {}
               window.location.href = '/shop';
               return;
             }
@@ -221,9 +225,18 @@ export const useLiff = () => {
             const nextAuthUnauthed = status === 'unauthenticated'; // Changed from !== 'authenticated'
             const isSessionLoading = status === 'loading';
             
-            if (nextAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current && !isSessionLoading) {
+            // Check if we have recent login success in localStorage
+            const lastLoginSuccess = localStorage.getItem('liff_login_success');
+            const hasRecentLogin = lastLoginSuccess && (Date.now() - parseInt(lastLoginSuccess) < 24 * 60 * 60 * 1000); // 24 hours
+            
+            if (nextAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current && !isSessionLoading && !hasRecentLogin) {
               autoLoginTriggeredThisMountRef.current = true;
               setAutoLoginAttempted(true);
+              await handleAutoLogin(liff);
+            } else if (hasRecentLogin && nextAuthUnauthed) {
+              // If we have recent login success but NextAuth session is missing, try to restore
+              console.log("🔄 Attempting to restore session from recent LIFF login");
+              autoLoginTriggeredThisMountRef.current = true;
               await handleAutoLogin(liff);
             }
           }

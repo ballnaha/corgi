@@ -85,11 +85,27 @@ export async function POST(request: NextRequest) {
       process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development'
     );
 
-    // Set NextAuth session cookie
+    // Set NextAuth session cookie with stronger settings for LIFF
     response.cookies.set('next-auth.session-token', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'none', // Allow cross-site for LIFF webview
+      path: '/',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    // Set backup session info for LIFF
+    response.cookies.set('liff-session-backup', JSON.stringify({
+      userId: user.id,
+      lineUserId: user.lineUserId,
+      displayName: user.displayName,
+      role: user.role,
+      isAdmin: user.isAdmin,
+      timestamp: Date.now(),
+    }), {
+      httpOnly: false, // Allow client access for backup
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'none',
       path: '/',
       maxAge: 30 * 24 * 60 * 60, // 30 days
     });
