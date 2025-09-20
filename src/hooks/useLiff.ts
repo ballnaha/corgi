@@ -109,7 +109,8 @@ export const useLiff = () => {
         
         // Fallback to OAuth for external browser or when ID token fails
         console.log("🔄 Fallback to OAuth flow");
-        await fetch('/api/auth/clear-line-cache', { method: 'POST' }).catch(() => {});
+        // Don't clear cookies on re-entry to avoid breaking existing session
+        // await fetch('/api/auth/clear-line-cache', { method: 'POST' }).catch(() => {});
         await new Promise(resolve => setTimeout(resolve, 300));
         const rid = Math.random().toString(36).slice(2);
         await signIn('line', { callbackUrl: `/shop?rid=${rid}` });
@@ -214,10 +215,13 @@ export const useLiff = () => {
               liff.login({ redirectUri: getStableRedirectUri() });
             }
           } else {
+            // Only trigger auto-login if NextAuth session is explicitly unauthenticated (not loading)
             const loginInProgress = sessionStorage.getItem('liff_login_in_progress') === '1';
             const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
-            const nextAuthUnauthed = status !== 'authenticated';
-            if (nextAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current) {
+            const nextAuthUnauthed = status === 'unauthenticated'; // Changed from !== 'authenticated'
+            const isSessionLoading = status === 'loading';
+            
+            if (nextAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current && !isSessionLoading) {
               autoLoginTriggeredThisMountRef.current = true;
               setAutoLoginAttempted(true);
               await handleAutoLogin(liff);
