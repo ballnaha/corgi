@@ -52,7 +52,7 @@ export const useLiff = () => {
   // ปิดการ logout อัตโนมัติเมื่อปิดหน้า LIFF ชั่วคราวเพื่อกันชน OAuth (ลด 400)
   // (ถ้าต้องการกลับมาใช้ ให้เพิ่ม flag และ guard ให้แน่นหนากว่านี้)
 
-  // Handle auto login to NextAuth using LIFF
+  // Handle auto login to NextAuth using LIFF ID Token
   const handleAutoLogin = async (liff: LiffObject) => {
     try {
       console.log("🔄 Starting LIFF auto login process...");
@@ -69,32 +69,50 @@ export const useLiff = () => {
         return;
       }
 
+      // Skip auto login if a recent logout set a skip flag
+      const skip = typeof window !== 'undefined' && sessionStorage.getItem('skip_liff_auto_login') === '1';
+      if (skip) {
+        sessionStorage.removeItem('skip_liff_auto_login');
+        console.log('⏭️ Skip LIFF auto login due to recent logout');
+        return;
+      }
+
       // Wait a bit to ensure LIFF is fully initialized
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      console.log("🔗 Triggering NextAuth LINE login for LIFF user...");
+      console.log("🔗 Using LIFF ID Token for NextAuth...");
       
-      // Trigger NextAuth LINE login
-      // Clear old auth cookies/state before starting OAuth to avoid 400/state mismatch
+      // Get LIFF ID Token and send to our custom auth endpoint
       try {
-        // Skip auto login if a recent logout set a skip flag
-        const skip = typeof window !== 'undefined' && sessionStorage.getItem('skip_liff_auto_login') === '1';
-        if (skip) {
-          sessionStorage.removeItem('skip_liff_auto_login');
-          console.log('⏭️ Skip LIFF auto login due to recent logout');
+        const idToken = liff.getIDToken();
+        if (!idToken) {
+          console.error("❌ No ID token available from LIFF");
           return;
         }
-        // Always clear cookies before OAuth to prevent state mismatch
-        await fetch('/api/auth/clear-line-cache', { method: 'POST' });
-      } catch {}
-      // Longer delay to ensure Set-Cookie deletions are fully applied
-      await new Promise(resolve => setTimeout(resolve, 500));
-      const rid = Math.random().toString(36).slice(2);
-      try { sessionStorage.setItem('line_oauth_in_progress', '1'); } catch {}
-      await signIn('line', {
-        callbackUrl: `/shop?rid=${rid}`,
-        redirect: true,
-      });
+
+        const response = await fetch('/api/auth/liff-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ idToken }),
+        });
+
+        if (response.ok) {
+          console.log("✅ LIFF token auth successful, redirecting...");
+          window.location.href = '/shop';
+        } else {
+          console.error("❌ LIFF token auth failed:", response.status);
+          // Fallback to regular OAuth if token auth fails
+          const rid = Math.random().toString(36).slice(2);
+          await signIn('line', { callbackUrl: `/shop?rid=${rid}` });
+        }
+      } catch (tokenError) {
+        console.error("❌ Error with LIFF token auth:", tokenError);
+        // Fallback to regular OAuth
+        const rid = Math.random().toString(36).slice(2);
+        await signIn('line', { callbackUrl: `/shop?rid=${rid}` });
+      }
 
     } catch (error) {
       console.error("❌ Error during LIFF auto login:", error);
