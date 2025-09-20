@@ -48,42 +48,8 @@ export const useLiff = () => {
     return `${window.location.origin}/liff`;
   };
 
-  // Ensure logout and cookie cleanup on LIFF window close
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const shouldAttach = checkLiffEnvironment();
-    if (!shouldAttach) return;
-
-    const handleCleanupAndLogout = () => {
-      try {
-        // Skip cleanup if it's an internal navigation within LIFF
-        const internalNav = typeof window !== 'undefined' && sessionStorage.getItem('liff_internal_nav') === '1';
-        if (internalNav) {
-          try { sessionStorage.removeItem('liff_internal_nav'); } catch {}
-          return;
-        }
-        // prevent auto login immediately on next open
-        sessionStorage.setItem('skip_liff_auto_login', '1');
-        // clear next-auth / oauth cookies on server
-        fetch('/api/auth/clear-line-cache', { method: 'POST', keepalive: true }).catch(() => {});
-        // best-effort LIFF logout
-        try { if (window.liff) window.liff.logout(); } catch {}
-      } catch {}
-    };
-
-    const onPageHide = () => handleCleanupAndLogout();
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') handleCleanupAndLogout();
-    };
-
-    window.addEventListener('pagehide', onPageHide);
-    document.addEventListener('visibilitychange', onVisibilityChange);
-    return () => {
-      window.removeEventListener('pagehide', onPageHide);
-      document.removeEventListener('visibilitychange', onVisibilityChange);
-    };
-  }, []);
+  // ปิดการ logout อัตโนมัติเมื่อปิดหน้า LIFF ชั่วคราวเพื่อกันชน OAuth (ลด 400)
+  // (ถ้าต้องการกลับมาใช้ ให้เพิ่ม flag และ guard ให้แน่นหนากว่านี้)
 
   // Handle auto login to NextAuth using LIFF
   const handleAutoLogin = async (liff: LiffObject) => {
