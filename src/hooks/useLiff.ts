@@ -195,7 +195,7 @@ export const useLiff = () => {
         setIsLoggedIn(liffLoggedIn);
         setIsReady(true);
 
-        // In LIFF: ensure LIFF login first, then ensure NextAuth session
+        // In LIFF: ensure LIFF login first, then prefer ID Token flow for NextAuth session
         if (!isOnSigninPage && isInLiff) {
           const urlNow = new URL(window.location.href);
           const hasOAuthParams = urlNow.searchParams.has('code') || urlNow.searchParams.has('state') ||
@@ -211,13 +211,26 @@ export const useLiff = () => {
               liff.login({ redirectUri: getStableRedirectUri() });
             }
           } else {
-            const loginInProgress = sessionStorage.getItem('liff_login_in_progress') === '1';
-            const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
             const nextAuthUnauthed = status !== 'authenticated';
-            if (nextAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current) {
+            if (nextAuthUnauthed && !autoLoginTriggeredThisMountRef.current) {
               autoLoginTriggeredThisMountRef.current = true;
               setAutoLoginAttempted(true);
-              await handleAutoLogin(liff);
+              try {
+                // Try ID Token flow first
+                const idToken = (window as any).liff?.getIDToken?.();
+                if (idToken) {
+                  await signIn('line-idtoken', {
+                    idToken,
+                    redirect: false,
+                  });
+                } else {
+                  // Fallback to OAuth redirect only ifไม่มี idToken
+                  await handleAutoLogin(liff);
+                }
+              } catch (e) {
+                // Fallback on error
+                await handleAutoLogin(liff);
+              }
             }
           }
         }
