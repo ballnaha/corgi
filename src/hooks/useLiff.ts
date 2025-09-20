@@ -15,7 +15,7 @@ interface LiffProfile {
 interface LiffObject {
   init: (config: { liffId: string; withLoginOnExternalBrowser?: boolean }) => Promise<void>;
   isLoggedIn: () => boolean;
-  login: () => void;
+  login: (params?: { redirectUri?: string }) => void;
   logout: () => void;
   getProfile: () => Promise<LiffProfile>;
   getIDToken: () => string | null;
@@ -41,6 +41,12 @@ export const useLiff = () => {
   const { data: session, status } = useSession();
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   const isOnSigninPage = pathname === "/auth/signin";
+
+  // Use stable redirect uri to avoid random query/hash differences
+  const getStableRedirectUri = () => {
+    if (typeof window === "undefined") return "/liff";
+    return `${window.location.origin}/liff`;
+  };
 
   // Handle auto login to NextAuth using LIFF
   const handleAutoLogin = async (liff: LiffObject) => {
@@ -172,9 +178,38 @@ export const useLiff = () => {
             sessionStorage.removeItem('skip_liff_auto_login');
             console.log('⏭️ Skip LIFF login due to recent logout');
           } else if (!isOnSigninPage && liff.isInClient && liff.isInClient()) {
-            liff.login();
+            // Avoid re-login loop when code/state already present
+            const currentUrl = new URL(window.location.href);
+            const hasLiffParams =
+              currentUrl.searchParams.has('code') ||
+              currentUrl.searchParams.has('state') ||
+              currentUrl.searchParams.has('liff.state') ||
+              currentUrl.searchParams.has('liffRedirectUri') ||
+              currentUrl.searchParams.has('liffClientId');
+
+            if (!hasLiffParams) {
+              liff.login({ redirectUri: getStableRedirectUri() });
+            }
           }
         }
+
+        // Clean up temporary LIFF/OAuth params to avoid collision in next load
+        try {
+          const urlToClean = new URL(window.location.href);
+          const paramsToDelete = [
+            'code', 'state', 'liff.state', 'liffRedirectUri', 'liffClientId',
+          ];
+          let changed = false;
+          paramsToDelete.forEach((key) => {
+            if (urlToClean.searchParams.has(key)) {
+              urlToClean.searchParams.delete(key);
+              changed = true;
+            }
+          });
+          if (changed) {
+            window.history.replaceState(null, '', urlToClean.toString());
+          }
+        } catch {}
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "LIFF initialization failed";
         setLiffError(errorMessage);

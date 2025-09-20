@@ -19,18 +19,18 @@ export default function LiffPage() {
   useEffect(() => {
     if (!mounted) return;
 
-    // If authenticated, redirect to home
+    // If authenticated, redirect to shop
     if (status === "authenticated") {
-      router.push("/");
+      router.push("/shop");
       return;
     }
 
-    // If LIFF is ready and user is logged in to LIFF, auto login should happen
-    // Otherwise, redirect to signin page
-    if (isReady && !isLoggedIn && !liffError) {
+    // If not in LIFF, and LIFF not logged in, go to signin page
+    // If in LIFF, do NOT redirect; let LIFF flow handle login to avoid loops
+    if (isReady && !isLoggedIn && !liffError && !isInLiff) {
       router.push("/auth/signin");
     }
-  }, [mounted, status, isReady, isLoggedIn, liffError, router]);
+  }, [mounted, status, isReady, isLoggedIn, liffError, isInLiff, router]);
 
   if (!mounted || !isReady) {
     return <LoadingScreen message="กำลังเชื่อมต่อ LINE..." fullScreen={false} />;
