@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useLiff } from "@/hooks/useLiff";
 import LoadingScreen from "@/components/LoadingScreen";
+import { signIn } from "next-auth/react";
 
 export default function LiffPage() {
   const { data: session, status } = useSession();
   const { isReady, isInLiff, isLoggedIn, liffError } = useLiff();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const kickAuthRef = useRef(false);
 
   useEffect(() => {
     setMounted(true);
@@ -25,8 +27,19 @@ export default function LiffPage() {
       return;
     }
 
+    // If in LIFF and LIFF is logged in but NextAuth isn't, force NextAuth sign-in
+    if (isReady && isInLiff && isLoggedIn && status === "unauthenticated" && !kickAuthRef.current) {
+      kickAuthRef.current = true;
+      const rid = Math.random().toString(36).slice(2);
+      fetch('/api/auth/clear-line-cache', { method: 'POST' })
+        .catch(() => {})
+        .finally(() => {
+          signIn('line', { callbackUrl: `/shop?rid=${rid}` });
+        });
+      return;
+    }
+
     // If not in LIFF, and LIFF not logged in, go to signin page
-    // If in LIFF, do NOT redirect; let LIFF flow handle login to avoid loops
     if (isReady && !isLoggedIn && !liffError && !isInLiff) {
       router.push("/auth/signin");
     }
