@@ -82,34 +82,41 @@ export const useLiff = () => {
 
       console.log("🔗 Using LIFF ID Token for NextAuth...");
       
-      // Get LIFF ID Token and send to our custom auth endpoint
+      // Try to use LIFF ID Token first, fallback to OAuth if not available
       try {
-        const idToken = liff.getIDToken();
-        if (!idToken) {
-          console.error("❌ No ID token available from LIFF");
-          return;
-        }
+        // Check if we're in LIFF client (not external browser)
+        const isInClient = liff.isInClient && liff.isInClient();
+        
+        if (isInClient) {
+          const idToken = liff.getIDToken();
+          if (idToken) {
+            console.log("🎯 Using LIFF ID Token (in client)");
+            const response = await fetch('/api/auth/liff-token', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ idToken }),
+            });
 
-        const response = await fetch('/api/auth/liff-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ idToken }),
-        });
-
-        if (response.ok) {
-          console.log("✅ LIFF token auth successful, redirecting...");
-          window.location.href = '/shop';
-        } else {
-          console.error("❌ LIFF token auth failed:", response.status);
-          // Fallback to regular OAuth if token auth fails
-          const rid = Math.random().toString(36).slice(2);
-          await signIn('line', { callbackUrl: `/shop?rid=${rid}` });
+            if (response.ok) {
+              console.log("✅ LIFF token auth successful, redirecting...");
+              window.location.href = '/shop';
+              return;
+            }
+          }
         }
+        
+        // Fallback to OAuth for external browser or when ID token fails
+        console.log("🔄 Fallback to OAuth flow");
+        await fetch('/api/auth/clear-line-cache', { method: 'POST' }).catch(() => {});
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const rid = Math.random().toString(36).slice(2);
+        await signIn('line', { callbackUrl: `/shop?rid=${rid}` });
+        
       } catch (tokenError) {
-        console.error("❌ Error with LIFF token auth:", tokenError);
-        // Fallback to regular OAuth
+        console.error("❌ Error with auth:", tokenError);
+        // Final fallback to regular OAuth
         const rid = Math.random().toString(36).slice(2);
         await signIn('line', { callbackUrl: `/shop?rid=${rid}` });
       }
@@ -177,8 +184,8 @@ export const useLiff = () => {
         
         await liff.init({ 
           liffId: process.env.NEXT_PUBLIC_LIFF_ID!,
-          // หลีกเลี่ยงการเปิดในเบราว์เซอร์ภายนอกเพราะฟีเจอร์ LIFF จะจำกัดและขึ้นแจ้งเตือน
-          withLoginOnExternalBrowser: false
+          // อนุญาตให้เปิดใน external browser ด้วยเพื่อรองรับทุกกรณี
+          withLoginOnExternalBrowser: true
         });
 
         // Enable LIFF client features for better navigation
