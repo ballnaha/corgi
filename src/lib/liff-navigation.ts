@@ -23,6 +23,7 @@ export const safeLiffNavigation = (url: string) => {
     // In LIFF environment, use window.location for navigation
     // This works better than router.push() in LINE mobile app
     console.log("LIFF navigation to:", url);
+    try { sessionStorage.setItem('liff_internal_nav', '1'); } catch {}
     window.location.href = url;
   } else {
     // In regular browser, use normal navigation

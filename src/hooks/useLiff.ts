@@ -57,6 +57,12 @@ export const useLiff = () => {
 
     const handleCleanupAndLogout = () => {
       try {
+        // Skip cleanup if it's an internal navigation within LIFF
+        const internalNav = typeof window !== 'undefined' && sessionStorage.getItem('liff_internal_nav') === '1';
+        if (internalNav) {
+          try { sessionStorage.removeItem('liff_internal_nav'); } catch {}
+          return;
+        }
         // prevent auto login immediately on next open
         sessionStorage.setItem('skip_liff_auto_login', '1');
         // clear next-auth / oauth cookies on server
