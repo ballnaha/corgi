@@ -48,6 +48,37 @@ export const useLiff = () => {
     return `${window.location.origin}/liff`;
   };
 
+  // Ensure logout and cookie cleanup on LIFF window close
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const shouldAttach = checkLiffEnvironment();
+    if (!shouldAttach) return;
+
+    const handleCleanupAndLogout = () => {
+      try {
+        // prevent auto login immediately on next open
+        sessionStorage.setItem('skip_liff_auto_login', '1');
+        // clear next-auth / oauth cookies on server
+        fetch('/api/auth/clear-line-cache', { method: 'POST', keepalive: true }).catch(() => {});
+        // best-effort LIFF logout
+        try { if (window.liff) window.liff.logout(); } catch {}
+      } catch {}
+    };
+
+    const onPageHide = () => handleCleanupAndLogout();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') handleCleanupAndLogout();
+    };
+
+    window.addEventListener('pagehide', onPageHide);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('pagehide', onPageHide);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
   // Handle auto login to NextAuth using LIFF
   const handleAutoLogin = async (liff: LiffObject) => {
     try {
@@ -188,6 +219,8 @@ export const useLiff = () => {
               currentUrl.searchParams.has('liffClientId');
 
             if (!hasLiffParams) {
+              // guard against multiple login triggers
+              try { sessionStorage.setItem('liff_login_in_progress', '1'); } catch {}
               liff.login({ redirectUri: getStableRedirectUri() });
             }
           }
@@ -209,6 +242,8 @@ export const useLiff = () => {
           if (changed) {
             window.history.replaceState(null, '', urlToClean.toString());
           }
+          // clear any stale in-progress flag
+          try { sessionStorage.removeItem('liff_login_in_progress'); } catch {}
         } catch {}
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : "LIFF initialization failed";
