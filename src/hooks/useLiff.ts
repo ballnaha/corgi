@@ -41,7 +41,6 @@ export const useLiff = () => {
   const { data: session, status } = useSession();
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   const isOnSigninPage = pathname === "/auth/signin";
-  const isOnLiffPage = pathname === "/liff";
 
   // Use stable redirect uri to avoid random query/hash differences
   const getStableRedirectUri = () => {
@@ -186,37 +185,24 @@ export const useLiff = () => {
           console.log("Running in LIFF client mode");
         }
 
-        // Force re-auth on fresh entry to /liff within LIFF to always hit access.line.me
-        try {
-          const currentUrl = new URL(window.location.href);
-          const hasOAuthParams = currentUrl.searchParams.has('code') || currentUrl.searchParams.has('state');
-          const alreadyForced = sessionStorage.getItem('force_reauth_done') === '1';
-          const isUnauthed = status !== 'authenticated';
-          if (isOnLiffPage && liff.isInClient && liff.isInClient() && isUnauthed && !hasOAuthParams && !alreadyForced) {
-            sessionStorage.setItem('force_reauth_done', '1');
-            await fetch('/api/auth/clear-line-cache', { method: 'POST' }).catch(() => {});
-            try { liff.logout(); } catch {}
-            try { sessionStorage.setItem('liff_login_in_progress', '1'); sessionStorage.setItem('line_oauth_in_progress', '1'); } catch {}
-            liff.login({ redirectUri: getStableRedirectUri() });
-            return; // will redirect
-          }
-        } catch {}
-
         setLiffObject(liff);
         const liffLoggedIn = liff.isLoggedIn();
         setIsLoggedIn(liffLoggedIn);
         setIsReady(true);
 
         // Auto login to NextAuth if LIFF is logged in but NextAuth session doesn't exist
-        if (liffLoggedIn && !autoLoginAttempted && !isOnSigninPage) {
-          // Prevent repeated auto login attempts within this session/tab
-          const hasAutoLoginFlag = typeof window !== "undefined" && sessionStorage.getItem("liff_auto_login_done") === "1";
-          if (!hasAutoLoginFlag) {
-            sessionStorage.setItem("liff_auto_login_done", "1");
+        if (liffLoggedIn && !isOnSigninPage) {
+          // ใช้ cooldown ระยะสั้นแทนการบล็อกทั้ง session/tab
+          const lastTsStr = typeof window !== 'undefined' ? sessionStorage.getItem('liff_auto_login_last_ts') : null;
+          const lastTs = lastTsStr ? Number(lastTsStr) : 0;
+          const now = Date.now();
+          const withinCooldown = now - lastTs < 3000; // 3 วินาที
+          if (!withinCooldown) {
+            try { sessionStorage.setItem('liff_auto_login_last_ts', String(now)); } catch {}
             setAutoLoginAttempted(true);
             await handleAutoLogin(liff);
           } else {
-            console.log("⏭️ Skip auto login (already attempted in this session)");
+            console.log('⏭️ Skip auto login due to cooldown');
           }
         } else if (!liffLoggedIn) {
           // เรียก LIFF login เฉพาะเมื่ออยู่ใน LIFF client เท่านั้น
