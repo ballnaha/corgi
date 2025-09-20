@@ -15,12 +15,11 @@ export default function Home() {
         const isLiff = isInLiffEnvironment();
 
         if (isLiff) {
-          // ใช้ window.location ใน LIFF เพื่อลดโอกาสค้าง
-          safeLiffNavigation("/shop");
-          // เผื่อว่า navigation ไม่ทำงาน ให้บังคับเปลี่ยนหน้าอีกครั้งหลังหน่วงสั้น ๆ
+          // ส่งไป /liff ก่อนเพื่อทำ login/sync session ให้เสร็จก่อน แล้วค่อยไป /shop
+          safeLiffNavigation("/liff");
           setTimeout(() => {
-            if (typeof window !== 'undefined' && window.location.pathname !== '/shop') {
-              window.location.href = '/shop';
+            if (typeof window !== 'undefined' && window.location.pathname !== '/liff') {
+              window.location.href = '/liff';
             }
           }, 300);
         } else {
