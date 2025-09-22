@@ -6,123 +6,33 @@ import {
   Box, 
   Typography, 
   Button, 
-  Avatar,
   IconButton,
   useTheme,
   useMediaQuery,
   Slide,
   Fade,
-  Menu as MuiMenu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Divider,
   Tooltip
 } from "@mui/material";
-import { Logout, Menu, Close, Person, AccountCircle } from "@mui/icons-material";
-import { useSession, signOut } from "next-auth/react";
-import { useUserDisplayName } from "@/hooks/useUserDisplayName";
-import { useSimpleAuth } from "@/hooks/useSimpleAuth";
-import { useLiff } from "@/hooks/useLiff";
+import { Menu, Close } from "@mui/icons-material";
 
 const ResponsiveHeader: React.FC = () => {
   const router = useRouter();
-  const { data: session } = useSession();
-  const { displayName, loading: userLoading } = useUserDisplayName();
-  const { logout: simpleLogout } = useSimpleAuth();
-  const { isInLiff } = useLiff();
+  // User auth hooks removed - keeping consistent with LIFF
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   // Mobile menu state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Desktop user menu state
-  const [userMenuAnchor, setUserMenuAnchor] = useState<null | HTMLElement>(null);
-  const isUserMenuOpen = Boolean(userMenuAnchor);
+  // Desktop user menu removed
 
   const handleShopNow = () => {
     router.push('/shop');
   };
 
-  const handleLogout = async () => {
-    try {
-      console.log('🔄 ResponsiveHeader logout started');
-      
-      // Add timeout protection to prevent hanging
-      const logoutTimeout = setTimeout(() => {
-        console.warn('⚠️ ResponsiveHeader logout timeout - forcing navigation');
-        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (isInLiff || isMobileDevice) {
-          router.push("/home");
-        } else {
-          window.location.href = "/home";
-        }
-      }, 10000); // 10 second timeout
+  // Logout functionality removed - keeping consistent with LIFF
 
-      // Clear skip auto login flag
-      try { 
-        sessionStorage.setItem('skip_liff_auto_login','1'); 
-      } catch {}
-
-      // Clear SimpleAuth session first
-      try {
-        await simpleLogout();
-        console.log('✅ ResponsiveHeader: SimpleAuth logout completed');
-      } catch (simpleAuthError) {
-        console.warn('Could not clear SimpleAuth session:', simpleAuthError);
-      }
-
-      // Clear NextAuth session
-      await signOut({ redirect: false });
-      
-      // Clear storage immediately
-      localStorage.clear();
-      sessionStorage.clear();
-
-      // Clear cookies
-      document.cookie.split(";").forEach((c) => {
-        const eqPos = c.indexOf("=");
-        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
-      });
-
-      // Clear timeout since we're navigating successfully
-      clearTimeout(logoutTimeout);
-
-      // Navigate with mobile-friendly approach
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isInLiff || isMobileDevice) {
-        router.push("/home");
-      } else {
-        window.location.href = "/home";
-      }
-
-      console.log('✅ ResponsiveHeader logout completed');
-    } catch (error) {
-      console.error('ResponsiveHeader logout error:', error);
-    }
-  };
-
-  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setUserMenuAnchor(event.currentTarget);
-  };
-
-  const handleUserMenuClose = () => {
-    setUserMenuAnchor(null);
-  };
-
-  const handleProfileClick = () => {
-    handleUserMenuClose();
-    router.push('/profile');
-  };
-
-  const handleLogoutClick = () => {
-    handleUserMenuClose();
-    handleLogout();
-  };
+  // Desktop user menu functions removed
 
 
   // Prevent body scroll when menu is open
@@ -215,52 +125,7 @@ const ResponsiveHeader: React.FC = () => {
             </Button>
 
 
-            {session?.user && (
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-
-
-                <IconButton
-                  onClick={handleUserMenuOpen}
-                  sx={{
-                    p: 0,
-                    "&:hover": {
-                      backgroundColor: "rgba(255, 107, 53, 0.1)",
-                    },
-                    transition: "all 0.2s ease"
-                  }}
-                  title="เมนูผู้ใช้"
-                >
-                  <Avatar
-                    src={session.user.image || undefined}
-                    alt={displayName || "User Avatar"}
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      background: session.user.image
-                        ? "transparent"
-                        : "linear-gradient(135deg, #FF6B35 0%, #F4511E 100%)",
-                      fontSize: "1rem",
-                      fontWeight: "bold",
-                      cursor: "pointer"
-                    }}
-                  >
-                    {!session.user.image && (displayName?.charAt(0) || "U")}
-                  </Avatar>
-                </IconButton>
-                {!userLoading && (
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      fontWeight: 500,
-                      color: "#333",
-                      fontSize: "0.95rem"
-                    }}
-                  >
-                    สวัสดี! {displayName}
-                  </Typography>
-                )}
-              </Box>
-            )}
+{/* Desktop user profile removed - keeping consistent with LIFF */}
           </Box>
         )}
 
@@ -351,116 +216,13 @@ const ResponsiveHeader: React.FC = () => {
               </Button>
 
 
-              {session?.user && (
-                <Box sx={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: 2,
-                  p: 2,
-                  backgroundColor: "#f8f9fa",
-                  borderRadius: "12px"
-                }}>
-                  <Avatar
-                    src={session.user.image || undefined}
-                    alt={displayName || "User Avatar"}
-                    sx={{
-                      width: 36,
-                      height: 36,
-                      background: session.user.image
-                        ? "transparent"
-                        : "linear-gradient(135deg, #FF6B35 0%, #F4511E 100%)",
-                      fontSize: "0.9rem",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {!session.user.image && (displayName?.charAt(0) || "U")}
-                  </Avatar>
-                  
-                  <Box sx={{ flex: 1 }}>
-                    {!userLoading && (
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontWeight: 500,
-                          color: "#333",
-                          fontSize: "0.9rem"
-                        }}
-                      >
-                        สวัสดี! {displayName}
-                      </Typography>
-                    )}
-                  </Box>
-
-                  <IconButton
-                    onClick={() => {
-                      handleLogout();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    sx={{
-                      color: "#666",
-                      "&:hover": {
-                        color: "#FF6B35",
-                        backgroundColor: "rgba(255, 107, 53, 0.1)",
-                      }
-                    }}
-                    title="ออกจากระบบ"
-                  >
-                    <Logout fontSize="small" />
-                  </IconButton>
-                </Box>
-              )}
+  {/* Mobile user profile removed - keeping consistent with LIFF */}
             </Box>
           </Box>
         </Slide>
       )}
 
-      {/* Desktop User Menu */}
-      <MuiMenu
-        anchorEl={userMenuAnchor}
-        open={isUserMenuOpen}
-        onClose={handleUserMenuClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: 200,
-            borderRadius: 2,
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-            border: '1px solid #f0f0f0'
-          }
-        }}
-      >
-        <MenuItem onClick={handleProfileClick}>
-          <ListItemIcon>
-            <Person fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              โปรไฟล์
-            </Typography>
-          </ListItemText>
-        </MenuItem>
-        
-        <Divider />
-        
-        <MenuItem onClick={handleLogoutClick}>
-          <ListItemIcon>
-            <Logout fontSize="small" sx={{ color: '#f44336' }} />
-          </ListItemIcon>
-          <ListItemText>
-            <Typography variant="body2" sx={{ fontWeight: 500, color: '#f44336' }}>
-              ออกจากระบบ
-            </Typography>
-          </ListItemText>
-        </MenuItem>
-      </MuiMenu>
+{/* Desktop User Menu removed - keeping consistent with LIFF */}
     </>
   );
 };
