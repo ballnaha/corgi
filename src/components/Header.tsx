@@ -11,15 +11,15 @@ import {
   Avatar,
   useMediaQuery,
   useTheme,
-  Container,
   Button,
   Tooltip,
 } from "@mui/material";
 import { Search, Tune, ShoppingBag } from "@mui/icons-material";
 import { styled, alpha } from "@mui/material/styles";
 import { colors } from "@/theme/colors";
-import { useSession, signIn } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { useUserDisplayName } from "@/hooks/useUserDisplayName";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import Image from "next/image";
 import LineIcon from "./LineIcon";
@@ -101,7 +101,7 @@ export default function Header({
   showLogo = false,
   logoSrc,
 }: HeaderProps) {
-  const { data: session } = useSession();
+  const { user, isAuthenticated } = useSimpleAuth();
   const { displayName, loading } = useUserDisplayName();
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -123,7 +123,7 @@ export default function Header({
   };
 
   const handleLineLogin = () => {
-    signIn("line", { callbackUrl: "/shop" });
+    signIn("line", { callbackUrl: "/auth/success" });
   };
 
   const handleLogoClick = () => {
@@ -143,22 +143,22 @@ export default function Header({
               mb: 1,
             }}
           >
-            {session?.user ? (
+            {isAuthenticated && user ? (
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Avatar
-                  src={session?.user?.image || undefined}
+                  src={user.pictureUrl || undefined}
                   alt={displayName || "User Avatar"}
                   sx={{
                     width: 48,
                     height: 48,
-                    background: session?.user?.image
+                    background: user.pictureUrl
                       ? "transparent"
                       : "linear-gradient(135deg, #FF6B35 0%, #F4511E 100%)",
                     fontSize: "1.2rem",
                     fontWeight: "bold",
                   }}
                 >
-                  {!session?.user?.image && (displayName?.charAt(0) || "U")}
+                  {!user.pictureUrl && (displayName?.charAt(0) || "U")}
                 </Avatar>
                 <Box>
                   {loading ? (
@@ -338,27 +338,38 @@ export default function Header({
   return (
     <Box sx={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1100 }}>
       <DesktopHeader>
-        <Container maxWidth="xl">
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              py: 1,
-            }}
-          >
-            {/* Left side - Logo or Brand */}
-            <Box sx={{ display: "flex", alignItems: "center", gap: 3 }}>
-              {showLogo && logoSrc ? (
-                <Image
-                  src={logoSrc}
-                  alt="Logo"
-                  width={140}
-                  height={60}
-                  style={{ objectFit: "contain" , cursor: "pointer"}}
-                  onClick={handleLogoClick}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            py: 2,
+            px: 4,
+            minHeight: "70px",
+          }}
+        >
+            {/* Left side - Logo */}
+            <Box sx={{ display: "flex", alignItems: "center", gap: 3, ml: 5 }}>
+              <Box
+                onClick={handleLogoClick}
+                sx={{
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center"
+                }}
+              >
+                <img 
+                  src="/images/natpi_logo.png" 
+                  alt="logo" 
+                  width={160} 
+                  height={60} 
+                  style={{ 
+                    objectFit: "contain",
+                    filter: "contrast(1.1) brightness(1.1)"
+                  }} 
                 />
-              ) : (
+              </Box>
+              {false && ( // Hide text logo
                 <Typography
                   variant="h5"
                   sx={{
@@ -388,7 +399,7 @@ export default function Header({
             <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
               
               {/* LINE Login Icon for Desktop - Show only when not logged in */}
-              {!session?.user && (
+              {!isAuthenticated && (
                 <Tooltip 
                   title="เข้าสู่ระบบด้วย LINE" 
                   arrow
@@ -477,22 +488,22 @@ export default function Header({
               </Link>
 
               {/* User Avatar and Name - Show only when logged in */}
-              {session?.user && (
+              {isAuthenticated && user && (
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                   <Avatar
-                    src={session?.user?.image || undefined}
+                    src={user.pictureUrl || undefined}
                     alt={displayName || "User Avatar"}
                     sx={{
                       width: 40,
                       height: 40,
-                      background: session?.user?.image
+                      background: user.pictureUrl
                         ? "transparent"
                         : "linear-gradient(135deg, #FF6B35 0%, #F4511E 100%)",
                       fontSize: "1rem",
                       fontWeight: "bold",
                     }}
                   >
-                    {!session?.user?.image && (displayName?.charAt(0) || "U")}
+                    {!user.pictureUrl && (displayName?.charAt(0) || "U")}
                   </Avatar>
                   
                   {loading ? (
@@ -520,8 +531,7 @@ export default function Header({
                 </Box>
               )}
             </Box>
-          </Box>
-        </Container>
+        </Box>
       </DesktopHeader>
     </Box>
   );

@@ -1,23 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { updateUser } from "@/lib/database";
 
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Support both NextAuth and SimpleAuth
+    const authUser = await getAuthenticatedUser(request);
 
-    if (!session?.user?.lineUserId) {
+    if (!authUser?.lineUserId) {
+      console.log('❌ User update API: No authenticated user found');
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: "Unauthorized - User not found" },
         { status: 401 }
       );
     }
 
+    console.log(`✅ User update API: User ${authUser.id} authenticated via ${authUser.source}`);
+
     const body = await request.json();
     const { displayName, email, phoneNumber, statusMessage } = body;
 
-    const updatedUser = await updateUser(session.user.lineUserId, {
+    console.log('📝 Updating user data:', {
+      lineUserId: authUser.lineUserId,
+      displayName,
+      email: email ? 'provided' : 'null',
+      phoneNumber: phoneNumber ? 'provided' : 'null'
+    });
+
+    const updatedUser = await updateUser(authUser.lineUserId, {
       displayName,
       email,
       phoneNumber,
@@ -25,15 +35,17 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!updatedUser) {
+      console.error('❌ User not found for update:', authUser.lineUserId);
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
       );
     }
 
+    console.log('✅ User updated successfully:', updatedUser.id);
     return NextResponse.json(updatedUser);
   } catch (error) {
-    console.error("Error updating user:", error);
+    console.error("❌ Error updating user:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

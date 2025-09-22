@@ -17,6 +17,7 @@ import { readCartFromStorage, writeCartToStorage, addToCartStorage } from "@/lib
 import { readFavoriteIds, toggleFavoriteId } from "@/lib/favorites";
 import { Product, CartItem } from "@/types";
 import { useThemedSnackbar } from "@/components/ThemedSnackbar";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 
 export default function ShopPage() {
   const SlideUpTransition = React.forwardRef(function SlideUpTransition(
@@ -27,6 +28,7 @@ export default function ShopPage() {
   });
   const router = useRouter();
   const { showSnackbar, SnackbarComponent } = useThemedSnackbar();
+  const { user, isAuthenticated } = useSimpleAuth(); // Add auth state
   const [selectedCategory, setSelectedCategory] = useState("dogs");
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -40,6 +42,13 @@ export default function ShopPage() {
     const stored = readCartFromStorage();
     if (stored.length) setCartItems(stored);
     setFavoriteIds(readFavoriteIds());
+    
+    // Clear skip auto login flag when user intentionally visits shop
+    // (This means they want to shop again, so enable auto login for future)
+    try {
+      sessionStorage.removeItem('skip_liff_auto_login');
+      console.log('🔄 Cleared skip auto login flag - user is shopping');
+    } catch {}
   }, []);
 
   useEffect(() => {

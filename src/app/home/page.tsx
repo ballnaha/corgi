@@ -15,44 +15,28 @@ import {
   GlobalStyles,
   Grid,
   CircularProgress,
-  IconButton,
-  Badge
 } from "@mui/material";
-import { ShoppingCart } from "@mui/icons-material";
 import Image from "next/image";
 import { colors } from "@/theme/colors";
 import RegistrationCertificateSheet from "@/components/RegistrationCertificateSheet";
-import ProductCard from "@/components/ProductCard";
-import Cart from "@/components/Cart";
 import ResponsiveHeader from "@/components/ResponsiveHeader";
-import CategoryFilter from "@/components/CategoryFilter";
-import { Product } from "@/types";
-import { readCartFromStorage, writeCartToStorage } from "@/lib/cart";
-import { CartItem } from "@/types";
-import FloatingActions from "@/components/FloatingActions";
-import { generateSlug } from "@/lib/products";
-import { useSession } from "next-auth/react";
 import { getBlogImageUrl, getApiImageUrl } from "@/utils/imageUtils";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 
 export default function HomePage() {
   const router = useRouter();
   const [isRegistrationSheetOpen, setIsRegistrationSheetOpen] = useState(false);
   
   // Authentication
-  const { data: session } = useSession();
+  const { user, isAuthenticated } = useSimpleAuth();
   
-  // Product states
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  // No auth requirements for home page - it's a public page
+  
   
   // Blog states
   const [blogPosts, setBlogPosts] = useState<any[]>([]);
   const [blogLoading, setBlogLoading] = useState(true);
   
-  // Cart states
-  const [isCartOpen, setIsCartOpen] = useState(false);
   
 
 
@@ -76,9 +60,6 @@ export default function HomePage() {
     setIsRegistrationSheetOpen(true);
   };
 
-  const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
-  };
 
 
 
@@ -106,148 +87,8 @@ export default function HomePage() {
     fetchBlogPosts();
   }, []);
 
-  // Fetch products from API
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/products');
-        if (response.ok) {
-          type DbProduct = {
-            id: string;
-            name: string;
-            category: string;
-            price: number | string;
-            salePrice?: number | string | null;
-            discountPercent?: number | string | null;
-            description?: string | null;
-            imageUrl?: string | null;
-            stock?: number | string | null;
-            gender?: 'MALE' | 'FEMALE' | 'UNKNOWN' | null;
-            age?: string | null;
-            breed?: string | null;
-            location?: string | null;
-            images?: Array<{
-              id: string;
-              imageUrl: string;
-              altText: string | null;
-              isMain: boolean;
-              order: number;
-            }>;
-          };
-          const data: DbProduct[] = await response.json();
-          
-          const transformed: Product[] = data.map((p) => {
-            // Get main image from images array, fallback to imageUrl
-            const mainImage = p.images?.find(img => img.isMain)?.imageUrl || 
-                            p.images?.[0]?.imageUrl || 
-                            p.imageUrl || 
-                            '';
-            
-            // Transform images to match ProductImage interface
-            const transformedImages = p.images?.map(img => ({
-              ...img,
-              productId: p.id,
-              createdAt: new Date()
-            })) || [];
-            
-            return {
-              ...p,
-              image: mainImage,
-              imageUrl: mainImage,
-              images: transformedImages,
-              price: Number(p.price),
-              salePrice: p.salePrice != null ? Number(p.salePrice) : null,
-              discountPercent: p.discountPercent != null ? Number(p.discountPercent) : null,
-              stock: Number(p.stock ?? 0),
-            };
-          });
-          
-          setProducts(transformed);
-        }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
 
-    fetchProducts();
-  }, []);
 
-  // Load cart from storage
-  useEffect(() => {
-    const stored = readCartFromStorage();
-    if (stored.length) setCartItems(stored);
-  }, []);
-
-  // Save cart to storage when cart changes
-  useEffect(() => {
-    writeCartToStorage(cartItems);
-  }, [cartItems]);
-
-  // Filter products based on category and show first 8 products
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-
-    // Filter by category
-    if (selectedCategory !== "all") {
-      filtered = filtered.filter(
-        (product) => product.category === selectedCategory
-      );
-    }
-
-    // Return first 8 products
-    return filtered.slice(0, 8);
-  }, [products, selectedCategory]);
-
-  const handleAddToCart = (product: Product) => {
-    const existingItem = cartItems.find(item => item.product.id === product.id);
-    
-    if (existingItem) {
-      setCartItems(cartItems.map(item =>
-        item.product.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
-      ));
-    } else {
-      setCartItems([...cartItems, { product, quantity: 1 }]);
-    }
-  };
-
-  const handleProductClick = (product: Product) => {
-    const slug = generateSlug(product.name, product.id);
-    router.push(`/product/${slug}`);
-  };
-
-  // Cart functions
-  const handleCartClick = () => {
-    setIsCartOpen(true);
-  };
-
-  const handleUpdateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      handleRemoveItem(productId);
-      return;
-    }
-    
-    setCartItems(cartItems.map(item =>
-      item.product.id === productId
-        ? { ...item, quantity }
-        : item
-    ));
-  };
-
-  const handleRemoveItem = (productId: string) => {
-    setCartItems(cartItems.filter(item => item.product.id !== productId));
-  };
-
-  const handleCheckout = () => {
-    setIsCartOpen(false);
-    router.push("/checkout");
-  };
-
-  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const infoCards = [
     {
@@ -322,11 +163,7 @@ export default function HomePage() {
       }}>
         
         {/* Responsive Header */}
-        <ResponsiveHeader 
-          showCartIcon={true}
-          onCartClick={() => setIsCartOpen(true)}
-          cartItemCount={cartItems.length}
-        />
+        <ResponsiveHeader />
 
         {/* Hero Section */}
         <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
@@ -376,7 +213,7 @@ export default function HomePage() {
               <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
                 <Button
                   variant="contained"
-                  onClick={handleBookNow}
+                  onClick={handleShopNow}
                   sx={{
                     backgroundColor: "#FFB347",
                     color: "#000",
@@ -392,7 +229,7 @@ export default function HomePage() {
                     }
                   }}
                 >
-                  เพิ่มเราเป็นเพื่อน
+                  SHOP NOW
                 </Button>
                 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -1342,100 +1179,6 @@ export default function HomePage() {
           </Box>
         </Container>
 
-
-        {/* Featured Products Section */}
-        <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
-          <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 4 }}>
-            <Typography
-              variant="h3"
-              sx={{
-                fontSize: { xs: "1.8rem", md: "2.2rem" },
-                fontWeight: "800",
-                color: "#000"
-              }}
-            >
-              รับน้องไปดูแล
-            </Typography>
-            <Button
-              onClick={handleBookNow}
-              sx={{
-                color: "#FF6B35",
-                fontSize: "14px",
-                textTransform: "none",
-                fontWeight: "600",
-                "&:hover": { backgroundColor: "transparent", textDecoration: "underline" }
-              }}
-            >
-              ดูทั้งหมด →
-            </Button>
-          </Box>
-
-          {/* Category Filter */}
-          <Container maxWidth="lg" sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
-            <CategoryFilter
-              selectedCategory={selectedCategory}
-              onCategoryChange={handleCategoryChange}
-            />
-          </Container>
-
-          {loading ? (
-            <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
-              <CircularProgress size={48} sx={{ color: "#FF6B35" }} />
-            </Box>
-          ) : (
-            <Box
-              sx={{
-                display: "grid",
-                gap: { xs: 1.5, sm: 1.5, md: 2 },
-                gridTemplateColumns: {
-                  xs: "1fr 1fr", // mobile → 2 columns
-                  sm: "1fr 1fr 1fr", // tablet → 3 columns  
-                  md: "1fr 1fr 1fr 1fr", // medium → 4 columns
-                  lg: "1fr 1fr 1fr 1fr" // desktop → 4 columns (เหมือนหน้า shop)
-                },
-                width: "100%",
-                maxWidth: "100%"
-              }}
-            >
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToCart={handleAddToCart}
-                  onProductClick={handleProductClick}
-                />
-              ))}
-            </Box>
-          )}
-
-          {!loading && filteredProducts.length === 0 && (
-            <Box
-  sx={{
-    textAlign: "center",
-    py: 8,
-    p: 4, // เพิ่ม padding ภายใน Box เพื่อให้มีพื้นที่ว่างระหว่างข้อความกับขอบ
-    border: '2px dashed', // กำหนดขอบเป็นเส้นปะ
-    borderColor: '#e0e0e0', // สีเทาอ่อนแบบ minimal
-    borderRadius: 2, // เพิ่มความโค้งมนเล็กน้อยที่มุม
-    maxWidth: 500, // กำหนดความกว้างสูงสุดเพื่อให้ดูดีขึ้น
-    mx: 'auto', // จัดให้อยู่กึ่งกลาง
-    backgroundColor: '#fdfdfd', // เพิ่มสีพื้นหลังอ่อนๆ ให้ดูมีมิติ
-  }}
->
-  <Typography sx={{ color: "#666", fontSize: 18, fontWeight: 500 }}>
-    น้อง ๆ ย้ายบ้านหมดแล้วครับ
-  </Typography>
-  <Typography sx={{ color: "#999", fontSize: 14, mt: 1 }}>
-    แต่ไม่ต้องห่วง! เรากำลังเตรียมความพร้อมให้น้องใหม่เร็วๆ นี้
-  </Typography>
-  <Typography sx={{ color: "#999", fontSize: 14 }}>
-    โปรดติดตามข่าวสารได้ที่หน้าเพจของเรานะครับ
-  </Typography>
-</Box>
-          )}
-        </Container>
-
-
         {/* WHAT WE CARE THE MOST Section */}
         <Container maxWidth="lg" sx={{ py: 6, px: { xs: 2, sm: 3, md: 4 } }}>
           <Box
@@ -1889,24 +1632,7 @@ export default function HomePage() {
           onClose={() => setIsRegistrationSheetOpen(false)}
         />
 
-        {/* Cart Drawer */}
-        <Cart
-          open={isCartOpen}
-          onClose={() => setIsCartOpen(false)}
-          items={cartItems}
-          onUpdateQuantity={handleUpdateQuantity}
-          onRemoveItem={handleRemoveItem}
-          onCheckout={handleCheckout}
-        />
-
       </Box>
-      
-      {/* Floating Actions (Back to Top only) */}
-      <FloatingActions 
-        cartItemCount={0}
-        onCartClick={handleCartClick}
-        showCart={false}
-      />
     </>
   );
 }

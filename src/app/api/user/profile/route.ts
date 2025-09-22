@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { getUserById, updateUserLastLogin } from "@/lib/database";
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    // Support both NextAuth and SimpleAuth
+    const authUser = await getAuthenticatedUser(request);
 
-    if (!session?.user?.lineUserId) {
+    if (!authUser?.lineUserId) {
+      console.log('❌ User profile API: No authenticated user found');
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: "Unauthorized - User not found" },
         { status: 401 }
       );
     }
 
-    const user = await getUserById(session.user.lineUserId);
+    console.log(`✅ User profile API: User ${authUser.id} authenticated via ${authUser.source}`);
+
+    const user = await getUserById(authUser.lineUserId);
 
     if (!user) {
+      console.error('❌ User not found in database:', authUser.lineUserId);
       return NextResponse.json(
         { error: "User not found" },
         { status: 404 }
@@ -24,11 +28,18 @@ export async function GET(_request: NextRequest) {
     }
 
     // Update last login time
-    await updateUserLastLogin(session.user.lineUserId);
+    await updateUserLastLogin(authUser.lineUserId);
+
+    console.log('✅ User profile fetched successfully:', {
+      id: user.id,
+      email: user.email ? 'present' : 'null',
+      phoneNumber: user.phoneNumber ? 'present' : 'null',
+      statusMessage: user.statusMessage ? 'present' : 'null'
+    });
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error("Error fetching user profile:", error);
+    console.error("❌ Error fetching user profile:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

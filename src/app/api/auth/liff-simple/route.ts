@@ -49,11 +49,12 @@ export async function POST(request: NextRequest) {
         data: {
           displayName,
           pictureUrl,
-          email: email || user.email,
+          // Only update email if we have a valid one, preserve existing email otherwise
+          email: (email && email.trim() !== '') ? email : user.email,
           lastLoginAt: new Date(),
         },
       });
-      console.log('✅ Updated existing user via LIFF simple auth:', user.id);
+      console.log('✅ Updated existing user via LIFF simple auth:', user.id, 'Email preserved:', user.email);
     }
 
     // Create simple session token

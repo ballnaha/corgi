@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import {
   Box,
   Typography,
@@ -154,7 +154,7 @@ export default function CheckoutPage() {
   };
 
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { user: authUser, isAuthenticated, isLoading } = useSimpleAuth();
   const { showSnackbar, SnackbarComponent } = useThemedSnackbar();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [discountCode, setDiscountCode] = useState("");
@@ -288,8 +288,8 @@ export default function CheckoutPage() {
             
             setCustomerInfo((prev) => ({
               ...prev,
-              name: userProfile.displayName || session.user?.name || "",
-              email: userProfile.email || session.user?.email || "",
+              name: userProfile.displayName || authUser?.displayName || "",
+              email: userProfile.email || authUser?.email || "",
               phone: userProfile.phoneNumber || "",
             }));
             setUserProfileLoaded(true);
@@ -297,8 +297,8 @@ export default function CheckoutPage() {
             // ถ้า API ไม่สำเร็จ ใช้ข้อมูลจาก session
             setCustomerInfo((prev) => ({
               ...prev,
-              name: session.user?.name || "",
-              email: session.user?.email || "",
+              name: authUser?.displayName || "",
+              email: authUser?.email || "",
             }));
           }
         } catch (error) {
@@ -306,8 +306,8 @@ export default function CheckoutPage() {
           // ถ้าเกิดข้อผิดพลาด ใช้ข้อมูลจาก session
           setCustomerInfo((prev) => ({
             ...prev,
-            name: session.user?.name || "",
-            email: session.user?.email || "",
+            name: authUser?.displayName || "",
+            email: authUser?.email || "",
           }));
         }
       }
@@ -430,10 +430,10 @@ export default function CheckoutPage() {
   }, [appliedDiscount, cartItems]);
 
   useEffect(() => {
-    if (status !== "loading" && !session) {
+    if (!isLoading && !isAuthenticated) {
       handleLiffNavigation(router, "/auth/signin");
     }
-  }, [session, status, router]);
+  }, [isAuthenticated, isLoading, router]);
 
   const calculateUnitPrice = (product: CartItem["product"]) => {
     const hasSalePrice = product.salePrice != null;
@@ -766,7 +766,7 @@ export default function CheckoutPage() {
     }
   };
 
-  if (status === "loading") {
+  if (isLoading) {
     return (
       <Box
         sx={{

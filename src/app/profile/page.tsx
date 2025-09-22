@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { useSession, signOut, signIn } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
+import { signOut, signIn } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
@@ -124,7 +125,7 @@ export default function ProfilePage() {
     return <Slide direction="up" ref={ref} {...props} />;
   });
 
-  const { data: session, status } = useSession();
+  const { user: authUser, isAuthenticated, isLoading, logout: simpleLogout } = useSimpleAuth();
   const { isInLiff, getProfile } = useLiff();
   const router = useRouter();
   const [userData, setUserData] = useState<UserData | null>(null);
@@ -174,12 +175,24 @@ export default function ProfilePage() {
       }
 
       // Fetch user data from our API
-      const response = await fetch("/api/user/profile");
+      const response = await fetch("/api/user/profile", {
+        credentials: 'include' // Important: include cookies for auth
+      });
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Profile data fetched from API:', {
+          id: data.id,
+          email: data.email ? 'present' : 'null',
+          phoneNumber: data.phoneNumber ? 'present' : 'null',
+          statusMessage: data.statusMessage ? 'present' : 'null'
+        });
+        
         setUserData({
           ...data,
-          statusMessage: lineProfile?.statusMessage || data.statusMessage,
+          // Prioritize database data, fallback to LINE profile, then session
+          statusMessage: data.statusMessage || lineProfile?.statusMessage || null,
+          email: data.email || (authUser as any)?.email || null,
+          phoneNumber: data.phoneNumber || null, // Keep database phoneNumber
         });
       } else {
         console.warn(
@@ -187,11 +200,11 @@ export default function ProfilePage() {
         );
         // User should already exist from login process, but fallback to session data
         setUserData({
-          id: session?.user?.id || "",
-          lineUserId: session?.user?.lineUserId || "",
-          displayName: session?.user?.name || "",
-          pictureUrl: session?.user?.image || null,
-          email: session?.user?.email || null,
+          id: authUser?.id || "",
+          lineUserId: authUser?.lineUserId || "",
+          displayName: authUser?.displayName || "",
+          pictureUrl: authUser?.pictureUrl || null,
+          email: (authUser as any)?.email || null,
           phoneNumber: null,
           statusMessage: lineProfile?.statusMessage || null,
           createdAt: new Date(),
@@ -203,18 +216,32 @@ export default function ProfilePage() {
     } finally {
       setLoadingUser(false);
     }
-  }, [isInLiff, getProfile]);
+  }, [isInLiff, getProfile, authUser]);
 
   const fetchOrders = useCallback(async () => {
     try {
       setLoadingOrders(true);
-      const response = await fetch("/api/user/orders");
+      const response = await fetch("/api/orders", {
+        credentials: 'include' // Important: include cookies for auth
+      });
 
       if (response.ok) {
         const ordersData = await response.json();
-        setOrders(ordersData);
+        // Ensure ordersData is an array
+        if (Array.isArray(ordersData)) {
+          setOrders(ordersData);
+        } else if (ordersData && Array.isArray(ordersData.orders)) {
+          // If API returns {orders: [...]}
+          setOrders(ordersData.orders);
+        } else {
+          console.warn('Orders API returned non-array data:', ordersData);
+          setOrders([]);
+        }
       } else {
         console.error("Failed to fetch orders, status:", response.status);
+        // Log more details for debugging
+        const errorText = await response.text();
+        console.error("Response body:", errorText.substring(0, 200));
         setOrders([]);
       }
     } catch (error) {
@@ -251,16 +278,37 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    if (!mounted || status === "loading" || dataFetched) return;
+    if (!mounted || isLoading || dataFetched) return;
 
-    // Only fetch data once when component mounts and session is available
-    if (mounted && session && status === "authenticated") {
+    // Only fetch data once when component mounts and user is authenticated
+    if (mounted && authUser && isAuthenticated) {
       fetchUserData();
       fetchOrders();
       fetchCategories();
       setDataFetched(true);
     }
-  }, [mounted, session, status, dataFetched]);
+  }, [mounted, authUser, isAuthenticated, dataFetched]);
+
+  // Debug log for data consistency - must be after all other useEffects
+  useEffect(() => {
+    if (userData) {
+      console.log('📊 Profile display data:', {
+        source: 'database',
+        hasEmail: !!userData.email,
+        hasPhoneNumber: !!userData.phoneNumber,
+        hasStatusMessage: !!userData.statusMessage,
+        isInLiff
+      });
+    } else if (authUser) {
+      console.log('📊 Profile display data:', {
+        source: 'session_fallback',
+        hasEmail: !!(authUser as any)?.email,
+        hasPhoneNumber: false,
+        hasStatusMessage: false,
+        isInLiff
+      });
+    }
+  }, [userData, authUser, isInLiff]);
 
   const handleUpdateProfile = async (updatedData: {
     displayName: string;
@@ -404,6 +452,17 @@ export default function ProfilePage() {
       });
       setSnackbarKey((k) => k + 1);
 
+      // Add timeout protection to prevent hanging
+      const logoutTimeout = setTimeout(() => {
+        console.warn('⚠️ Logout timeout - forcing navigation');
+        // Use LIFF detection instead of user agent for consistent behavior
+        if (isInLiff) {
+          router.push("/home");
+        } else {
+          window.location.href = "/home";
+        }
+      }, 10000); // 10 second timeout
+
       // Clear LINE cache first
       try {
         const response = await fetch("/api/auth/clear-line-cache", {
@@ -442,22 +501,36 @@ export default function ProfilePage() {
         sessionStorage.setItem("skip_liff_auto_login", "1");
       } catch {}
 
+      // Clear SimpleAuth session first using hook
+      try {
+        await simpleLogout();
+        console.log('✅ SimpleAuth logout completed');
+      } catch (simpleAuthError) {
+        console.warn('Could not clear SimpleAuth session:', simpleAuthError);
+      }
+
       // Clear NextAuth session และไปหน้า /shop ทันที
       await signOut({ redirect: false });
 
-      // Clear browser cache
-      if ("caches" in window) {
-        const cacheNames = await caches.keys();
-        await Promise.all(
-          cacheNames.map((cacheName) => caches.delete(cacheName))
-        );
-      }
-
-      // Clear localStorage
+      // Clear storage immediately (don't await in LIFF)
       localStorage.clear();
-
-      // Clear sessionStorage
       sessionStorage.clear();
+
+      // Clear browser cache only on desktop (avoid LIFF hanging)
+      if ("caches" in window && !isInLiff) {
+        // Only clear cache on desktop to avoid LIFF hanging
+        try {
+          const cacheNames = await caches.keys();
+          await Promise.all(
+            cacheNames.map((cacheName) => caches.delete(cacheName))
+          );
+          console.log('✅ Browser cache cleared');
+        } catch (cacheError) {
+          console.warn("Could not clear browser cache:", cacheError);
+        }
+      } else {
+        console.log('⏭️ Skipping cache clear in LIFF for better performance');
+      }
 
       // Clear all cookies by setting them to expire
       document.cookie.split(";").forEach((c) => {
@@ -471,8 +544,17 @@ export default function ProfilePage() {
           window.location.hostname;
       });
 
-      // ไปหน้า shop ทันที (หลีกเลี่ยงการดีดไป access.line.me)
-      window.location.href = "/shop";
+      // Clear timeout since we're navigating successfully
+      clearTimeout(logoutTimeout);
+
+      // Navigate to home page with LIFF-friendly approach
+      if (isInLiff) {
+        // In LIFF, use router navigation (smoother, less likely to hang)
+        router.push("/home");
+      } else {
+        // On desktop, use window.location for complete refresh
+        window.location.href = "/home";
+      }
     } catch (error) {
       console.error("Error during logout:", error);
       setSnackbar({
@@ -486,6 +568,12 @@ export default function ProfilePage() {
 
   // Filter orders by category and status
   const getFilteredOrders = () => {
+    // Ensure orders is an array
+    if (!Array.isArray(orders)) {
+      console.warn('orders is not an array:', orders);
+      return [];
+    }
+    
     let filteredOrders = orders;
 
     // Filter by category
@@ -598,7 +686,7 @@ export default function ProfilePage() {
   };
 
   // Only show loading for initial mount and auth loading
-  if (!mounted || status === "loading") {
+  if (!mounted || isLoading) {
     return (
       <Box
         sx={{
@@ -622,7 +710,7 @@ export default function ProfilePage() {
   }
 
   // Wait until all API calls have completed before rendering content (only when authenticated)
-  const isDataLoading = session && (loadingUser || loadingOrders || loadingCategories);
+  const isDataLoading = isAuthenticated && (loadingUser || loadingOrders || loadingCategories);
 
   if (isDataLoading) {
     return (
@@ -642,15 +730,15 @@ export default function ProfilePage() {
     );
   }
 
-  // Use session data as fallback while userData is loading
+  // Use auth user data as fallback while userData is loading
   const displayData = userData || {
-    displayName: session?.user?.name || "",
-    pictureUrl: session?.user?.image || "",
-    email: session?.user?.email || "",
-    lineUserId: session?.user?.lineUserId || "",
+    displayName: authUser?.displayName || "",
+    pictureUrl: authUser?.pictureUrl || "",
+    email: (authUser as any)?.email || null,
+    phoneNumber: null, // Will be loaded from API
+    statusMessage: null, // Will be loaded from API or LIFF profile
+    lineUserId: authUser?.lineUserId || "",
   };
-
-
 
   // Show loading while determining auth status
   if (!mounted) {
@@ -670,7 +758,7 @@ export default function ProfilePage() {
   }
 
   // Show QR code when not authenticated
-  if (!session) {
+  if (!isAuthenticated) {
     return (
       <Box
         sx={{
@@ -807,7 +895,7 @@ export default function ProfilePage() {
                  backgroundColor: "#05b04a",
                },
              }}
-             onClick={() => signIn("line", { callbackUrl: "/shop" })}
+             onClick={() => signIn("line", { callbackUrl: "/auth/success" })}
            >
              LINE Login
            </Button>
@@ -917,8 +1005,8 @@ export default function ProfilePage() {
         >
         {/* User Avatar */}
         <Avatar
-          src={displayData.pictureUrl || session.user?.image || ""}
-          alt={displayData.displayName || session.user?.name || "User"}
+          src={displayData.pictureUrl || authUser?.pictureUrl || ""}
+          alt={displayData.displayName || authUser?.displayName || "User"}
           sx={{
             width: 100,
             height: 100,
@@ -938,7 +1026,7 @@ export default function ProfilePage() {
                 fontSize: "1.8rem",
               }}
             >
-              {displayData.displayName || session.user?.name}
+              {displayData.displayName || authUser?.displayName}
             </Typography>
             <IconButton
               onClick={handleEditClick}
@@ -1938,6 +2026,10 @@ export default function ProfilePage() {
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 2,
                 },
+                
+              }}
+              InputProps={{
+                readOnly: true,
               }}
             />
           </Box>

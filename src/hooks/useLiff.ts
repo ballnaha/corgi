@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 
 // LIFF SDK type definitions
 interface LiffProfile {
@@ -39,7 +39,7 @@ export const useLiff = () => {
   const [mounted, setMounted] = useState(false);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
   const autoLoginTriggeredThisMountRef = React.useRef(false);
-  const { data: session, status } = useSession();
+  const { isAuthenticated, isLoading, login } = useSimpleAuth();
   const pathname = typeof window !== "undefined" ? window.location.pathname : "";
   const isOnSigninPage = pathname === "/auth/signin";
 
@@ -91,24 +91,22 @@ export const useLiff = () => {
         }
 
         console.log("🎯 Using LIFF ID Token for simple session");
-        const response = await fetch('/api/auth/liff-simple', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ idToken }),
-        });
-
-        if (response.ok) {
-          console.log("✅ LIFF simple auth successful, redirecting...");
+        const success = await login(idToken);
+        if (success) {
+          console.log("✅ LIFF simple auth successful");
           // Store login success flag in localStorage for persistence
           try {
             localStorage.setItem('liff_login_success', Date.now().toString());
           } catch {}
-          window.location.href = '/shop';
+          
+          // Dispatch auto login event to notify other components/pages
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('liff-auto-login-success'));
+            console.log('📡 Auto login event dispatched');
+          }
           return;
         } else {
-          console.error("❌ LIFF simple auth failed:", response.status);
+          console.error("❌ LIFF simple auth failed");
         }
         
       } catch (tokenError) {
@@ -211,19 +209,19 @@ export const useLiff = () => {
             // Only trigger auto-login if NextAuth session is explicitly unauthenticated (not loading)
             const loginInProgress = sessionStorage.getItem('liff_login_in_progress') === '1';
             const oauthInProgress = sessionStorage.getItem('line_oauth_in_progress') === '1';
-            const nextAuthUnauthed = status === 'unauthenticated'; // Changed from !== 'authenticated'
-            const isSessionLoading = status === 'loading';
+            const simpleAuthUnauthed = !isAuthenticated;
+            const isAuthLoading = isLoading;
             
             // Check if we have recent login success in localStorage
             const lastLoginSuccess = localStorage.getItem('liff_login_success');
             const hasRecentLogin = lastLoginSuccess && (Date.now() - parseInt(lastLoginSuccess) < 24 * 60 * 60 * 1000); // 24 hours
             
-            if (nextAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current && !isSessionLoading && !hasRecentLogin) {
+            if (simpleAuthUnauthed && !hasOAuthParams && !oauthInProgress && !autoLoginTriggeredThisMountRef.current && !isAuthLoading && !hasRecentLogin) {
               autoLoginTriggeredThisMountRef.current = true;
               setAutoLoginAttempted(true);
               await handleAutoLogin(liff);
-            } else if (hasRecentLogin && nextAuthUnauthed) {
-              // If we have recent login success but NextAuth session is missing, try to restore
+            } else if (hasRecentLogin && simpleAuthUnauthed) {
+              // If we have recent login success but Simple Auth session is missing, try to restore
               console.log("🔄 Attempting to restore session from recent LIFF login");
               autoLoginTriggeredThisMountRef.current = true;
               await handleAutoLogin(liff);

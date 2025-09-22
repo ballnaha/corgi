@@ -30,7 +30,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
   })();
 
   // Public routes that don't require authentication
-  const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff', '/images', '/shop', '/product', '/checkout', '/profile', '/favorites', '/blog'];
+  const publicRoutes = ['/home', '/', '/unauthorized', '/auth', '/liff', '/images', '/shop', '/product', '/checkout', '/profile', '/favorites', '/blog', '/debug-auth', '/debug','/auth/debug-oauth'];
   // Protected routes that require authentication for LIFF users but redirect non-LIFF to home
   const protectedRoutes = ['/order-success'];
   
@@ -47,14 +47,28 @@ function AuthGuard({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!mounted || isRedirecting) return;
+    if (!mounted) return;
     
-    // In LIFF, require auth before showing /shop
+    // Reset redirecting when auth state changes
+    if (isRedirecting && (isAuthenticated || isLoading)) {
+      setIsRedirecting(false);
+      return;
+    }
+    
+    if (isRedirecting) return;
+    
+    // In LIFF, require auth before showing /shop (unless user just logged out)
     const isShopRoute = pathname === "/shop" || pathname.startsWith("/shop/");
     if (isLikelyInLiffEnvironment && isShopRoute && !isAuthenticated && !isLoading) {
-      setIsRedirecting(true);
-      router.replace("/liff");
-      return;
+      // Check if user just logged out and wants to skip auto login
+      const skipAutoLogin = typeof window !== 'undefined' && 
+        sessionStorage.getItem('skip_liff_auto_login') === '1';
+      
+      if (!skipAutoLogin) {
+        setIsRedirecting(true);
+        router.replace("/liff");
+        return;
+      }
     }
     
     // For public routes, allow access without authentication

@@ -34,9 +34,19 @@ export default function LiffPage() {
   useEffect(() => {
     if (!mounted) return;
 
+    // Check if user wants to skip auto login (just logged out)
+    const skipAutoLogin = sessionStorage.getItem('skip_liff_auto_login') === '1';
+    
     // If authenticated, redirect to shop
     if (isAuthenticated) {
       router.push("/shop");
+      return;
+    }
+
+    // If user just logged out, don't auto login and redirect to home
+    if (skipAutoLogin) {
+      console.log('🚫 Skipping LIFF auto login due to recent logout');
+      router.push("/home");
       return;
     }
 
@@ -50,6 +60,9 @@ export default function LiffPage() {
         if (idToken) {
           login(idToken).then(success => {
             if (success) {
+              // Dispatch auto login event to notify other components/pages
+              window.dispatchEvent(new CustomEvent('liff-auto-login-success'));
+              console.log('📡 LIFF page auto login event dispatched');
               router.push("/shop");
             }
           });

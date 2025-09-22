@@ -11,6 +11,7 @@ import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
 import ThemeProvider from "@/components/ThemeProvider";
 import ClientOnly from "@/components/ClientOnly";
 import BottomNavigation from "@/components/BottomNavigation";
+import NextAuthSessionProvider from "@/components/NextAuthSessionProvider";
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -63,12 +64,14 @@ export default function RootLayout({
         <ClientOnly>
           <AppRouterCacheProvider>
             <ThemeProvider>
-              <AuthProvider>
-                <LineAuthProvider>
-                  {children}
-                  <BottomNavigation />
-                </LineAuthProvider>
-              </AuthProvider>
+              <NextAuthSessionProvider>
+                <AuthProvider>
+                  <LineAuthProvider>
+                    {children}
+                    <BottomNavigation />
+                  </LineAuthProvider>
+                </AuthProvider>
+              </NextAuthSessionProvider>
             </ThemeProvider>
           </AppRouterCacheProvider>
         </ClientOnly>

@@ -37,20 +37,31 @@ export async function ensureUserExists(sessionUser: SessionUser): Promise<User |
       console.log("User not found in database, creating new user:", sessionUser.id);
       
       try {
-        console.log("Attempting to create user with data:", {
+        // Clean and validate data before creating user
+        const cleanDisplayName = sessionUser.name && sessionUser.name.trim() !== '' 
+          ? sessionUser.name 
+          : "Unknown User";
+        const cleanEmail = sessionUser.email && sessionUser.email.trim() !== '' 
+          ? sessionUser.email 
+          : null;
+        const cleanLineUserId = sessionUser.lineUserId && sessionUser.lineUserId.trim() !== '' 
+          ? sessionUser.lineUserId 
+          : sessionUser.id;
+
+        console.log("Attempting to create user with cleaned data:", {
           id: sessionUser.id,
-          lineUserId: sessionUser.lineUserId || sessionUser.id,
-          displayName: sessionUser.name || "Unknown User",
-          email: sessionUser.email
+          lineUserId: cleanLineUserId,
+          displayName: cleanDisplayName,
+          email: cleanEmail
         });
 
         // สร้าง user ใหม่
         user = await prisma.user.create({
           data: {
             id: sessionUser.id,
-            lineUserId: sessionUser.lineUserId || sessionUser.id, // ใช้ id หาก lineUserId ไม่มี
-            displayName: sessionUser.name || "Unknown User",
-            email: sessionUser.email,
+            lineUserId: cleanLineUserId,
+            displayName: cleanDisplayName,
+            email: cleanEmail,
           }
         });
         

@@ -58,8 +58,8 @@ export const authOptions: NextAuthOptions = {
             id: "line",
             name: "LINE",
             type: "oauth",
-            // ใช้เฉพาะ PKCE เพื่อลด state mismatch ใน LIFF
-            checks: ["pkce"],
+            // Temporarily disable PKCE for debugging
+            // checks: ["pkce"],
             authorization: {
               url: "https://access.line.me/oauth2/v2.1/authorize",
               params: {
@@ -209,7 +209,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  debug: process.env.NODE_ENV === "development",
+  debug: true, // Enable debug in production for LINE OAuth troubleshooting
   pages: {
     signIn: "/auth/signin",
     error: "/auth/error",
@@ -219,7 +219,7 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
-  useSecureCookies: process.env.NODE_ENV === "production",
+  useSecureCookies: true, // Always use secure cookies for LINE OAuth
   // Add events to debug OAuth flow
   events: {
     async signIn({ user, account, profile }) {

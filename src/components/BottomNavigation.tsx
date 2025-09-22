@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { Box, Typography } from "@mui/material";
-import { useSession } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 
 import Image from "next/image";
 import { colors } from "@/theme/colors";
@@ -21,20 +21,9 @@ export default function BottomNavigation({
 }: BottomNavigationProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { status } = useSession();
-  
-  // Don't show bottom navigation during authentication loading for non-public routes
-  if (status === "loading") {
-    const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff'];
-    const isPublicRoute = publicRoutes.some(route => 
-      pathname === route || pathname.startsWith(route + '/')
-    );
-    
-    if (!isPublicRoute) {
-      return null;
-    }
-  }
+  const { isAuthenticated } = useSimpleAuth();
 
+  // ⚠️ ALL HOOKS MUST BE CALLED FIRST (before any early returns)
   // Derive active tab from current path when not explicitly controlled
   const derivedActiveTab = useMemo(() => {
     if (!pathname) return "home";
@@ -46,16 +35,42 @@ export default function BottomNavigation({
     return "home";
   }, [pathname]);
 
-  const isControlled = typeof activeTab !== "undefined";
-  const currentActiveTab = isControlled
-    ? (activeTab as string)
-    : derivedActiveTab;
-
   // Trigger a subtle bottom animation bar on route change
   const [routeAnimKey, setRouteAnimKey] = useState(0);
   useEffect(() => {
     setRouteAnimKey((k) => k + 1);
   }, [pathname]);
+
+  // Calculate derived values
+  const isControlled = typeof activeTab !== "undefined";
+  const currentActiveTab = isControlled
+    ? (activeTab as string)
+    : derivedActiveTab;
+  
+  // Show bottom navigation for authenticated users or on public routes
+  const publicRoutes = ['/home', '/', '/unauthorized', '/auth/signin', '/liff'];
+  const isPublicRoute = publicRoutes.some(route => 
+    pathname === route || pathname.startsWith(route + '/')
+  );
+  
+  // Early returns AFTER all hooks
+  if (!isAuthenticated && !isPublicRoute) {
+    return null;
+  }
+
+  // Hide bottom navigation on specific pages
+  if (
+    pathname &&
+    (pathname === "/home" ||
+      pathname.startsWith("/product/") ||
+      pathname.startsWith("/checkout") ||
+      pathname.startsWith("/order-success") ||
+      pathname.startsWith("/payment-notification") ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/blog"))
+  ) {
+    return null;
+  }
 
   const tabs = [
     { id: "home", icon: "custom", label: "หน้าหลัก" },

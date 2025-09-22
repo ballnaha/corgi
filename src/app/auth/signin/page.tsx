@@ -7,6 +7,7 @@ import { Box, Button, Typography, CircularProgress, Alert, Card, CardContent, Di
 import Image from "next/image";
 import { useLiff } from "@/hooks/useLiff";
 import LoadingScreen from "@/components/LoadingScreen";
+import { signIn } from "next-auth/react";
 
 export default function SignIn() {
   const { isAuthenticated, isLoading } = useSimpleAuth();
@@ -32,8 +33,16 @@ export default function SignIn() {
   }, [isAuthenticated, router, mounted]);
 
   const handleSignIn = () => {
-    // For external browser users, redirect to LIFF for proper authentication
-    window.location.href = '/liff';
+    if (isInLiff) {
+      // For LIFF users, use the existing LIFF flow
+      window.location.href = '/liff';
+    } else {
+      // For desktop/web users, use NextAuth LINE OAuth
+      signIn('line', { 
+        callbackUrl: '/auth/success',
+        redirect: true 
+      });
+    }
   };
 
   const handleClearCache = async () => {
@@ -95,7 +104,9 @@ export default function SignIn() {
         />
       </Box>
       <Typography variant="body1" color="text.secondary" textAlign="center">
-        แนะนำให้ใช้งานด้วย line application เพื่อประสบการณ์ที่ดีที่สุด
+        {isInLiff 
+          ? "คุณกำลังใช้งานผ่าน LINE Application" 
+          : "เข้าสู่ระบบด้วย LINE เพื่อใช้งานร้านค้า"}
       </Typography>
 
       {(isInLiff || error) && (
@@ -125,7 +136,7 @@ export default function SignIn() {
           minWidth: 200,
         }}
       >
-        {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วย LINE"}
+        {loading ? "กำลังเข้าสู่ระบบ..." : isInLiff ? "เข้าสู่ระบบด้วย LIFF" : "เข้าสู่ระบบด้วย LINE"}
       </Button>
 
       <Button

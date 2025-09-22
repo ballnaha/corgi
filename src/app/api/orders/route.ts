@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ensureUserExists } from "@/lib/user-utils";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
+    // Support both NextAuth and SimpleAuth
+    const authUser = await getAuthenticatedUser(request);
+    
+    if (!authUser?.id) {
+      console.log('❌ Orders API: No authenticated user found');
       return NextResponse.json(
         { error: "Unauthorized - User not found" },
         { status: 401 }
       );
     }
 
+    console.log(`✅ Orders API: User ${authUser.id} authenticated via ${authUser.source}`);
+
     // ตรวจสอบและสร้าง user หากจำเป็น
-    const user = await ensureUserExists(session.user);
+    const user = await ensureUserExists({ 
+      id: authUser.id, 
+      lineUserId: authUser.lineUserId || authUser.id 
+    });
     if (!user) {
       return NextResponse.json(
         { error: "Failed to validate user" },
@@ -34,18 +40,18 @@ export async function GET(request: NextRequest) {
 
     // Build where clause
     // Handle both internal DB ID and LINE ID for backward compatibility
-    let userId = session.user.id;
+    let userId = authUser.id;
     
-    // Check if user exists with current session ID
+    // Check if user exists with current user ID
     const userCheck = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true }
     });
     
-    if (!userCheck && session.user.lineUserId) {
+    if (!userCheck && authUser.lineUserId) {
       // If not found by ID, try to find by lineUserId
       const userByLineId = await prisma.user.findUnique({
-        where: { lineUserId: session.user.lineUserId },
+        where: { lineUserId: authUser.lineUserId },
         select: { id: true }
       });
       
@@ -124,7 +130,7 @@ export async function GET(request: NextRequest) {
         
         // Debug: ลองหา order ทั้งหมดของ user นี้
         const allUserOrders = await prisma.order.findMany({
-          where: { userId: session.user.id },
+          where: { userId: authUser.id },
           select: { id: true, orderNumber: true, createdAt: true },
           orderBy: { createdAt: 'desc' },
           take: 5

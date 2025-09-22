@@ -19,25 +19,18 @@ import {
   Divider,
   Tooltip
 } from "@mui/material";
-import { ShoppingCart, Logout, Menu, Close, Person, AccountCircle } from "@mui/icons-material";
-import { useSession, signOut, signIn } from "next-auth/react";
+import { Logout, Menu, Close, Person, AccountCircle } from "@mui/icons-material";
+import { useSession, signOut } from "next-auth/react";
 import { useUserDisplayName } from "@/hooks/useUserDisplayName";
-import LineIcon from "./LineIcon";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
+import { useLiff } from "@/hooks/useLiff";
 
-interface ResponsiveHeaderProps {
-  showCartIcon?: boolean;
-  onCartClick?: () => void;
-  cartItemCount?: number;
-}
-
-const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
-  showCartIcon = false,
-  onCartClick,
-  cartItemCount = 0
-}) => {
+const ResponsiveHeader: React.FC = () => {
   const router = useRouter();
   const { data: session } = useSession();
   const { displayName, loading: userLoading } = useUserDisplayName();
+  const { logout: simpleLogout } = useSimpleAuth();
+  const { isInLiff } = useLiff();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
@@ -54,11 +47,62 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
 
   const handleLogout = async () => {
     try {
-      try { sessionStorage.setItem('skip_liff_auto_login','1'); } catch {}
+      console.log('🔄 ResponsiveHeader logout started');
+      
+      // Add timeout protection to prevent hanging
+      const logoutTimeout = setTimeout(() => {
+        console.warn('⚠️ ResponsiveHeader logout timeout - forcing navigation');
+        const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (isInLiff || isMobileDevice) {
+          router.push("/home");
+        } else {
+          window.location.href = "/home";
+        }
+      }, 10000); // 10 second timeout
+
+      // Clear skip auto login flag
+      try { 
+        sessionStorage.setItem('skip_liff_auto_login','1'); 
+      } catch {}
+
+      // Clear SimpleAuth session first
+      try {
+        await simpleLogout();
+        console.log('✅ ResponsiveHeader: SimpleAuth logout completed');
+      } catch (simpleAuthError) {
+        console.warn('Could not clear SimpleAuth session:', simpleAuthError);
+      }
+
+      // Clear NextAuth session
       await signOut({ redirect: false });
-      router.push('/shop');
+      
+      // Clear storage immediately
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Clear cookies
+      document.cookie.split(";").forEach((c) => {
+        const eqPos = c.indexOf("=");
+        const name = eqPos > -1 ? c.substr(0, eqPos) : c;
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
+        document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname;
+      });
+
+      // Clear timeout since we're navigating successfully
+      clearTimeout(logoutTimeout);
+
+      // Navigate with mobile-friendly approach
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isInLiff || isMobileDevice) {
+        router.push("/home");
+      } else {
+        window.location.href = "/home";
+      }
+
+      console.log('✅ ResponsiveHeader logout completed');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('ResponsiveHeader logout error:', error);
     }
   };
 
@@ -80,9 +124,6 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
     handleLogout();
   };
 
-  const handleLineLogin = () => {
-    signIn("line", { callbackUrl: "/shop" });
-  };
 
   // Prevent body scroll when menu is open
   useEffect(() => {
@@ -173,70 +214,6 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
               Shop Now
             </Button>
 
-            {/* LINE Login Icon for Desktop - Show only when not logged in */}
-            {!session?.user && (
-              <Tooltip 
-                title="เข้าสู่ระบบด้วย LINE" 
-                arrow
-                placement="bottom"
-              >
-                <IconButton
-                  onClick={handleLineLogin}
-                  sx={{
-                    color: "#00B900",
-                    padding: "8px",
-                    "&:hover": {
-                      color: "#009900",
-                      backgroundColor: "rgba(0, 185, 0, 0.1)",
-                      transform: "scale(1.05)",
-                    },
-                    transition: "all 0.2s ease"
-                  }}
-                >
-                  <LineIcon sx={{ fontSize: "1.5rem" }} />
-                </IconButton>
-              </Tooltip>
-            )}
-
-            {/* Cart Icon for Desktop */}
-            {showCartIcon && (
-              <IconButton
-                onClick={onCartClick}
-                sx={{
-                  color: "#333",
-                  position: "relative",
-                  "&:hover": {
-                    color: "#FF6B35",
-                    backgroundColor: "rgba(255, 107, 53, 0.1)",
-                  }
-                }}
-              >
-                <ShoppingCart />
-                {cartItemCount > 0 && (
-                  <Box
-                    sx={{
-                      position: "absolute",
-                      top: -2,
-                      right: -2,
-                      backgroundColor: "#FF6B35",
-                      color: "white",
-                      borderRadius: "50%",
-                      width: 18,
-                      height: 18,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "11px",
-                      fontWeight: "bold",
-                      border: "1px solid white",
-                      boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
-                    }}
-                  >
-                    {cartItemCount > 99 ? '99+' : cartItemCount}
-                  </Box>
-                )}
-              </IconButton>
-            )}
 
             {session?.user && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
@@ -373,89 +350,6 @@ const ResponsiveHeader: React.FC<ResponsiveHeaderProps> = ({
                 Shop Now
               </Button>
 
-              {/* Cart for Mobile */}
-              {showCartIcon && (
-                <Button
-                  variant="outlined"
-                  onClick={() => {
-                    onCartClick?.();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  sx={{
-                    borderColor: "#000",
-                    color: "#000",
-                    borderRadius: "20px",
-                    py: 1,
-                    fontSize: "14px",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                    "&:hover": {
-                      borderColor: "#FF6B35",
-                      color: "#FF6B35"
-                    }
-                  }}
-                >
-                  <ShoppingCart fontSize="small" />
-                  ตรวจสอบตะกร้า
-                  {cartItemCount > 0 && (
-                    <Box
-                      sx={{
-                        backgroundColor: "#FF6B35",
-                        color: "white",
-                        borderRadius: "50%",
-                        width: 18,
-                        height: 18,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "11px",
-                        fontWeight: "bold",
-                        ml: 1,
-                        border: "1px solid white",
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
-                      }}
-                    >
-                      {cartItemCount > 99 ? '99+' : cartItemCount}
-                    </Box>
-                  )}
-                </Button>
-              )}
-
-              {/* LINE Login for Mobile - Show only when not logged in */}
-              {!session?.user && (
-                <Button
-                  variant="contained"
-                  onClick={() => {
-                    handleLineLogin();
-                    setIsMobileMenuOpen(false);
-                  }}
-                  sx={{
-                    backgroundColor: "#00B900",
-                    color: "white",
-                    borderRadius: "20px",
-                    py: 1.2,
-                    px: 2,
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    textTransform: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    boxShadow: "0 2px 8px rgba(0, 185, 0, 0.3)",
-                    "&:hover": {
-                      backgroundColor: "#009900",
-                      boxShadow: "0 4px 12px rgba(0, 185, 0, 0.4)",
-                      transform: "translateY(-1px)",
-                    },
-                    transition: "all 0.2s ease"
-                  }}
-                >
-                  <LineIcon sx={{ fontSize: "1.2rem" }} />
-                  เข้าสู่ระบบด้วย LINE
-                </Button>
-              )}
 
               {session?.user && (
                 <Box sx={{ 

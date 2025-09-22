@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signOut } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 import { useRouter } from "next/navigation";
 import {
   AppBar,
@@ -19,7 +19,7 @@ import { colors } from "@/theme/colors";
 import { handleLiffNavigation } from "@/lib/liff-navigation";
 
 export default function Navigation() {
-  const { data: session } = useSession();
+  const { user, isAuthenticated, logout } = useSimpleAuth();
   const router = useRouter();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -39,7 +39,7 @@ export default function Navigation() {
   const handleSignOut = async () => {
     try {
       try { sessionStorage.setItem("skip_liff_auto_login", "1"); } catch {}
-      await signOut({ redirect: false });
+      logout();
       handleLiffNavigation(router, "/shop");
     } catch (e) {
       console.error("Logout error:", e);
@@ -70,7 +70,7 @@ export default function Navigation() {
           What Da Dog Pet Shop
         </Typography>
 
-        {session ? (
+        {isAuthenticated ? (
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <IconButton onClick={() => handleLiffNavigation(router, '/favorites')} sx={{ color: colors.error }}>
               <FavoriteBorderIcon />
@@ -79,12 +79,12 @@ export default function Navigation() {
               variant="body2"
               sx={{ color: colors.text.secondary, display: { xs: "none", sm: "block" } }}
             >
-              สวัสดี, {session.user?.name}
+              สวัสดี, {user?.displayName}
             </Typography>
             <IconButton onClick={handleMenuOpen}>
               <Avatar
-                src={session.user?.image || ""}
-                alt={session.user?.name || "User"}
+                src={user?.pictureUrl || ""}
+                alt={user?.displayName || "User"}
                 sx={{ width: 32, height: 32 }}
               />
             </IconButton>
@@ -102,9 +102,9 @@ export default function Navigation() {
               }}
             >
               <MenuItem onClick={handleProfileClick}>
-                <Avatar
-                  src={session.user?.image || ""}
-                  alt={session.user?.name || "User"}
+                  <Avatar
+                    src={user?.pictureUrl || ""}
+                    alt={user?.displayName || "User"}
                   sx={{ width: 24, height: 24, mr: 2 }}
                 />
                 โปรไฟล์

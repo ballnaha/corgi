@@ -1,38 +1,29 @@
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
+import { useSimpleAuth } from "@/hooks/useSimpleAuth";
 
 export function useUserDisplayName() {
-  const { data: session, status } = useSession();
+  const { user, isAuthenticated, isLoading } = useSimpleAuth();
   const [displayName, setDisplayName] = useState<string>("ผู้ใช้งาน");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // ถ้า session ยังโหลดอยู่
-    if (status === "loading") {
+    // ถ้า auth ยังโหลดอยู่
+    if (isLoading) {
       setLoading(true);
       return;
     }
 
-    // ถ้าไม่มี session หรือไม่มี lineUserId
-    if (!session?.user?.lineUserId) {
-      setDisplayName(session?.user?.name || "ผู้ใช้งาน");
+    // ถ้าไม่มี user หรือไม่มี lineUserId
+    if (!isAuthenticated || !user?.lineUserId) {
+      setDisplayName(user?.displayName || "ผู้ใช้งาน");
       setLoading(false);
       return;
     }
 
-    // ดึงข้อมูลจาก API
-    setLoading(true);
-    fetch("/api/user/display-name")
-      .then(res => res.json())
-      .then(data => {
-        setDisplayName(data.displayName || session?.user?.name || "ผู้ใช้งาน");
-      })
-      .catch(error => {
-        console.error("Error fetching display name:", error);
-        setDisplayName(session?.user?.name || "ผู้ใช้งาน");
-      })
-      .finally(() => setLoading(false));
-  }, [session?.user?.lineUserId, session?.user?.name, status]);
+    // ใช้ displayName จาก user โดยตรง (ข้อมูลมาจาก LIFF แล้ว)
+    setDisplayName(user.displayName || "ผู้ใช้งาน");
+    setLoading(false);
+  }, [user?.lineUserId, user?.displayName, isAuthenticated, isLoading]);
 
   return { displayName, loading };
 }

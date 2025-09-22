@@ -53,7 +53,7 @@ export default function AuthErrorPage() {
     } catch {}
     setClearing(false);
     // เริ่ม Login ใหม่
-    signIn("line", { callbackUrl: "/shop" });
+    signIn("line", { callbackUrl: "/auth/success" });
   };
 
   const sendReport = async () => {
@@ -108,6 +108,7 @@ export default function AuthErrorPage() {
           >
             {clearing ? "กำลังเคลียร์และลองใหม่..." : "ล้างและลองเข้าสู่ระบบใหม่"}
           </Button>
+          <Button fullWidth variant="outlined" onClick={() => router.push("/auth/setup-guide")}>ดูคู่มือการตั้งค่า</Button>
           <Button fullWidth variant="outlined" onClick={sendReport}>ส่งรายงานปัญหา</Button>
           <Button fullWidth variant="outlined" onClick={() => router.push("/auth/signin")}>ไปหน้าล็อกอิน</Button>
         </Stack>
