@@ -102,33 +102,25 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // For non-LIFF users accessing truly protected routes, redirect to home
-  const homeUrl = new URL('/home', request.url);
-  return NextResponse.redirect(homeUrl);
+  // Only redirect admin routes and truly protected routes, let 404 handle invalid URLs
+  if (request.nextUrl.pathname.startsWith('/admin')) {
+    const homeUrl = new URL('/home', request.url);
+    return NextResponse.redirect(homeUrl);
+  }
+  
+  // For other non-matching routes, let Next.js handle 404 naturally
+  return NextResponse.next();
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - auth (auth pages)
-     * - images (static images)
-     * - product (product pages)
-     * - shop (shop page)
-     * - home (home page)
-     * - blog (blog pages) - completely public like home
-     * - uploads (file uploads)
-     * - checkout, profile, favorites (handled separately)
-     * - line-test (for testing LINE API)
-     * - debug (for debugging session)
-     * - test-order (for testing order flow)
-     * - payment-notification (for payment upload)
-     * - order-success (for order success page)
+     * Match admin routes for protection and key routes for LIFF detection
+     * Let Next.js handle 404 for all other routes naturally
      */
-    "/((?!api|_next/static|_next/image|favicon.ico|auth|images|product|shop|home|blog|uploads|checkout|profile|favorites|line-test|debug|test-order|payment-notification|order-success|sitemap.xml|robots.txt).*)",
+    "/admin/:path*",
+    "/shop/:path*",
+    "/liff/:path*",
+    "/product/:path*",
   ],
 };

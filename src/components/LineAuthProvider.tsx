@@ -74,7 +74,7 @@ function AuthGuard({ children }: { children: ReactNode }) {
     // For public routes, allow access without authentication
     if (isPublicRoute) return;
     
-    // Handle protected routes and other non-public routes
+    // Handle protected routes and admin routes only
     if (!isAuthenticated && !isLoading) {
       // Set redirecting state immediately to prevent content flash
       setIsRedirecting(true);
@@ -91,16 +91,19 @@ function AuthGuard({ children }: { children: ReactNode }) {
         }
       }
       
-      // For other routes (like admin), redirect based on environment
-      if (!isLikelyInLiffEnvironment) {
-        router.replace("/home");
-        return;
+      // Only redirect admin routes, let 404 handle other invalid routes
+      if (pathname.startsWith('/admin')) {
+        if (!isLikelyInLiffEnvironment) {
+          router.replace("/home");
+          return;
+        } else {
+          router.replace("/auth/signin");
+          return;
+        }
       }
       
-      // For LIFF users on other protected routes
-      if (pathname !== "/auth/signin" && pathname !== "/liff") {
-        router.replace("/auth/signin");
-      }
+      // Reset redirecting for non-admin/non-protected routes (let 404 handle them)
+      setIsRedirecting(false);
     }
   }, [isAuthenticated, isLoading, router, pathname, mounted, isRedirecting, isLikelyInLiffEnvironment, isPublicRoute, isProtectedRoute]);
 
@@ -114,8 +117,8 @@ function AuthGuard({ children }: { children: ReactNode }) {
     return <LoadingScreen message="กำลังเปลี่ยนหน้า..." fullScreen={true} />;
   }
 
-  // Handle protected routes for non-LIFF users - prevent content flash
-  if (!isLikelyInLiffEnvironment && (isProtectedRoute || !isPublicRoute) && !isAuthenticated) {
+  // Handle protected routes and admin routes for non-LIFF users - prevent content flash
+  if (!isLikelyInLiffEnvironment && (isProtectedRoute || pathname.startsWith('/admin')) && !isAuthenticated) {
     return <LoadingScreen message="กำลังเปลี่ยนหน้า..." fullScreen={true} />;
   }
 
@@ -129,8 +132,8 @@ function AuthGuard({ children }: { children: ReactNode }) {
     return <>{children}</>;
   }
 
-  // Fallback loading state
-  return <LoadingScreen message="กำลังตรวจสอบการเข้าสู่ระบบ..." fullScreen={true} />;
+  // Allow content to render (including 404 pages)
+  return <>{children}</>;
 }
 
 function LiffWrapper({ children }: { children: ReactNode }) {
