@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         hasNextAuthSecret: !!process.env.NEXTAUTH_SECRET,
         isProduction: process.env.NODE_ENV === 'production'
       },
-      recommendations: []
+      recommendations: [] as string[]
     };
 
     // Add recommendations based on missing configs

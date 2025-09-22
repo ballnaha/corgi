@@ -22,9 +22,9 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
       return {
         id: session.user.id,
         lineUserId: session.user.lineUserId,
-        displayName: session.user.displayName || session.user.name,
-        pictureUrl: session.user.image,
-        email: session.user.email,
+        displayName: session.user.displayName || session.user.name || undefined,
+        pictureUrl: session.user.image || undefined,
+        email: session.user.email || undefined,
         source: 'nextauth'
       };
     }

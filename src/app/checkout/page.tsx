@@ -279,9 +279,11 @@ export default function CheckoutPage() {
 
     // ดึงข้อมูล user profile จากฐานข้อมูล
     const fetchUserProfile = async () => {
-      if (session?.user) {
+      if (authUser) {
         try {
-          const response = await fetch("/api/user/profile");
+          const response = await fetch("/api/user/profile", {
+            credentials: 'include' // Include cookies for auth
+          });
           if (response.ok) {
             const userProfile = await response.json();
             console.log("User profile:", userProfile);
@@ -289,25 +291,25 @@ export default function CheckoutPage() {
             setCustomerInfo((prev) => ({
               ...prev,
               name: userProfile.displayName || authUser?.displayName || "",
-              email: userProfile.email || authUser?.email || "",
+              email: userProfile.email || (authUser as any)?.email || "",
               phone: userProfile.phoneNumber || "",
             }));
             setUserProfileLoaded(true);
           } else {
-            // ถ้า API ไม่สำเร็จ ใช้ข้อมูลจาก session
+            // ถ้า API ไม่สำเร็จ ใช้ข้อมูลจาก authUser
             setCustomerInfo((prev) => ({
               ...prev,
               name: authUser?.displayName || "",
-              email: authUser?.email || "",
+              email: (authUser as any)?.email || "",
             }));
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
-          // ถ้าเกิดข้อผิดพลาด ใช้ข้อมูลจาก session
+          // ถ้าเกิดข้อผิดพลาด ใช้ข้อมูลจาก authUser
           setCustomerInfo((prev) => ({
             ...prev,
             name: authUser?.displayName || "",
-            email: authUser?.email || "",
+            email: (authUser as any)?.email || "",
           }));
         }
       }
@@ -399,7 +401,7 @@ export default function CheckoutPage() {
     };
 
     fetchData();
-  }, [session]);
+  }, [authUser]);
 
   // อัปเดต shipping options เมื่อ order analysis เปลี่ยน
   useEffect(() => {
