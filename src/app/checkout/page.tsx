@@ -42,6 +42,7 @@ import {
   ExpandLess,
   LocalOffer,
   AccountCircle,
+  Storefront,
 } from "@mui/icons-material";
 import { colors } from "@/theme/colors";
 import { CartItem } from "@/types";
@@ -49,7 +50,6 @@ import { readCartFromStorage, clearCartStorage, updateQuantityInStorage, removeF
 import { handleLiffNavigation } from "@/lib/liff-navigation";
 import { useThemedSnackbar } from "@/components/ThemedSnackbar";
 import { 
-  analyzeOrder, 
   filterShippingOptions,
   calculatePaymentAmount,
   getPaymentDescription,
@@ -57,6 +57,27 @@ import {
   OrderAnalysis,
   DiscountInfo
 } from "@/lib/order-logic";
+
+// Helper function to analyze order via API
+const analyzeOrderViaAPI = async (cartItems: CartItem[], discountInfo?: DiscountInfo | null): Promise<OrderAnalysis> => {
+  const response = await fetch('/api/analyze-order', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      cartItems,
+      discountInfo: discountInfo || undefined
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to analyze order');
+  }
+
+  return response.json();
+};
+import { getStripe } from "@/lib/stripe";
 
 // Define keyframes animation
 const snackGrowAnimation = keyframes`
@@ -189,6 +210,10 @@ export default function CheckoutPage() {
   }>({ open: false, productName: "", productId: "" });
   const [showDiscountSection, setShowDiscountSection] = useState(false);
   const [userProfileLoaded, setUserProfileLoaded] = useState(false);
+  const [stripePromise] = useState(() => getStripe());
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [showStripeForm, setShowStripeForm] = useState(false);
+  const [pendingOrderData, setPendingOrderData] = useState<any>(null);
 
   // ฟังก์ชันแปลง appliedDiscount เป็น DiscountInfo
   const getDiscountInfo = (): DiscountInfo | null => {
@@ -201,7 +226,7 @@ export default function CheckoutPage() {
   };
 
   // ฟังก์ชันจัดการตะกร้าสินค้า
-  const handleUpdateQuantity = (productId: string, newQuantity: number) => {
+  const handleUpdateQuantity = async (productId: string, newQuantity: number) => {
     const item = cartItems.find(item => item.product.id === productId);
     if (!item) return;
 
@@ -221,9 +246,33 @@ export default function CheckoutPage() {
     const updatedItems = readCartFromStorage();
     setCartItems(updatedItems);
     
+    // คำนวณ subtotal ใหม่ทันทีและตรวจสอบส่วนลด
+    const newSubtotal = updatedItems.reduce((sum, item) => {
+      return sum + calculateUnitPrice(item.product) * item.quantity;
+    }, 0);
+    
+    console.log("🔄 Quantity Updated:", {
+      productId,
+      newQuantity,
+      newSubtotal,
+      hasDiscount: !!appliedDiscount,
+      discountCode: appliedDiscount?.code,
+      discountMinAmount: appliedDiscount?.minAmount,
+      discountObject: appliedDiscount,
+      shouldRemoveDiscount: appliedDiscount && appliedDiscount.minAmount && newSubtotal < appliedDiscount.minAmount
+    });
+    
+    // ตรวจสอบส่วนลดทันที
+    if (appliedDiscount && appliedDiscount.minAmount && newSubtotal < appliedDiscount.minAmount) {
+      console.log(`🚫 Immediate removing discount ${appliedDiscount.code} - New Subtotal ${newSubtotal} < MinAmount ${appliedDiscount.minAmount}`);
+      setAppliedDiscount(null);
+      setDiscountCode("");
+      showSnackbar(`ยกเลิกรหัสส่วนลด ${appliedDiscount.code} เนื่องจากยอดซื้อไม่ถึงขั้นต่ำ`, "warning");
+    }
+    
     // อัปเดต order analysis
     if (updatedItems.length > 0) {
-      const analysis = analyzeOrder(updatedItems, getDiscountInfo());
+      const analysis = await analyzeOrderViaAPI(updatedItems, getDiscountInfo());
       setOrderAnalysis(analysis);
     }
 
@@ -241,15 +290,28 @@ export default function CheckoutPage() {
     });
   };
 
-  const confirmRemoveItem = () => {
+  const confirmRemoveItem = async () => {
     const productId = confirmDialog.productId;
     removeFromCartStorage(productId);
     const updatedItems = readCartFromStorage();
     setCartItems(updatedItems);
 
+    // คำนวณ subtotal ใหม่ (ถ้ามีสินค้าเหลือ)
+    if (updatedItems.length > 0) {
+      // การตรวจสอบส่วนลดจะถูกทำโดย useEffect โดยอัตโนมัติ
+      // ไม่จำเป็นต้องตรวจสอบที่นี่
+    } else {
+      // ถ้าตะกร้าว่าง ให้ลบส่วนลดด้วย
+      if (appliedDiscount) {
+        console.log("🗑️ Cart is empty, removing discount");
+        setAppliedDiscount(null);
+        setDiscountCode("");
+      }
+    }
+
     // อัปเดต order analysis
     if (updatedItems.length > 0) {
-      const analysis = analyzeOrder(updatedItems, getDiscountInfo());
+      const analysis = await analyzeOrderViaAPI(updatedItems, getDiscountInfo());
       setOrderAnalysis(analysis);
     } else {
       setOrderAnalysis(null);
@@ -271,11 +333,15 @@ export default function CheckoutPage() {
     setCartItems(items);
 
     // วิเคราะห์คำสั่งซื้อ
-    if (items.length > 0) {
-      const analysis = analyzeOrder(items, getDiscountInfo());
-      setOrderAnalysis(analysis);
-      console.log("Order Analysis:", analysis);
-    }
+    const initOrderAnalysis = async () => {
+      if (items.length > 0) {
+        const analysis = await analyzeOrderViaAPI(items, getDiscountInfo());
+        setOrderAnalysis(analysis);
+        console.log("Order Analysis:", analysis);
+      }
+    };
+    
+    initOrderAnalysis();
 
     // ดึงข้อมูล user profile จากฐานข้อมูล
     const fetchUserProfile = async () => {
@@ -381,16 +447,22 @@ export default function CheckoutPage() {
         const discountResponse = await fetch("/api/discount-codes");
         if (discountResponse.ok) {
           const discountData = await discountResponse.json();
-          const transformedDiscounts = discountData.map(
-            (code: DiscountCode) => ({
+          const transformedDiscounts = discountData.map((code: any) => {
+            const rawType = code.type;
+            const normalizedType = typeof rawType === 'string' && rawType.toUpperCase() === 'PERCENTAGE'
+              ? 'percentage'
+              : typeof rawType === 'string' && rawType.toUpperCase() === 'FIXED_AMOUNT'
+              ? 'fixed'
+              : (String(rawType || '').toLowerCase() === 'percentage' ? 'percentage' : 'fixed');
+            return {
               id: code.id,
               code: code.code,
-              type: code.type,
+              type: normalizedType as 'percentage' | 'fixed',
               value: Number(code.value),
               minAmount: code.minAmount ? Number(code.minAmount) : undefined,
               description: code.description,
-            })
-          );
+            } as DiscountCode;
+          });
           setAvailableDiscountCodes(transformedDiscounts);
         }
       } catch (error) {
@@ -423,13 +495,37 @@ export default function CheckoutPage() {
     }
   }, [orderAnalysis, shippingOptions]);
 
-  // อัปเดต order analysis เมื่อส่วนลดเปลี่ยน
+  // อัปเดต order analysis เมื่อส่วนลดเปลี่ยน หรือเมื่อเปลี่ยน payment method
   useEffect(() => {
-    if (cartItems.length > 0) {
-      const analysis = analyzeOrder(cartItems, getDiscountInfo());
-      setOrderAnalysis(analysis);
-    }
-  }, [appliedDiscount, cartItems]);
+    const updateOrderAnalysis = async () => {
+      if (cartItems.length > 0) {
+        const discountInfo = getDiscountInfo();
+        console.log("🔄 Updating order analysis with discount:", discountInfo);
+        
+        const baseAnalysis = await analyzeOrderViaAPI(cartItems, discountInfo);
+        console.log("📊 Base analysis result:", baseAnalysis);
+        
+        // บังคับให้บัตรเครดิตชำระเต็มจำนวน
+        const selectedPaymentMethod = paymentMethods.find(method => method.id === selectedPayment);
+        const isCreditCard = selectedPaymentMethod?.type === "credit_card";
+        
+        const finalAnalysis = isCreditCard 
+          ? {
+              ...baseAnalysis,
+              paymentType: "FULL_PAYMENT" as const,
+              requiresDeposit: false,
+              depositAmount: 0,
+              remainingAmount: baseAnalysis.totalAmount,
+            }
+          : baseAnalysis;
+        
+        console.log("✅ Setting final analysis:", finalAnalysis);
+        setOrderAnalysis(finalAnalysis);
+      }
+    };
+    
+    updateOrderAnalysis();
+  }, [appliedDiscount, cartItems, selectedPayment, paymentMethods]);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -458,23 +554,73 @@ export default function CheckoutPage() {
     0
   );
 
+  // ตรวจสอบส่วนลดเมื่อ subtotal เปลี่ยนแปลง
+  useEffect(() => {
+    console.log("🔍 Discount Validation Check:", {
+      hasAppliedDiscount: !!appliedDiscount,
+      discountCode: appliedDiscount?.code,
+      minAmount: appliedDiscount?.minAmount,
+      subtotal: subtotal,
+      shouldRemove: appliedDiscount && appliedDiscount.minAmount && subtotal < appliedDiscount.minAmount
+    });
+    
+    if (appliedDiscount && appliedDiscount.minAmount && subtotal < appliedDiscount.minAmount) {
+      console.log(`🚫 Auto-removing discount ${appliedDiscount.code} - Subtotal ${subtotal} < MinAmount ${appliedDiscount.minAmount}`);
+      setAppliedDiscount(null);
+      setDiscountCode("");
+      showSnackbar(`ยกเลิกรหัสส่วนลด ${appliedDiscount.code} เนื่องจากยอดซื้อไม่ถึงขั้นต่ำ`, "warning");
+    }
+  }, [subtotal, appliedDiscount, showSnackbar]);
+
   const selectedShippingOption = filteredShippingOptions.find(
     (option) => option.id === selectedShipping
   );
-  const shippingCost =
-    appliedDiscount?.code === "FREESHIP"
-      ? 0
-      : selectedShippingOption?.price || 0;
+  
+  // คำนวณค่าจัดส่งหลังหักส่วนลด FREESHIP
+  const baseShippingCost = selectedShippingOption?.price || 0;
+  const shippingCost = appliedDiscount?.code === "FREESHIP" ? 0 : baseShippingCost;
 
-  const discountAmount = appliedDiscount
-    ? appliedDiscount.type === "percentage"
-      ? (subtotal * appliedDiscount.value) / 100
-      : appliedDiscount.code === "FREESHIP"
-      ? selectedShippingOption?.price || 0
-      : appliedDiscount.value
+  // ส่วนลดตาม orderAnalysis (แม่นยำที่สุดเมื่อพร้อม)
+  const discountAmountFromAnalysis = orderAnalysis && appliedDiscount
+    ? orderAnalysis.totalAmountBeforeDiscount - orderAnalysis.totalAmount
     : 0;
 
-  const total = subtotal + shippingCost - discountAmount;
+  // ส่วนลดแบบคำนวณทันทีจากสถานะปัจจุบัน (fallback)
+  const instantDiscountAmount = appliedDiscount
+    ? appliedDiscount.code === "FREESHIP"
+      ? baseShippingCost
+      : appliedDiscount.type === "percentage"
+        ? (subtotal * appliedDiscount.value) / 100
+        : appliedDiscount.value
+    : 0;
+
+  // ใช้ส่วนลดจาก analysis หากพร้อม ไม่งั้นใช้แบบทันที
+  const discountAmount = appliedDiscount
+    ? discountAmountFromAnalysis > 0
+      ? discountAmountFromAnalysis + (appliedDiscount.code === "FREESHIP" ? baseShippingCost : 0)
+      : instantDiscountAmount
+    : 0;
+
+  // ยอดรวมสุดท้าย = ยอดสินค้าหลังหักส่วนลด + ค่าจัดส่งหลังหักส่วนลด
+  const total = orderAnalysis
+    ? orderAnalysis.totalAmount + shippingCost
+    : subtotal + shippingCost - (appliedDiscount ? instantDiscountAmount : 0);
+
+  // Debug logging สำหรับการคำนวณส่วนลด
+  React.useEffect(() => {
+    if (appliedDiscount && orderAnalysis) {
+      console.log("🔍 Discount Debug:");
+      console.log("  Applied Discount:", appliedDiscount);
+      console.log("  Order Analysis Before Discount:", orderAnalysis.totalAmountBeforeDiscount);
+      console.log("  Order Analysis After Discount:", orderAnalysis.totalAmount);
+      console.log("  Base Shipping Cost:", baseShippingCost);
+      console.log("  Final Shipping Cost:", shippingCost);
+      console.log("  Calculated Discount Amount:", discountAmount);
+      console.log("  Subtotal:", subtotal);
+      console.log("  Final Total:", total);
+      console.log("---");
+    }
+  }, [appliedDiscount, orderAnalysis, discountAmount, subtotal, shippingCost, total, baseShippingCost]);
 
   const handleApplyDiscount = async () => {
     if (!discountCode.trim()) return;
@@ -494,9 +640,18 @@ export default function CheckoutPage() {
       const data = await response.json();
 
       if (response.ok && data.valid) {
-        setAppliedDiscount(data.discountCode);
+        const rawType = data.discountCode?.type;
+        const normalizedType = typeof rawType === 'string' && rawType.toUpperCase() === 'PERCENTAGE'
+          ? 'percentage'
+          : typeof rawType === 'string' && rawType.toUpperCase() === 'FIXED_AMOUNT'
+          ? 'fixed'
+          : (String(rawType || '').toLowerCase() === 'percentage' ? 'percentage' : 'fixed');
+        const normalized = { ...data.discountCode, type: normalizedType };
+        console.log("✅ Applied discount successfully:", normalized);
+        setAppliedDiscount(normalized);
         showSnackbar("ใช้รหัสส่วนลดสำเร็จ!", "success");
       } else {
+        console.log("❌ Discount validation failed:", data.error);
         showSnackbar(data.error || "รหัสส่วนลดไม่ถูกต้อง", "error");
       }
     } catch {
@@ -505,6 +660,7 @@ export default function CheckoutPage() {
   };
 
   const handleRemoveDiscount = () => {
+    console.log("🗑️ Removing discount");
     setAppliedDiscount(null);
     setDiscountCode("");
   };
@@ -560,12 +716,15 @@ export default function CheckoutPage() {
         appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0
       );
 
+      const selectedPaymentMethodObj = paymentMethods.find(method => method.id === selectedPayment);
       const orderCreateData = {
         orderNumber,
         totalAmount: orderAnalysis.totalAmount, // ✅ ใช้ totalAmount ใหม่ (ราคาหลังหักส่วนลด)
         discountAmount,
         discountCode: appliedDiscount?.code,
         paymentType: orderAnalysis.paymentType,
+        paymentMethodType: selectedPaymentMethodObj?.type,
+        paymentMethodId: selectedPaymentMethodObj?.id,
         depositAmount: orderAnalysis.depositAmount,
         remainingAmount: orderAnalysis.remainingAmount,
         shippingOptionId: selectedShipping,
@@ -584,8 +743,50 @@ export default function CheckoutPage() {
         }))
       };
 
-      // บันทึกคำสั่งซื้อลงฐานข้อมูล
-      console.log("=== ORDER DEBUG INFO ===");
+      // ตรวจสอบว่าเป็นบัตรเครดิตหรือไม่
+      const selectedPaymentMethod = paymentMethods.find(method => method.id === selectedPayment);
+      const isCreditCard = selectedPaymentMethod?.type === "credit_card";
+
+      if (isCreditCard) {
+        // สำหรับบัตรเครดิต - ใช้ Stripe Checkout
+        console.log("=== STRIPE CHECKOUT ===");
+        console.log("Creating Stripe checkout session for order:", orderCreateData.orderNumber);
+        console.log("Payment amount (full payment):", orderAnalysis.totalAmount);
+        
+        const stripeResponse = await fetch("/api/stripe/create-checkout-session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            orderData: orderCreateData,
+            customerInfo,
+            shippingAddress,
+            totalAmount: orderAnalysis.totalAmount,
+            orderNumber: orderCreateData.orderNumber,
+          }),
+        });
+
+        if (!stripeResponse.ok) {
+          const errorData = await stripeResponse.json();
+          console.error("Stripe API Error:", errorData);
+          throw new Error(errorData.error || "Failed to create Stripe checkout session");
+        }
+
+        const stripeData = await stripeResponse.json();
+        console.log("Stripe checkout session created:", stripeData);
+
+        // Redirect ไปหน้า Stripe Checkout
+        if (stripeData.checkoutUrl) {
+          window.location.href = stripeData.checkoutUrl;
+          return;
+        } else {
+          throw new Error("No checkout URL received from Stripe");
+        }
+      }
+
+      // สำหรับ payment methods อื่นๆ - ใช้วิธีเดิม
+      console.log("=== REGULAR ORDER ===");
       console.log("Sending order data:", JSON.stringify(orderCreateData, null, 2));
       console.log("Selected shipping:", selectedShipping);
       console.log("Selected shipping option:", selectedShippingOption);
@@ -981,17 +1182,33 @@ export default function CheckoutPage() {
       >
         <Container maxWidth={false} sx={{ maxWidth: { xs: "100%", sm: "100%", md: "1200px" }, mx: "auto" }}>
           <Box sx={{ px: { xs: 0.5, sm: 1, md: 3 } }}>
-          <Typography
-            variant="h6"
-            sx={{ 
-              mb: { xs: 1.5, sm: 2, md: 3 }, 
-              fontWeight: 600, 
-              color: colors.text.primary,
-              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
-            }}
-          >
-            รายการสินค้า
-          </Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: { xs: 1.5, sm: 2, md: 3 } }}>
+            <Typography
+              variant="h6"
+              sx={{ 
+                fontWeight: 600, 
+                color: colors.text.primary,
+                fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+              }}
+            >
+              รายการสินค้า
+            </Typography>
+            <IconButton
+              onClick={() => handleLiffNavigation(router, "/shop")}
+              sx={{
+                ml: 1,
+                color: colors.primary.main,
+                "&:hover": {
+                  backgroundColor: `${colors.primary.main}15`,
+                  color: colors.primary.dark,
+                },
+                transition: "all 0.2s ease",
+              }}
+              aria-label="ไปยังหน้าร้านค้า"
+            >
+              <Storefront sx={{ fontSize: { xs: 20, sm: 22, md: 24 } }} />
+            </IconButton>
+          </Box>
         </Box>
         <Box sx={{ display: "flex", flexDirection: "column", px: { xs: 0.5, sm: 1, md: 0 } }}>
           {cartItems.map((item, index) => (
@@ -1183,11 +1400,37 @@ export default function CheckoutPage() {
             sx={{ 
               fontWeight: 600, 
               color: colors.text.primary,
-              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' }
+              fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.5rem' },
+              mb: 1
             }}
           >
             การจัดส่ง
           </Typography>
+          {orderAnalysis && (
+            <Box
+              sx={{
+                p: { xs: 1.5, sm: 2 },
+                borderRadius: 2,
+                backgroundColor: orderAnalysis.hasPets ? "#fff3e0" : "#e3f2fd",
+                border: orderAnalysis.hasPets ? "1px solid #ffcc02" : "1px solid #2196f3",
+              }}
+            >
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: orderAnalysis.hasPets ? "#e65100" : "#1565c0",
+                  fontWeight: 500,
+                  textAlign: "center",
+                  fontSize: { xs: '0.85rem', sm: '0.9rem' }
+                }}
+              >
+                {orderAnalysis.hasPets 
+                  ? "🚗 เนื่องจากมีสัตว์เลี้ยงในรายการ → ทางร้านเป็นคนจัดส่งด้วยตัวเอง"
+                  : "🚚 สินค้าทั่วไป → จัดส่งด่วนภายใน 1-2 วันทำการ"
+                }
+              </Typography>
+            </Box>
+          )}
         </Box>
         {loadingData ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
@@ -1230,17 +1473,43 @@ export default function CheckoutPage() {
                           mb: 0.5,
                         }}
                       >
-                        <Typography
-                          variant="subtitle1"
-                          sx={{ fontWeight: 500 }}
-                        >
-                          {option.name}
-                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{ fontWeight: 500 }}
+                          >
+                            {option.name}
+                          </Typography>
+                          {option.forPetsOnly && (
+                            <Chip
+                              label="สัตว์เลี้ยง"
+                              size="small"
+                              sx={{
+                                backgroundColor: "#fff3e0",
+                                color: "#e65100",
+                                fontSize: "0.7rem",
+                                height: 20
+                              }}
+                            />
+                          )}
+                          {!option.forPetsOnly && (
+                            <Chip
+                              label="สินค้าทั่วไป"
+                              size="small"
+                              sx={{
+                                backgroundColor: "#e3f2fd",
+                                color: "#1565c0",
+                                fontSize: "0.7rem",
+                                height: 20
+                              }}
+                            />
+                          )}
+                        </Box>
                         <Typography
                           variant="h6"
-                          sx={{ fontWeight: 600, color: colors.primary.main }}
+                          sx={{ fontWeight: 600, color: option.price > 0 ? colors.primary.main : "#4caf50" }}
                         >
-                          ฿{option.price}
+                          {option.price > 0 ? `฿${option.price}` : "ฟรี"}
                         </Typography>
                       </Box>
                       <Typography variant="body2" color="text.secondary">
@@ -1375,22 +1644,125 @@ export default function CheckoutPage() {
                       รหัสส่วนลดที่ใช้ได้:
                     </Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-                      {availableDiscountCodes.map((code) => (
-                        <Chip
+                      {availableDiscountCodes
+                        .filter((code) => {
+                          // กรองเฉพาะรหัสที่ตรงตามยอดขั้นต่ำ
+                          return !code.minAmount || subtotal >= code.minAmount;
+                        })
+                        .map((code) => (
+                        <Box
                           key={code.code}
-                          label={code.code}
-                          variant="outlined"
-                          size="small"
                           onClick={() => setDiscountCode(code.code)}
                           sx={{
-                            borderRadius: 2,
+                            backgroundColor: colors.primary.main + "08",
+                            border: `1px solid ${colors.primary.main}20`,
+                            borderRadius: 1.5,
+                            padding: "8px 12px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
                             "&:hover": {
-                              backgroundColor: `${colors.primary.main}08`,
+                              backgroundColor: colors.primary.main + "15",
+                              borderColor: colors.primary.main + "40",
                             },
                           }}
-                        />
+                        >
+                          <Box
+                            sx={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              backgroundColor: colors.primary.main,
+                            }}
+                          />
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: 600,
+                              color: colors.primary.main,
+                              fontSize: "0.8rem",
+                            }}
+                          >
+                            {code.code}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: colors.text.secondary,
+                              fontSize: "0.7rem",
+                            }}
+                          >
+                            {code.type === "percentage" 
+                              ? `${code.value}%` 
+                              : `฿${code.value}`
+                            }
+                          </Typography>
+                        </Box>
                       ))}
                     </Box>
+                    {/* แสดงรหัสที่ไม่ตรงเงื่อนไข */}
+                    {(() => {
+                      const ineligibleCodes = availableDiscountCodes.filter(code => code.minAmount && subtotal < code.minAmount);
+                      return ineligibleCodes.length > 0 && (
+                        <Box sx={{ mt: 2 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            รหัสส่วนลดที่ต้องซื้อเพิ่ม:
+                          </Typography>
+                          <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+                            {ineligibleCodes.map((code) => (
+                              <Box
+                                key={code.code}
+                                sx={{
+                                  backgroundColor: "#f5f5f5",
+                                  border: "1px solid #e0e0e0",
+                                  borderRadius: 1.5,
+                                  padding: "8px 12px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 1,
+                                  opacity: 0.7,
+                                }}
+                              >
+                                <Box
+                                  sx={{
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: "50%",
+                                    backgroundColor: "#bdbdbd",
+                                  }}
+                                />
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 600,
+                                    color: "#757575",
+                                    fontSize: "0.8rem",
+                                  }}
+                                >
+                                  {code.code}
+                                </Typography>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: "#9e9e9e",
+                                    fontSize: "0.7rem",
+                                  }}
+                                >
+                                  ซื้อเพิ่ม ฿{((code.minAmount || 0) - subtotal).toLocaleString()}
+                                </Typography>
+                              </Box>
+                            ))}
+                          </Box>
+                        </Box>
+                      );
+                    })()}
+                    {availableDiscountCodes.filter(code => !code.minAmount || subtotal >= code.minAmount).length === 0 && (
+                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic", textAlign: "center", mt: 1 }}>
+                        ไม่มีรหัสส่วนลดที่ใช้ได้กับยอดซื้อปัจจุบัน
+                      </Typography>
+                    )}
                   </>
                 )}
               </>
@@ -1514,6 +1886,54 @@ export default function CheckoutPage() {
             })}
           </RadioGroup>
         )}
+        
+        {/* แสดงข้อความแจ้งเตือนเมื่อเลือกบัตรเครดิต */}
+        {(() => {
+          const selectedPaymentMethod = paymentMethods.find(method => method.id === selectedPayment);
+          return selectedPaymentMethod?.type === "credit_card";
+        })() && (
+          <Box sx={{ mt: 2, px: { xs: 1, sm: 2, md: 0 } }}>
+            <Box
+              sx={{
+                backgroundColor: `${colors.primary.main}15`,
+                border: `1px solid ${colors.primary.main}40`,
+                borderRadius: 3,
+                p: 2,
+                display: "flex",
+                alignItems: "center",
+                gap: 1.5,
+              }}
+            >
+              <CreditCard sx={{ color: colors.primary.main, fontSize: 24 }} />
+              <Box>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: colors.primary.main,
+                    mb: 0.5
+                  }}
+                >
+                  การชำระด้วยบัตรเครดิต
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: colors.text.secondary,
+                    fontSize: "0.875rem"
+                  }}
+                >
+                  • ชำระเต็มจำนวนเท่านั้น (ไม่สามารถชำระมัดจำได้)
+                  <br />
+                  • ระบบจะนำคุณไปยังหน้าชำระเงินของ Stripe
+                  <br />
+                  • รองรับบัตรเครดิต/เดบิต ทุกธนาคาร
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        )}
+        
         </Container>
       </Box>
 
@@ -1761,12 +2181,23 @@ export default function CheckoutPage() {
                   ยอดรวมทั้งหมด
                 </Typography>
                 <Typography variant="h6" sx={{ fontWeight: 600, color: colors.primary.main }}>
-                  ฿{total.toLocaleString()}
+                  ฿{(() => {
+                    // ใช้ orderAnalysis.totalAmount (ที่หักส่วนลดแล้ว) + ค่าจัดส่ง สำหรับทุกประเภทการชำระเงิน
+                    if (orderAnalysis) {
+                      const finalTotal = orderAnalysis.totalAmount + shippingCost;
+                      return finalTotal.toLocaleString();
+                    }
+                    // fallback ในกรณีที่ยังไม่มี orderAnalysis
+                    return total.toLocaleString();
+                  })()}
                 </Typography>
               </Box>
               
               {/* แสดงข้อมูลการชำระเงินแบบชัดเจน */}
-              {orderAnalysis.requiresDeposit ? (
+              {orderAnalysis.requiresDeposit && (() => {
+                const selectedPaymentMethod = paymentMethods.find(method => method.id === selectedPayment);
+                return selectedPaymentMethod?.type !== "credit_card";
+              })() ? (
                 <Box
                   sx={{
                     mt: 2,
@@ -1791,7 +2222,7 @@ export default function CheckoutPage() {
                   <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                        ยอดมัดจำ (10%)
+                        ยอดมัดจำ ({orderAnalysis.depositRate}%)
                       </Typography>
                       <Typography 
                         variant="h6" 
@@ -1801,11 +2232,20 @@ export default function CheckoutPage() {
                           fontSize: "1.25rem"
                         }}
                       >
-                        ฿{calculatePaymentAmount(
-                          orderAnalysis, 
-                          selectedShippingOption?.price || 0, 
-                          appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0
-                        ).toLocaleString()}
+                        ฿{(() => {
+                          const selectedPaymentMethod = paymentMethods.find(method => method.id === selectedPayment);
+                          if (selectedPaymentMethod?.type === "credit_card") {
+                            // บัตรเครดิต: ชำระเต็มจำนวน (ยอดหลังหักส่วนลด + ค่าจัดส่ง)
+                            const totalWithShipping = orderAnalysis.totalAmount + shippingCost;
+                            return totalWithShipping.toLocaleString();
+                          } else {
+                            // การชำระปกติ: ใช้ยอดมัดจำ + ค่าจัดส่ง หรือ ยอดเต็ม + ค่าจัดส่ง
+                            const paymentAmount = orderAnalysis.requiresDeposit 
+                              ? (orderAnalysis.depositAmount || 0) + shippingCost
+                              : orderAnalysis.totalAmount + shippingCost;
+                            return paymentAmount.toLocaleString();
+                          }
+                        })()}
                       </Typography>
                     </Box>
                     
@@ -1848,6 +2288,46 @@ export default function CheckoutPage() {
                       </Typography>
                     </Box>
                   </Box>
+                </Box>
+              ) : (() => {
+                const selectedPaymentMethod = paymentMethods.find(method => method.id === selectedPayment);
+                return selectedPaymentMethod?.type === "credit_card";
+              })() ? (
+                <Box
+                  sx={{
+                    mt: 2,
+                    p: 3,
+                    borderRadius: 3,
+                    backgroundColor: `${colors.primary.main}15`,
+                    border: `2px solid ${colors.primary.main}30`,
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 1.5, mb: 1 }}>
+                    <CreditCard sx={{ color: colors.primary.main, fontSize: 24 }} />
+                    <Typography 
+                      variant="h6" 
+                      sx={{ 
+                        fontWeight: 600, 
+                        color: colors.primary.main,
+                        textAlign: "center"
+                      }}
+                    >
+                      การชำระด้วยบัตรเครดิต
+                    </Typography>
+                  </Box>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: colors.text.secondary,
+                      textAlign: "center",
+                      fontSize: "0.875rem"
+                    }}
+                  >
+                    ชำระเต็มจำนวน ฿{(() => {
+                      const totalWithShipping = orderAnalysis.totalAmount + shippingCost;
+                      return totalWithShipping.toLocaleString();
+                    })()} ผ่านระบบ Stripe
+                  </Typography>
                 </Box>
               ) : (
                 <Box
@@ -1925,9 +2405,23 @@ export default function CheckoutPage() {
             loading || isProcessingOrder ? 
             (isProcessingOrder ? "กำลังประมวลผล..." : "กำลังดำเนินการ...") : 
             orderAnalysis ? (
-              orderAnalysis.requiresDeposit 
-                ? `ชำระมัดจำ (฿${calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()})`
-                : `ชำระเงิน (฿${calculatePaymentAmount(orderAnalysis, selectedShippingOption?.price || 0, appliedDiscount?.code === "FREESHIP" ? selectedShippingOption?.price || 0 : 0).toLocaleString()})`
+              (() => {
+                const selectedPaymentMethod = paymentMethods.find(method => method.id === selectedPayment);
+                
+                if (selectedPaymentMethod?.type === "credit_card") {
+                  // บัตรเครดิต: ชำระเต็มจำนวน (ใช้ยอดหลังหักส่วนลด + ค่าจัดส่ง)
+                  const totalWithShipping = orderAnalysis.totalAmount + shippingCost;
+                  return `ชำระเต็มจำนวน (฿${totalWithShipping.toLocaleString()})`;
+                } else if (orderAnalysis.requiresDeposit) {
+                  // การชำระมัดจำ: ใช้ยอดมัดจำ + ค่าจัดส่ง
+                  const depositWithShipping = (orderAnalysis.depositAmount || 0) + shippingCost;
+                  return `ชำระมัดจำ (฿${depositWithShipping.toLocaleString()})`;
+                } else {
+                  // ชำระเต็มจำนวน: ใช้ยอดหลังหักส่วนลด + ค่าจัดส่ง
+                  const totalWithShipping = orderAnalysis.totalAmount + shippingCost;
+                  return `ชำระเต็มจำนวน (฿${totalWithShipping.toLocaleString()})`;
+                }
+              })()
             ) : "ชำระเงิน"}
         </Button>
         </Container>

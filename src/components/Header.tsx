@@ -378,7 +378,7 @@ export default function Header({
                     fontSize: "1.5rem",
                   }}
                 >
-                  🐕 What da dog
+                  🐕 Natpi & Corgi
                 </Typography>
               )}
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 import type { OrderStatus } from "@/lib/order-status";
 import { 
@@ -19,9 +18,9 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, context: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
+    const authenticatedUser = await getAuthenticatedUser(request);
 
-    if (!session?.user?.id) {
+    if (!authenticatedUser?.id) {
       return NextResponse.json(
         { error: "Unauthorized - User not found" },
         { status: 401 }
@@ -29,7 +28,14 @@ export async function GET(request: NextRequest, context: RouteParams) {
     }
 
     // ตรวจสอบและสร้าง user หากจำเป็น
-    const user = await ensureUserExists(session.user);
+    const userForEnsure = {
+      id: authenticatedUser.id,
+      lineUserId: authenticatedUser.lineUserId,
+      name: authenticatedUser.displayName,
+      email: authenticatedUser.email
+    };
+    
+    const user = await ensureUserExists(userForEnsure);
     if (!user) {
       return NextResponse.json(
         { error: "Failed to validate user" },
@@ -50,7 +56,7 @@ export async function GET(request: NextRequest, context: RouteParams) {
     const order = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: session.user.id, // Ensure user can only access their own orders
+        userId: user.id, // Ensure user can only access their own orders
       },
       include: {
         orderItems: {
@@ -120,21 +126,30 @@ export async function GET(request: NextRequest, context: RouteParams) {
 
 export async function PATCH(request: NextRequest, context: RouteParams) {
   try {
-    const session = await getServerSession(authOptions);
+    const authenticatedUser = await getAuthenticatedUser(request);
 
-    if (!session?.user?.id) {
+    if (!authenticatedUser?.id) {
       return NextResponse.json(
         { error: "Unauthorized - User not found" },
         { status: 401 }
       );
     }
 
-    // ตรวจสอบและสร้าง user หากจำเป็น
-    const user = await ensureUserExists(session.user);
+    // ค้นหา user ในฐานข้อมูล  
+    let user = await prisma.user.findUnique({
+      where: { lineUserId: authenticatedUser.lineUserId || authenticatedUser.id }
+    });
+    
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { id: authenticatedUser.id }
+      });
+    }
+    
     if (!user) {
       return NextResponse.json(
-        { error: "Failed to validate user" },
-        { status: 500 }
+        { error: "User not found in database" },
+        { status: 404 }
       );
     }
 
@@ -173,7 +188,7 @@ export async function PATCH(request: NextRequest, context: RouteParams) {
     const existingOrder = await prisma.order.findFirst({
       where: {
         id: orderId,
-        userId: session.user.id,
+        userId: user.id,
       },
       include: {
         shippingOption: true,

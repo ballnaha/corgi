@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       lineClientId: process.env.LINE_CLIENT_ID ? 
         `SET (${process.env.LINE_CLIENT_ID.substring(0, 10)}...)` : 'NOT SET',
       lineClientSecret: process.env.LINE_CLIENT_SECRET ? 'SET (hidden)' : 'NOT SET',
-      expectedCallbackUrl: `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/auth/callback/line`,
+      expectedCallbackUrl: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/api/auth/callback/line`,
       checks: {
         hasLineClientId: !!process.env.LINE_CLIENT_ID,
         hasLineClientSecret: !!process.env.LINE_CLIENT_SECRET,

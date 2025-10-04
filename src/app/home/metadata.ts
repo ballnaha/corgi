@@ -1,8 +1,8 @@
 import { Metadata } from 'next';
 
 export const homePageMetadata: Metadata = {
-  title: "What Da Dog Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน | หน้าหลัก",
-  description: "ยินดีต้อนรับสู่ What Da Dog Pet Shop ร้านขายลูกสุนัขคอร์กี้ สัตว์เลี้ยง และอุปกรณ์สัตว์เลี้ยงคุณภาพ พร้อมบริการครบครัน",
+  title: "Natpi & Corgi Farm and Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน | หน้าหลัก",
+  description: "ยินดีต้อนรับสู่ Natpi & Corgi Farm and Pet Shop ร้านขายลูกสุนัขคอร์กี้ สัตว์เลี้ยง และอุปกรณ์สัตว์เลี้ยงคุณภาพ พร้อมบริการครบครัน",
   keywords: [
     "สัตว์เลี้ยง",
     "ลูกสุนัขคอร์กี้", 
@@ -12,13 +12,13 @@ export const homePageMetadata: Metadata = {
     "ของเล่นสัตว์เลี้ยง",
     "pet shop thailand",
     "corgi puppies",
-    "What Da Dog",
+    "Natpi & Corgi Farm and Pet Shop",
     "พันธุ์แท้",
     "มีใบรับรอง"
   ].join(", "),
-  authors: [{ name: "What Da Dog Pet Shop" }],
-  creator: "What Da Dog Pet Shop",
-  publisher: "What Da Dog Pet Shop",
+  authors: [{ name: "Natpi & Corgi Farm and Pet Shop" }],
+  creator: "Natpi & Corgi Farm and Pet Shop",
+  publisher: "Natpi & Corgi Farm and Pet Shop",
   robots: {
     index: true,
     follow: true,
@@ -32,30 +32,30 @@ export const homePageMetadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    title: "What Da Dog Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
-    description: "ยินดีต้อนรับสู่ What Da Dog Pet Shop ร้านขายลูกสุนัขคอร์กี้ สัตว์เลี้ยง และอุปกรณ์สัตว์เลี้ยงคุณภาพ พร้อมบริการครบครัน จัดส่งทั่วไทย",
+    title: "Natpi & Corgi Farm and Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
+    description: "ยินดีต้อนรับสู่ Natpi & Corgi Farm and Pet Shop ร้านขายลูกสุนัขคอร์กี้ สัตว์เลี้ยง และอุปกรณ์สัตว์เลี้ยงคุณภาพ พร้อมบริการครบครัน จัดส่งทั่วไทย",
     url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/home`,
-    siteName: 'What Da Dog Pet Shop',
+    siteName: 'Natpi & Corgi Farm and Pet Shop',
     images: [
       {
         url: '/images/natpi_logo.png',
         width: 1200,
         height: 630,
-        alt: 'What Da Dog Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน',
+        alt: 'Natpi & Corgi Farm and Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน',
       },
       {
         url: '/images/icon-corgi.png',
         width: 800,
         height: 600,
-        alt: 'คอร์กี้ - What Da Dog Pet Shop',
+        alt: 'คอร์กี้ - Natpi & Corgi Farm and Pet Shop',
       },
     ],
     locale: 'th_TH',
   },
   twitter: {
     card: 'summary_large_image',
-    title: "What Da Dog Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
-    description: "ยินดีต้อนรับสู่ What Da Dog Pet Shop ร้านขายลูกสุนัขคอร์กี้ สัตว์เลี้ยง และอุปกรณ์สัตว์เลี้ยงคุณภาพ",
+    title: "Natpi & Corgi Farm and Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
+    description: "ยินดีต้อนรับสู่ Natpi & Corgi Farm and Pet Shop ร้านขายลูกสุนัขคอร์กี้ สัตว์เลี้ยง และอุปกรณ์สัตว์เลี้ยงคุณภาพ",
     images: ['/images/natpi_logo.png'],
   },
   alternates: {
@@ -76,7 +76,7 @@ export const structuredData = {
     {
       "@type": "Organization",
       "@id": `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/#organization`,
-      "name": "What Da Dog Pet Shop",
+      "name": "Natpi & Corgi Farm and Pet Shop",
       "alternateName": "Natpi & Corgi Farm and Pet Shop",
       "description": "ร้านขายสัตว์เลี้ยงและอุปกรณ์สัตว์เลี้ยงครบครัน ด้วยความรักและใส่ใจในทุกรายละเอียด",
       "url": process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com',

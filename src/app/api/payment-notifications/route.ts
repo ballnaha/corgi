@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
     const transferDate = formData.get("transferDate") as string;
     const transferTime = formData.get("transferTime") as string;
     const note = formData.get("note") as string;
+    const inferredPaymentMethod = 'bank_transfer';
     const paymentSlip = formData.get("paymentSlip") as File;
 
     // Debug logging
@@ -66,11 +67,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload payment slip image to folder
+    // Generate standardized filename for database storage BEFORE upload
+    const currentDate = new Date();
+    const year = currentDate.getFullYear();
+    const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+    const date = String(currentDate.getDate()).padStart(2, '0');
+    const dateString = `${year}_${month}_${date}`;
+    
+    // Get file extension from original filename
+    const fileExtension = paymentSlip.name ? paymentSlip.name.split('.').pop() : 'jpg';
+    const standardFileName = `payment-slip-${orderNumber}-${dateString}.${fileExtension}`;
+
+    // Upload payment slip image to folder with standard filename
     const uploadFormData = new FormData();
     uploadFormData.append("paymentSlip", paymentSlip);
+    uploadFormData.append("customFileName", standardFileName);
 
-    const uploadResponse = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/upload/payment-slip`, {
+    const uploadResponse = await fetch(`${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/api/upload/payment-slip`, {
       method: "POST",
       headers: {
         // Don't set Content-Type header, let fetch handle it for FormData
@@ -91,18 +104,64 @@ export async function POST(request: NextRequest) {
     const uploadResult = await uploadResponse.json();
     console.log("Payment slip uploaded successfully:", uploadResult);
 
+    console.log("Generated standard filename for DB:", standardFileName, "length:", standardFileName.length);
+    console.log("Actual file saved as:", uploadResult.paymentSlipFileName);
+
+    // Truncate only fields that might vary in length
+    const truncateString = (str: string | null | undefined, maxLength: number = 255): string | null => {
+      if (!str) return null;
+      if (typeof str !== 'string') return String(str).substring(0, maxLength);
+      return str.length > maxLength ? str.substring(0, maxLength) : str;
+    };
+
+    const truncatedMimeType = truncateString(paymentSlip.type, 100);
+    const truncatedNote = truncateString(note, 500);
+
     // Create payment notification record with file path instead of base64
+    console.log("=== PREPARING PAYMENT NOTIFICATION DATA ===");
+    console.log("Upload API returned filename:", uploadResult.paymentSlipFileName, "length:", uploadResult.paymentSlipFileName?.length);
+    console.log("Our standard filename:", standardFileName, "length:", standardFileName.length);
+    console.log("Original mimetype:", paymentSlip.type, "length:", paymentSlip.type?.length);
+    console.log("Truncated mimetype:", truncatedMimeType, "length:", truncatedMimeType?.length);
+    console.log("Original note:", note, "length:", note?.length);
+    console.log("Truncated note:", truncatedNote, "length:", truncatedNote?.length);
+    
+    // Final validation before database insert - standard filename should always be short
+    if (standardFileName.length > 100) {
+      console.error("CRITICAL: Standard filename too long!", standardFileName.length);
+      throw new Error(`Standard filename too long: ${standardFileName.length} characters`);
+    }
+    
+    if (truncatedMimeType && truncatedMimeType.length > 100) {
+      console.error("CRITICAL: MimeType still too long after truncation!", truncatedMimeType.length);
+      throw new Error(`MimeType still too long: ${truncatedMimeType.length} characters`);
+    }
+    
+    // Create standardized URL path using our standard filename
+    const standardSlipUrl = `/uploads/payment-slips/${standardFileName}`;
+    
+    console.log("Creating payment notification with data:", {
+      orderId: order.id,
+      transferAmount: transferAmount.toString(),
+      transferDate: `${transferDate}T${transferTime}:00`,
+      transferTime,
+      originalUploadUrl: uploadResult.paymentSlipUrl, // Original file location
+      standardSlipUrl: standardSlipUrl, // Standardized URL
+      paymentSlipMimeType: truncatedMimeType,
+      paymentSlipFileName: standardFileName,
+      note: truncatedNote,
+    });
+
     const paymentNotification = await prisma.paymentNotification.create({
       data: {
         orderId: order.id,
-        transferAmount,
-        transferDate: new Date(`${transferDate}T${transferTime}`),
+        transferAmount: transferAmount.toString(),
+        transferDate: new Date(`${transferDate}T${transferTime}:00`),
         transferTime,
-        note: note || null,
-        paymentSlipData: uploadResult.paymentSlipUrl, // Store file URL instead of base64
-        paymentSlipMimeType: paymentSlip.type,
-        paymentSlipFileName: uploadResult.paymentSlipFileName,
-
+        note: truncatedNote || null,
+        paymentSlipData: standardSlipUrl, // Use standard URL path
+        paymentSlipMimeType: truncatedMimeType,
+        paymentSlipFileName: standardFileName,
         submittedAt: new Date(),
       },
     });
@@ -112,6 +171,7 @@ export async function POST(request: NextRequest) {
       where: { id: order.id },
       data: {
         status: "PAYMENT_PENDING" as any,
+        paymentMethod: inferredPaymentMethod,
       },
     });
 

@@ -17,6 +17,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
   try {
     // Try NextAuth first
     const session = await getServerSession(authOptions);
+    
     if (session?.user?.id) {
       console.log('✅ Found NextAuth session:', session.user.id);
       return {
@@ -31,6 +32,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
 
     // Try SimpleAuth if NextAuth fails
     const sessionCookie = request.cookies.get('liff-simple-session')?.value;
+    
     if (sessionCookie) {
       const decoded = jwt.verify(
         sessionCookie, 
@@ -38,6 +40,7 @@ export async function getAuthenticatedUser(request: NextRequest): Promise<Authen
       ) as any;
       
       console.log('✅ Found SimpleAuth session:', decoded.id);
+      
       return {
         id: decoded.id,
         lineUserId: decoded.lineUserId,

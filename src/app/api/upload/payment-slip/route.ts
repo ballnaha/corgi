@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("paymentSlip") as File;
+    const customFileName = formData.get("customFileName") as string;
 
     if (!file) {
       return NextResponse.json({ error: "ไม่พบไฟล์รูปภาพ" }, { status: 400 });
@@ -40,11 +41,19 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Create unique filename
-    const timestamp = Date.now();
-    const userIdShort = session.user.id?.slice(-8) || 'user';
-    const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const filename = `payment_${userIdShort}_${timestamp}_${originalName}`;
+    // Create filename - use custom filename if provided, otherwise generate unique one
+    let filename: string;
+    if (customFileName) {
+      // Remove extension from custom filename as we'll add our own
+      const nameWithoutExt = customFileName.replace(/\.[^/.]+$/, "");
+      filename = nameWithoutExt;
+    } else {
+      // Fallback to original method if no custom filename provided
+      const timestamp = Date.now();
+      const userIdShort = session.user.id?.slice(-8) || 'user';
+      const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+      filename = `payment_${userIdShort}_${timestamp}_${originalName}`;
+    }
 
     // Create upload directory if it doesn't exist
     const uploadDir = path.join(process.cwd(), "public", "uploads", "payment-slips");
@@ -78,7 +87,9 @@ export async function POST(request: NextRequest) {
 
     // Create final filename with correct extension
     const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
-    const finalFilename = `${nameWithoutExt}_large${outputExt}`;
+    const finalFilename = customFileName 
+      ? `${nameWithoutExt}${outputExt}` // Don't add _large suffix for custom filenames
+      : `${nameWithoutExt}_large${outputExt}`;
 
     const filePath = path.join(uploadDir, finalFilename);
     await writeFile(filePath, processedBuffer);

@@ -6,10 +6,10 @@ async function seedShippingOptions() {
   console.log("Seeding shipping options...");
 
   const shippingOptions = [
-    // สำหรับสัตว์เลี้ยง - รับด้วยตัวเอง
+    // สำหรับสัตว์เลี้ยง - ทางร้านจัดส่งด้วยตัวเอง
     {
-      name: "ทางร้านจัดส่งด้วยตัวเอง (สัตว์เลี้ยง)",
-      description: "ทางร้านจัดส่งด้วยตัวเอง",
+      name: "ทางร้านเป็นคนจัดส่ง",
+      description: "ทางร้านจัดส่งด้วยตัวเอง สำหรับสัตว์เลี้ยง",
       price: 0.00,
       estimatedDays: "ตามนัดหมาย",
       method: "pickup",
@@ -18,10 +18,10 @@ async function seedShippingOptions() {
       sortOrder: 1,
     },
     
-    // สำหรับของอื่นๆ - จัดส่งด่วน
+    // สำหรับสินค้าทั่วไป - จัดส่งด่วน
     {
       name: "จัดส่งด่วน",
-      description: "จัดส่งภายใน 1-2 วันทำการ",
+      description: "จัดส่งสินค้าทั่วไปภายใน 1-2 วันทำการ",
       price: 50.00,
       estimatedDays: "1-2 วันทำการ",
       method: "delivery",

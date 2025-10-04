@@ -4,7 +4,19 @@ import { ensureUserExists } from "@/lib/user-utils";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 
 export async function GET(request: NextRequest) {
+  console.log("🚀 === ORDERS API ROUTE CALLED ===");
+  console.log("🔗 Request URL:", request.url);
+  
   try {
+    // Parse URL parameters once
+    const { searchParams } = new URL(request.url);
+    const orderNumber = searchParams.get("orderNumber");
+    
+    // Log orderNumber search if present
+    if (orderNumber) {
+      console.log("Searching for orderNumber:", orderNumber);
+    }
+    
     // Support both NextAuth and SimpleAuth
     const authUser = await getAuthenticatedUser(request);
     
@@ -18,53 +30,34 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Orders API: User ${authUser.id} authenticated via ${authUser.source}`);
 
-    // ตรวจสอบและสร้าง user หากจำเป็น
-    const user = await ensureUserExists({ 
-      id: authUser.id, 
-      lineUserId: authUser.lineUserId || authUser.id 
+    // ค้นหา user ในฐานข้อมูล
+    let user = await prisma.user.findUnique({
+      where: { lineUserId: authUser.lineUserId || authUser.id }
     });
+    
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { id: authUser.id }
+      });
+    }
+    
     if (!user) {
       return NextResponse.json(
-        { error: "Failed to validate user" },
-        { status: 500 }
+        { error: "User not found in database" },
+        { status: 404 }
       );
     }
 
-    const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const status = searchParams.get("status");
-    const orderNumber = searchParams.get("orderNumber");
 
     const skip = (page - 1) * limit;
-
-    // Build where clause
-    // Handle both internal DB ID and LINE ID for backward compatibility
-    let userId = authUser.id;
     
-    // Check if user exists with current user ID
-    const userCheck = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true }
-    });
-    
-    if (!userCheck && authUser.lineUserId) {
-      // If not found by ID, try to find by lineUserId
-      const userByLineId = await prisma.user.findUnique({
-        where: { lineUserId: authUser.lineUserId },
-        select: { id: true }
-      });
-      
-      if (userByLineId) {
-        console.log("Found user by lineUserId, using internal ID:", userByLineId.id);
-        userId = userByLineId.id;
-      }
-    }
-    
-    console.log("Using userId for orders search:", userId);
+    console.log("Using userId for orders search:", user.id);
     
     const where: any = {
-      userId: userId,
+      userId: user.id,
     };
 
     if (status) {
@@ -115,11 +108,33 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          paymentNotifications: {
+            select: {
+              id: true,
+              transferAmount: true,
+              transferDate: true,
+              status: true,
+              submittedAt: true,
+              paymentSlipData: true,
+              paymentSlipMimeType: true,
+              paymentSlipFileName: true,
+              createdAt: true,
+            },
+          },
           shippingOption: {
             select: {
               id: true,
               name: true,
               method: true,
+            },
+          },
+          paymentMethodRef: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              description: true,
+              icon: true,
             },
           },
         },
@@ -186,11 +201,33 @@ export async function GET(request: NextRequest) {
               },
             },
           },
+          paymentNotifications: {
+            select: {
+              id: true,
+              transferAmount: true,
+              transferDate: true,
+              status: true,
+              submittedAt: true,
+              paymentSlipData: true,
+              paymentSlipMimeType: true,
+              paymentSlipFileName: true,
+              createdAt: true,
+            },
+          },
           shippingOption: {
             select: {
               id: true,
               name: true,
               method: true,
+            },
+          },
+          paymentMethodRef: {
+            select: {
+              id: true,
+              name: true,
+              type: true,
+              description: true,
+              icon: true,
             },
           },
         },
@@ -218,10 +255,16 @@ export async function GET(request: NextRequest) {
       },
     });
 
-  } catch (error) {
+  } catch (error: any) {
+    console.error("=== CRITICAL ERROR IN ORDERS API ===");
     console.error("Error fetching orders:", error);
+    console.error("Error type:", typeof error);
+    console.error("Error constructor:", error?.constructor?.name);
+    console.error("Error stack:", error?.stack);
+    console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error?.message },
       { status: 500 }
     );
   }

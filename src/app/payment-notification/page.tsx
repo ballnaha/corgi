@@ -470,11 +470,16 @@ export default function PaymentNotificationPage() {
                         ยอดรวมคำสั่งซื้อ:
                       </Typography>
                       <Typography variant="body2" sx={{ fontWeight: 600, color: colors.text.primary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
-                        ฿{Number(orderData.totalAmount).toLocaleString()}
+                        {(() => {
+                          const total = Number(orderData.totalAmount || 0);
+                          const discount = Number(orderData.discountAmount || 0);
+                          const beforeDiscount = total + discount;
+                          return `฿${beforeDiscount.toLocaleString()}`;
+                        })()}
                       </Typography>
                     </Box>
 
-                    {orderData.paymentType === "DEPOSIT" && orderData.depositAmount && (
+                    {orderData.paymentType === "DEPOSIT_PAYMENT" && orderData.depositAmount && (
                       <>
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                           <Typography variant="body2" sx={{ fontWeight: 500, color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.875rem" } }}>
@@ -524,7 +529,7 @@ export default function PaymentNotificationPage() {
                         mt: 1,
                       }}
                     >
-                      {orderData.paymentType === "DEPOSIT" && orderData.depositAmount ? (
+                      {orderData.paymentType === "DEPOSIT_PAYMENT" && orderData.depositAmount ? (
                         <>
                           {/* กรณีชำระมัดจำ */}
                           <Box 
@@ -607,7 +612,7 @@ export default function PaymentNotificationPage() {
                                 fontSize: { xs: "1.1rem", sm: "1.25rem" }
                               }}
                             >
-                              💰 จ่ายมัดจำ:
+                              💳 จำนวนที่ต้องชำระ:
                             </Typography>
                             <Typography 
                               variant="h6" 
@@ -617,7 +622,12 @@ export default function PaymentNotificationPage() {
                                 fontSize: { xs: "1.3rem", sm: "1.5rem" }
                               }}
                             >
-                              ฿{Number(orderData.depositAmount).toLocaleString()}
+                              {(() => {
+                                const total = Number(orderData.totalAmount || 0);
+                                const shipping = Number(orderData.shippingFee || 0);
+                                const amountToPay = Math.max(0, total + shipping);
+                                return `฿${amountToPay.toLocaleString()}`;
+                              })()}
                             </Typography>
                           </Box>
                         </>
@@ -830,6 +840,10 @@ export default function PaymentNotificationPage() {
                   required
                   inputProps={{
                     min: 0,
+                    onWheel: (e: React.WheelEvent<HTMLInputElement>) => {
+                      // ป้องกันการปรับค่าด้วย scroll wheel
+                      e.currentTarget.blur();
+                    },
                   }}
                   slotProps={{
                     input: {
@@ -855,6 +869,14 @@ export default function PaymentNotificationPage() {
                       fontWeight: 500,
                       color: colors.primary.main,
                     },
+                    // ป้องกันการปรับค่าด้วย mouse wheel
+                    "& input[type=number]": {
+                      "&::-webkit-outer-spin-button, &::-webkit-inner-spin-button": {
+                        WebkitAppearance: "none",
+                        margin: 0,
+                      },
+                      MozAppearance: "textfield",
+                    },
                   }}
                 />
 
@@ -867,7 +889,7 @@ export default function PaymentNotificationPage() {
                   <DatePicker
                     label="วันที่โอน"
                     value={transferDate}
-                    onChange={(newValue) => setTransferDate(newValue)}
+                    onChange={(newValue) => setTransferDate(newValue as Dayjs | null)}
                     format="DD/MM/YYYY"
                     maxDate={dayjs()}
                     sx={{
@@ -887,7 +909,7 @@ export default function PaymentNotificationPage() {
                   <TimePicker
                     label="เวลาที่โอน"
                     value={transferTime}
-                    onChange={(newValue) => setTransferTime(newValue)}
+                    onChange={(newValue) => setTransferTime(newValue as Dayjs | null)}
                     format="HH:mm"
                     sx={{
                       flex: 1,

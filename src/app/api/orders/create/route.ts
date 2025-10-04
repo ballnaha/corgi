@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 // import { orders_status } from "@prisma/client";
 import { ensureUserExists } from "@/lib/user-utils";
@@ -20,6 +19,8 @@ interface CreateOrderRequest {
   
   // Payment details
   paymentType: string;
+  paymentMethodType?: string; // e.g., 'credit_card', 'bank_transfer', 'e_wallet', 'cash_on_delivery'
+  paymentMethodId?: string;   // optional explicit PaymentMethod id
   depositAmount?: number;
   remainingAmount?: number;
   
@@ -44,44 +45,51 @@ interface CreateOrderRequest {
 
 export async function POST(request: NextRequest) {
   console.log("🚀 === ORDER API ROUTE CALLED ===");
-  console.log("📅 Request method:", request.method);
-  console.log("🔗 Request URL:", request.url);
-  console.log("⏰ Current time:", new Date().toISOString());
   
   try {
     console.log("Order API called");
     
-    // Test return เพื่อดูว่า API ทำงานหรือไม่
-    // return NextResponse.json({ test: "API is working" }, { status: 200 });
+    // Debug: Test authentication first
+    console.log("🔍 Testing authentication...");
     
-    const session = await getServerSession(authOptions);
-    console.log("Session:", session?.user?.id ? "Found" : "Not found");
-    console.log("Session user:", {
-      id: session?.user?.id,
-      name: session?.user?.name,
-      email: session?.user?.email
+    const authenticatedUser = await getAuthenticatedUser(request);
+    console.log("Auth user:", authenticatedUser?.id ? "Found" : "Not found");
+    console.log("Auth user details:", {
+      id: authenticatedUser?.id,
+      lineUserId: authenticatedUser?.lineUserId,
+      displayName: authenticatedUser?.displayName,
+      source: authenticatedUser?.source
     });
 
-    if (!session?.user?.id) {
+    if (!authenticatedUser?.id) {
       return NextResponse.json(
         { error: "Unauthorized - User not found" },
         { status: 401 }
       );
     }
 
-    // ตรวจสอบและสร้าง user ในฐานข้อมูลหากยังไม่มี
-    console.log("🔍 Ensuring user exists for:", session.user);
-    const user = await ensureUserExists(session.user);
-    console.log("👤 User after ensureUserExists:", user);
+    // ตรวจสอบและสร้าง user ในฐานข้อมูลหากยังไม่มี - ใช้ข้อมูลจาก authenticated user
+    console.log("🔍 Ensuring user exists for:", authenticatedUser);
+    
+    // ค้นหา user ในฐานข้อมูลโดยใช้ lineUserId
+    let user = await prisma.user.findUnique({
+      where: { lineUserId: authenticatedUser.lineUserId || authenticatedUser.id }
+    });
     
     if (!user) {
-      console.error("❌ Failed to ensure user exists");
-      return NextResponse.json(
-        { error: "Failed to create or find user in database" },
-        { status: 500 }
-      );
+      console.log("User not found, attempting to find by ID:", authenticatedUser.id);
+      user = await prisma.user.findUnique({
+        where: { id: authenticatedUser.id }
+      });
     }
     
+    if (!user) {
+      console.error("❌ User not found in database with lineUserId:", authenticatedUser.lineUserId, "or ID:", authenticatedUser.id);
+      return NextResponse.json(
+        { error: "User not found in database" },
+        { status: 404 }
+      );
+    }
     console.log("✅ User confirmed exists with ID:", user.id);
 
     let orderData: CreateOrderRequest;
@@ -240,11 +248,10 @@ export async function POST(request: NextRequest) {
 
     // Create order in a transaction
     console.log("Starting database transaction");
-    console.log("👤 Session User ID:", session.user.id);
-    console.log("👤 Ensured User ID:", user.id);
-    console.log("🆔 User IDs match:", session.user.id === user.id);
+    console.log("👤 Authenticated User ID:", authenticatedUser.id);
+    console.log("👤 Database User ID:", user.id);
     
-    // ใช้ user.id แทน session.user.id เพื่อความแน่ใจ
+    // ใช้ user.id สำหรับ order
     const userIdForOrder = user.id;
     console.log("🔑 Final User ID for order:", userIdForOrder);
     
@@ -259,6 +266,19 @@ export async function POST(request: NextRequest) {
     });
     
     const result = await prisma.$transaction(async (tx) => {
+      // Resolve payment method from provided type or id (optional)
+      let resolvedPaymentMethod: { id: string; type: string } | null = null;
+      try {
+        if (orderData.paymentMethodId) {
+          const pm = await tx.paymentMethod.findUnique({ where: { id: orderData.paymentMethodId }, select: { id: true, type: true } });
+          if (pm) resolvedPaymentMethod = pm;
+        } else if (orderData.paymentMethodType) {
+          const pm = await tx.paymentMethod.findFirst({ where: { type: orderData.paymentMethodType }, select: { id: true, type: true } });
+          if (pm) resolvedPaymentMethod = pm;
+        }
+      } catch (e) {
+        console.warn("Could not resolve payment method:", e);
+      }
       // Create the order
       console.log("Creating order record");
       const order = await tx.order.create({
@@ -270,6 +290,8 @@ export async function POST(request: NextRequest) {
           discountAmount: orderData.discountAmount || 0,
           discountCode: orderData.discountCode,
           paymentType: orderData.paymentType,
+          paymentMethod: resolvedPaymentMethod?.type,
+          paymentMethodId: resolvedPaymentMethod?.id,
           depositAmount: orderData.depositAmount,
           remainingAmount: orderData.remainingAmount,
           shippingOptionId: orderData.shippingOptionId,
@@ -367,6 +389,14 @@ export async function POST(request: NextRequest) {
     console.error("Error creating order:", error);
     console.error("Error type:", typeof error);
     console.error("Error constructor:", error?.constructor?.name);
+    console.error("Error stack:", error?.stack);
+    
+    // Try to stringify error safely
+    try {
+      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    } catch (stringifyError) {
+      console.error("Could not stringify error:", stringifyError);
+    }
     
     if (error?.code) {
       console.error("Error code:", error.code);
@@ -375,7 +405,7 @@ export async function POST(request: NextRequest) {
       console.error("Error meta:", error.meta);
     }
     
-    // ส่ง error message ที่เฉพาะเจาะจงมากขึ้น
+    // Always return a proper error response, never empty
     let errorMessage = "Internal server error";
     let statusCode = 500;
     
@@ -401,15 +431,37 @@ export async function POST(request: NextRequest) {
       } else if (error.message.includes("connect ECONNREFUSED")) {
         errorMessage = "Database connection failed";
         statusCode = 503;
+      } else {
+        // Include the actual error message for debugging
+        errorMessage = `Internal server error: ${error.message}`;
       }
       
-      // แสดง error message เต็ม ๆ เพื่อ debug
       console.error("Full error message:", error.message);
     }
     
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: statusCode }
-    );
+    // Make sure we ALWAYS return a proper JSON response
+    try {
+      return NextResponse.json(
+        { 
+          error: errorMessage,
+          timestamp: new Date().toISOString(),
+          debug: process.env.NODE_ENV === 'development' ? {
+            errorType: error?.constructor?.name,
+            errorMessage: error?.message
+          } : undefined
+        },
+        { status: statusCode }
+      );
+    } catch (responseError) {
+      console.error("Failed to create error response:", responseError);
+      // Fallback response
+      return new Response(
+        JSON.stringify({ error: "Critical server error" }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
   }
 }

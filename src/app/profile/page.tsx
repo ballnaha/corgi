@@ -81,10 +81,19 @@ interface OrderItem {
     id: string;
     name: string;
     category: string;
-    imageUrl: string;
+    imageUrl?: string;
     breed?: string | null;
     gender?: string | null;
     age?: string | null;
+    price?: number;
+    salePrice?: number;
+    discountPercent?: number;
+    images?: Array<{
+      id: string;
+      imageUrl: string;
+      altText?: string;
+      isMain: boolean;
+    }>;
   };
 }
 
@@ -95,7 +104,8 @@ interface PaymentNotification {
   paymentSlipData?: string | null;
   paymentSlipMimeType?: string | null;
   paymentSlipFileName?: string | null;
-  submittedAt: Date | string;
+  submittedAt: Date | string | null | undefined;
+  status?: string;
 }
 
 interface Order {
@@ -109,12 +119,22 @@ interface Order {
   shippingAddress?: string | null;
   shippingFee?: number;
   discountAmount?: number;
+  discountCode?: string | null;
   paymentType?: string;
+  paymentMethod?: string | null;
+  paymentMethodRef?: {
+    id: string;
+    name: string;
+    type: string;
+    description?: string | null;
+    icon?: string | null;
+  } | null;
   depositAmount?: number | null;
   remainingAmount?: number | null;
   adminComment?: string | null;
   paymentNotifications?: PaymentNotification[];
-  items: OrderItem[];
+  items?: OrderItem[];
+  orderItems?: OrderItem[]; // API returns orderItems, not items
 }
 
 export default function ProfilePage() {
@@ -227,11 +247,21 @@ export default function ProfilePage() {
 
       if (response.ok) {
         const ordersData = await response.json();
+        console.log("Fetched orders data:", ordersData);
+        
         // Ensure ordersData is an array
         if (Array.isArray(ordersData)) {
+          console.log("📦 Orders is array, first order:", ordersData[0]);
+          console.log("🛍️  First order items:", ordersData[0]?.items);
+          console.log("🛍️  First order orderItems:", ordersData[0]?.orderItems);
+          console.log("💰 First order paymentNotifications:", ordersData[0]?.paymentNotifications);
           setOrders(ordersData);
         } else if (ordersData && Array.isArray(ordersData.orders)) {
           // If API returns {orders: [...]}
+          console.log("📦 Orders in orders property, first order:", ordersData.orders[0]);
+          console.log("🛍️  First order items:", ordersData.orders[0]?.items);
+          console.log("🛍️  First order orderItems:", ordersData.orders[0]?.orderItems);
+          console.log("💰 First order paymentNotifications:", ordersData.orders[0]?.paymentNotifications);
           setOrders(ordersData.orders);
         } else {
           console.warn('Orders API returned non-array data:', ordersData);
@@ -371,6 +401,25 @@ export default function ProfilePage() {
   };
 
   const handleOrderDetailOpen = (order: Order) => {
+    console.log("=== ORDER DETAIL DEBUG ===");
+    console.log("Opening order detail:", order);
+    console.log("Order items:", order.items);
+    console.log("Order orderItems:", order.orderItems);
+    console.log("Order paymentNotifications:", order.paymentNotifications);
+    console.log("Payment notifications count:", order.paymentNotifications?.length || 0);
+    
+    // Debug each payment notification
+    order.paymentNotifications?.forEach((notification, index) => {
+      console.log(`PaymentNotification ${index}:`, {
+        id: notification.id,
+        transferAmount: notification.transferAmount,
+        paymentSlipData: notification.paymentSlipData,
+        paymentSlipFileName: notification.paymentSlipFileName,
+        hasSlipData: !!notification.paymentSlipData
+      });
+    });
+    
+    console.log("getOrderItems result:", getOrderItems(order));
     setSelectedOrder(order);
     setOrderDetailOpen(true);
   };
@@ -582,11 +631,11 @@ export default function ProfilePage() {
 
       if (selectedCategory === "other") {
         filteredOrders = filteredOrders.filter((order) =>
-          order.items.some((item) => !dynamicKeys.includes(item.product.category))
+          getOrderItems(order).some((item) => !dynamicKeys.includes(item.product.category))
         );
       } else {
         filteredOrders = filteredOrders.filter((order) =>
-          order.items.some((item) => item.product.category === selectedCategory)
+          getOrderItems(order).some((item) => item.product.category === selectedCategory)
         );
       }
     }
@@ -615,6 +664,96 @@ export default function ProfilePage() {
     }
   };
 
+  // Calculate actual unit price (after discount)
+  const calculateUnitPrice = (product: OrderItem['product'], orderItemPrice: number | string) => {
+    // Ensure the price is a number for calculations
+    const numericPrice = ensureNumber(orderItemPrice);
+    
+    // The orderItemPrice from database should already be the final price after discount
+    // But if not, we can calculate it here
+    return numericPrice;
+  };
+
+  // Get display price for product (with discount if applicable)
+  const getDisplayPrice = (product: any) => {
+    if (product.salePrice && product.salePrice > 0) {
+      return product.salePrice;
+    }
+    if (product.discountPercent && product.discountPercent > 0) {
+      return product.price * (1 - product.discountPercent / 100);
+    }
+    return product.price;
+  };
+
+  // Get items from order (handle both items and orderItems fields)
+  const getOrderItems = (order: Order): OrderItem[] => {
+    return order.orderItems || order.items || [];
+  };
+
+  // Get total quantity across all items in an order
+  const getOrderTotalQuantity = (order: Order): number => {
+    const items = getOrderItems(order);
+    return items.reduce((sum, item) => ensureNumber(sum) + ensureNumber(item.quantity), 0);
+  };
+
+  // Ensure price is number for calculations
+  const ensureNumber = (value: any): number => {
+    // Handle null, undefined, or empty values
+    if (value === null || value === undefined || value === '') return 0;
+    
+    // If already a number, return it
+    if (typeof value === 'number') {
+      return isNaN(value) ? 0 : value;
+    }
+    
+    // If string, parse it
+    if (typeof value === 'string') {
+      // Remove any non-numeric characters except decimal point and minus
+      const cleanValue = value.replace(/[^\d.-]/g, '');
+      const parsed = parseFloat(cleanValue);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    
+    // For any other type, try to convert
+    const converted = Number(value);
+    return isNaN(converted) ? 0 : converted;
+  };
+
+  // Get main image for product (same as checkout page)
+  const getMainImage = (product: OrderItem['product']) => {
+    // ลองหารูปหลักจาก images array ก่อน
+    if (product.images && product.images.length > 0) {
+      const mainImage = product.images.find(img => img.isMain);
+      if (mainImage?.imageUrl) return mainImage.imageUrl;
+      
+      // ถ้าไม่มีรูปหลัก ใช้รูปแรก
+      if (product.images[0]?.imageUrl) return product.images[0].imageUrl;
+    }
+    
+    // fallback ไปยัง imageUrl หรือ default
+    return product.imageUrl || "/images/icon-corgi.png";
+  };
+
+  // Calculate actual total from items (more accurate than totalAmount from DB)
+  const calculateOrderTotal = (order: Order): number => {
+    const items = getOrderItems(order);
+    const itemsTotal = items.reduce((sum, item) => {
+      // Ensure all values are numbers to prevent string concatenation
+      const unitPrice = calculateUnitPrice(item.product, item.price); // already returns number
+      const quantity = ensureNumber(item.quantity);
+      const itemTotal = unitPrice * quantity;
+      
+      
+      return ensureNumber(sum) + ensureNumber(itemTotal);
+    }, 0);
+    
+    const shippingFee = ensureNumber(order.shippingFee || 0);
+    const discountAmount = ensureNumber(order.discountAmount || 0);
+    
+    
+    return Math.max(0, ensureNumber(itemsTotal) + shippingFee - discountAmount);
+  };
+
   // Get background color based on product ID (same as ProductCard)
   const getCardBgColor = (productId: string) => {
     const pastelColors = [
@@ -633,8 +772,17 @@ export default function ProfilePage() {
   };
 
   // Format date
-  const formatDate = (dateString: string | Date) => {
+  const formatDate = (dateString: string | Date | undefined | null) => {
+    if (!dateString) return "ไม่ระบุ";
+    
     const date = new Date(dateString);
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn("Invalid date provided to formatDate:", dateString);
+      return "วันที่ไม่ถูกต้อง";
+    }
+    
     return date.toLocaleDateString("th-TH", {
       year: "numeric",
       month: "long",
@@ -683,6 +831,60 @@ export default function ProfilePage() {
       default:
         return colors.info;
     }
+  };
+
+  // Derive payment method chips from order data (extensible for future methods)
+  const getPaymentMethodChips = (order: Order): { label: string; color: string }[] => {
+    const chips: { label: string; color: string }[] = [];
+    
+    // First priority: Use paymentMethodRef if available
+    if (order.paymentMethodRef) {
+      chips.push({ 
+        label: order.paymentMethodRef.name, 
+        color: colors.primary.main 
+      });
+      return chips;
+    }
+    
+    // Second priority: Use paymentMethod string if available
+    if (order.paymentMethod) {
+      chips.push({ 
+        label: order.paymentMethod, 
+        color: colors.primary.main 
+      });
+      return chips;
+    }
+    
+    // Fallback: Detect from payment notifications (legacy behavior)
+    const notifications = order.paymentNotifications || [];
+
+    // Detect credit card via Stripe markers embedded in notifications
+    const hasCreditCard = notifications.some((n: any) =>
+      String(n?.paymentSlipFileName || "").startsWith("stripe-session") ||
+      String(n?.paymentSlipData || "").includes("Stripe Session") ||
+      String((n as any)?.note || "").includes("Stripe")
+    );
+    if (hasCreditCard) {
+      chips.push({ label: "บัตรเครดิต", color: colors.info });
+    }
+
+    // Bank transfer if any notification that is not identified as Stripe
+    const hasBankTransfer = notifications.some((n: any) => {
+      const isStripeLike = String(n?.paymentSlipFileName || "").startsWith("stripe-session") ||
+        String(n?.paymentSlipData || "").includes("Stripe Session") ||
+        String((n as any)?.note || "").includes("Stripe");
+      return !isStripeLike;
+    });
+    if (hasBankTransfer) {
+      chips.push({ label: "โอนเงิน", color: colors.primary.main });
+    }
+
+    // Fallback when no payment method information is available
+    if (chips.length === 0) {
+      chips.push({ label: "วิธีชำระเงินยังไม่ระบุ", color: colors.text.secondary });
+    }
+
+    return chips;
   };
 
   // Only show loading for initial mount and auth loading
@@ -1284,11 +1486,11 @@ export default function ProfilePage() {
                     variant="h6"
                     sx={{ mb: 2, color: colors.text.secondary }}
                   >
-                    {orders.length === 0 
+                    {(orders?.length || 0) === 0 
                       ? "ยังไม่มีประวัติการซื้อ" 
                       : "ไม่พบคำสั่งซื้อที่ตรงกับเงื่อนไขการกรอง"}
                   </Typography>
-                  {orders.length > 0 && (
+                  {(orders?.length || 0) > 0 && (
                     <Typography
                       variant="body2"
                       sx={{ color: colors.text.secondary }}
@@ -1381,31 +1583,44 @@ export default function ProfilePage() {
                             size="small"
                             sx={{
                               color: getStatusColor(order.status),
-                              backgroundColor: `${getStatusColor(
-                                order.status
-                              )}20`,
+                              backgroundColor: `${getStatusColor(order.status)}20`,
                               fontWeight: "500",
                               fontSize: { xs: "0.7rem", sm: "0.75rem" },
                               height: { xs: 24, sm: 28 },
                             }}
                           />
+
+                          {getPaymentMethodChips(order).map((chip) => (
+                            <Chip
+                              key={`${order.id}-${chip.label}`}
+                              label={chip.label}
+                              size="small"
+                              sx={{
+                                color: chip.color,
+                                backgroundColor: `${chip.color}20`,
+                                fontWeight: "500",
+                                fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                                height: { xs: 24, sm: 28 },
+                              }}
+                            />
+                          ))}
                         </Box>
                       </Box>
 
                       {/* Order Items */}
-                      {order.items.map((item, index) => (
+                      {getOrderItems(order).map((item, index) => (
                         <Box
                           key={item.id}
                           sx={{
                             display: "flex",
                             gap: { xs: 2, sm: 3 },
                             mb:
-                              index < order.items.length - 1
+                              index < getOrderItems(order).length - 1
                                 ? { xs: 1.5, sm: 2 }
                                 : 0,
                           }}
                         >
-                          {item.product.imageUrl ? (
+                          {getMainImage(item.product) ? (
                             <Box
                               sx={{
                                 width: { xs: 80, sm: 96 },
@@ -1427,7 +1642,7 @@ export default function ProfilePage() {
                             >
                               <Box
                                 component="img"
-                                src={item.product.imageUrl}
+                                src={getMainImage(item.product)}
                                 alt={item.product.name}
                                 loading="lazy"
                                 onClick={() => handleProductClick(item.product)}
@@ -1528,7 +1743,7 @@ export default function ProfilePage() {
                                 fontSize: { xs: "0.95rem", sm: "1.1rem" },
                               }}
                             >
-                              ฿{item.price.toLocaleString()}
+                              ฿{ensureNumber(calculateUnitPrice(item.product, item.price)).toLocaleString()}
                               {item.quantity > 1 && ` x ${item.quantity}`}
                             </Typography>
                           </Box>
@@ -1564,7 +1779,7 @@ export default function ProfilePage() {
                                 variant="body2"
                                 sx={{ fontWeight: "bold", fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
                               >
-                                ฿{((order.depositAmount || 0) + (order.remainingAmount || 0)).toLocaleString()}
+                                ฿{(ensureNumber(order.depositAmount) + ensureNumber(order.remainingAmount)).toLocaleString()}
                               </Typography>
                             </Box>
                             <Box
@@ -1585,7 +1800,7 @@ export default function ProfilePage() {
                                 variant="body2"
                                 sx={{ fontWeight: "bold", color: colors.primary.main, fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
                               >
-                                ฿{(order.depositAmount || 0).toLocaleString()}
+                                ฿{ensureNumber(order.depositAmount).toLocaleString()}
                               </Typography>
                             </Box>
                             <Box
@@ -1610,7 +1825,7 @@ export default function ProfilePage() {
                                   fontSize: { xs: "0.85rem", sm: "0.95rem" } 
                                 }}
                               >
-                                {order.status === "DELIVERED" ? "ไม่ต้องจ่ายเพิ่ม" : `฿${(order.remainingAmount || 0).toLocaleString()}`}
+                                {order.status === "DELIVERED" ? "ไม่ต้องจ่ายเพิ่ม" : `฿${ensureNumber(order.remainingAmount).toLocaleString()}`}
                               </Typography>
                             </Box>
                             
@@ -1619,7 +1834,7 @@ export default function ProfilePage() {
                               const totalPaid = (order.paymentNotifications || []).reduce((sum, payment) => {
                                 return sum + Number(payment.transferAmount || 0);
                               }, 0);
-                              const orderTotal = Number(order.totalAmount || 0);
+                              const orderTotal = calculateOrderTotal(order);
                               const remainingToPay = Math.max(0, orderTotal - totalPaid);
                               
                               if (totalPaid > 0 && order.status !== "DELIVERED") {
@@ -1744,12 +1959,39 @@ export default function ProfilePage() {
                                 </Typography>
                               </Box>
                             )}
+
+                            {/* Discount Amount */}
+                            {order.discountAmount !== undefined && order.discountAmount > 0 && (
+                              <Box
+                                sx={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  mb: 1,
+                                }}
+                              >
+                                <Typography
+                                  variant="body2"
+                                  sx={{ color: colors.text.secondary, fontSize: { xs: "0.8rem", sm: "0.9rem" } }}
+                                >
+                                  ส่วนลด 
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ fontWeight: "500", color: colors.info, fontSize: { xs: "0.85rem", sm: "0.95rem" } }}
+                                >
+                                  ฿{order.discountAmount.toLocaleString()}
+                                  {order.discountCode && ` (${order.discountCode})`}
+                                </Typography>
+                              </Box>
+                            )}
+
                             {/* Payment Status for Full Payment */}
                             {(() => {
                               const totalPaid = (order.paymentNotifications || []).reduce((sum, payment) => {
                                 return sum + Number(payment.transferAmount || 0);
                               }, 0);
-                              const orderTotal = Number(order.totalAmount || 0);
+                              const orderTotal = calculateOrderTotal(order);
                               const remainingToPay = Math.max(0, orderTotal - totalPaid);
                               
                               return (
@@ -1828,7 +2070,7 @@ export default function ProfilePage() {
                                         fontWeight: 500 
                                       }}
                                     >
-                                      {order.status === "DELIVERED" ? "✅ ชำระครบแล้ว" : remainingToPay > 0 ? "⏳ คงเหลือ" : "✅ ครบแล้ว"}
+                                      {order.status === "DELIVERED" ? "✅ ชำระครบแล้ว" : remainingToPay > 0 ? "⏳ คงเหลือ" : "✅ ครบแล้วไม่ต้องจ่ายเพิ่ม"}
                                     </Typography>
                                     <Typography
                                       variant="body2"
@@ -1921,7 +2163,7 @@ export default function ProfilePage() {
                                 transition: "all 0.2s ease",
                               }}
                             >
-                              {(order.paymentNotifications && order.paymentNotifications.length > 0) 
+                              {(order.paymentNotifications && order.paymentNotifications?.length > 0) 
                                 ? "แจ้งชำระอีกครั้ง" 
                                 : "แจ้งชำระเงิน"}
                             </Button>
@@ -2341,28 +2583,40 @@ export default function ProfilePage() {
                   </Typography>
                 </Box>
 
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 2,
-                  }}
-                >
+                 <Box
+                   sx={{
+                     display: "flex",
+                     justifyContent: "space-between",
+                     alignItems: "center",
+                     mb: 2,
+                   }}
+                 >
                   <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
                     สถานะ
                   </Typography>
-                  <Chip
-                    label={getStatusInThai(selectedOrder.status)}
-                    size="small"
-                    sx={{
-                      color: getStatusColor(selectedOrder.status),
-                      backgroundColor: `${getStatusColor(
-                        selectedOrder.status
-                      )}20`,
-                      fontWeight: "bold",
-                    }}
-                  />
+                   <Box sx={{ display: "flex", gap: 1, alignItems: "center", flexWrap: "wrap" }}>
+                     <Chip
+                       label={getStatusInThai(selectedOrder.status)}
+                       size="small"
+                       sx={{
+                         color: getStatusColor(selectedOrder.status),
+                         backgroundColor: `${getStatusColor(selectedOrder.status)}20`,
+                         fontWeight: "bold",
+                       }}
+                     />
+                     {getPaymentMethodChips(selectedOrder).map((chip) => (
+                       <Chip
+                         key={`${selectedOrder.id}-${chip.label}`}
+                         label={chip.label}
+                         size="small"
+                         sx={{
+                           color: chip.color,
+                           backgroundColor: `${chip.color}20`,
+                           fontWeight: "bold",
+                         }}
+                       />
+                     ))}
+                   </Box>
                 </Box>
 
                 <Box
@@ -2380,8 +2634,8 @@ export default function ProfilePage() {
                     sx={{ fontWeight: "bold", color: colors.primary.main }}
                   >
                     ฿{selectedOrder.paymentType === "DEPOSIT_PAYMENT" 
-                      ? ((selectedOrder.depositAmount || 0) + (selectedOrder.remainingAmount || 0)).toLocaleString()
-                      : selectedOrder.totalAmount.toLocaleString()}
+                      ? (ensureNumber(selectedOrder.depositAmount) + ensureNumber(selectedOrder.remainingAmount)).toLocaleString()
+                      : calculateOrderTotal(selectedOrder).toLocaleString()}
                   </Typography>
                 </Box>
               </CardContent>
@@ -2404,8 +2658,10 @@ export default function ProfilePage() {
                     return sum + Number(payment.transferAmount || 0);
                   }, 0);
                   
-                  const orderTotal = Number(selectedOrder.totalAmount || 0);
+                  const orderTotal = calculateOrderTotal(selectedOrder);
                   const remainingToPay = Math.max(0, orderTotal - totalPaid);
+                  const depositCap = ensureNumber(selectedOrder.depositAmount || 0);
+                  const depositPaidDisplay = Math.min(totalPaid, depositCap);
                   
                   return selectedOrder.paymentType === "DEPOSIT_PAYMENT" ? (
                     <>
@@ -2466,7 +2722,7 @@ export default function ProfilePage() {
                           variant="body2"
                           sx={{ fontWeight: "bold", color: colors.primary.main }}
                         >
-                          ฿{(selectedOrder.depositAmount || 0).toLocaleString()}
+                          ฿{ensureNumber(selectedOrder.depositAmount).toLocaleString()}
                         </Typography>
                       </Box>
                       <Box
@@ -2493,7 +2749,7 @@ export default function ProfilePage() {
                             color: totalPaid > 0 ? colors.success : colors.text.secondary 
                           }}
                         >
-                          ฿{totalPaid.toLocaleString()}
+                          ฿{depositPaidDisplay.toLocaleString()}
                         </Typography>
                       </Box>
                       <Box
@@ -2767,7 +3023,7 @@ export default function ProfilePage() {
             )}
 
             {/* Payment Notifications */}
-            {selectedOrder.paymentNotifications && selectedOrder.paymentNotifications.length > 0 && (
+            {selectedOrder.paymentNotifications && selectedOrder.paymentNotifications?.length > 0 && (
               <Card sx={{ mb: 3, borderRadius: 3 }}>
                 <CardContent>
                   <Typography
@@ -2791,16 +3047,19 @@ export default function ProfilePage() {
                     </Typography>
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                        ยอดที่ได้รับทั้งหมด: ฿{selectedOrder.paymentNotifications.reduce((sum, p) => sum + Number(p.transferAmount), 0).toLocaleString()}
+                        ยอดที่ได้รับทั้งหมด: ฿{selectedOrder.paymentNotifications?.reduce((sum, p) => sum + Number(p.transferAmount), 0).toLocaleString() || 0}
                       </Typography>
                       <Typography variant="body2" sx={{ color: colors.success }}>
-                        ({selectedOrder.paymentNotifications.length} รายการ)
+                        ({selectedOrder.paymentNotifications?.length || 0} รายการ)
                       </Typography>
                     </Box>
                   </Box>
 
-                  {selectedOrder.paymentNotifications.map((notification, index) => (
-                    <Box key={notification.id} sx={{ mb: index < selectedOrder.paymentNotifications!.length - 1 ? 3 : 0 }}>
+                  {selectedOrder.paymentNotifications?.map((notification, index) => {
+                    console.log(`Payment notification ${index}:`, notification);
+                    console.log(`Has paymentSlipData:`, !!notification.paymentSlipData);
+                    return (
+                    <Box key={notification.id} sx={{ mb: index < (selectedOrder.paymentNotifications?.length || 0) - 1 ? 3 : 0 }}>
                       <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}>
                         <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
                           การชำระเงิน #{index + 1}
@@ -2843,24 +3102,41 @@ export default function ProfilePage() {
                           วันที่แจ้ง
                         </Typography>
                         <Typography variant="body2" sx={{ fontWeight: "bold" }}>
-                          {formatDate(notification.submittedAt)}
+                          {(() => {
+                            console.log("submittedAt raw value:", notification.submittedAt, "type:", typeof notification.submittedAt);
+                            return formatDate(notification.submittedAt);
+                          })()}
                         </Typography>
                       </Box>
 
                                                   {/* Payment Slip */}
                             {notification.paymentSlipData && (
                               <Box sx={{ mt: 2 }}>
-                                <Typography variant="body2" sx={{ color: colors.text.secondary, mb: 1 }}>
-                                  หลักฐานการโอนเงิน
-                                </Typography>
+                                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+                                  <Typography variant="body2" sx={{ color: colors.text.secondary }}>
+                                    หลักฐานการโอนเงิน
+                                  </Typography>
+                                  {notification.paymentSlipFileName && (
+                                    <Typography variant="caption" sx={{ color: colors.text.disabled, fontSize: "0.7rem" }}>
+                                      {notification.paymentSlipFileName}
+                                    </Typography>
+                                  )}
+                                </Box>
                                 <Box
                                   component="img"
                                   src={notification.paymentSlipData?.startsWith('data:') 
                                     ? notification.paymentSlipData 
                                     : notification.paymentSlipData || ''}
-                                  alt="Payment Slip"
+                                  alt={`หลักฐานการโอนเงิน ${notification.paymentSlipFileName || ''}`}
+                                  loading="lazy"
+                                  onLoad={() => {
+                                    console.log("✅ Payment slip image loaded successfully:", notification.paymentSlipData);
+                                  }}
                                   onError={(e) => {
-                                    console.error("Failed to load payment slip image:", notification.paymentSlipData);
+                                    console.error("❌ Failed to load payment slip image:", notification.paymentSlipData);
+                                    console.error("Filename:", notification.paymentSlipFileName);
+                                    console.error("Image src:", (e.target as HTMLImageElement).src);
+                                    console.error("Error event:", e);
                                     (e.target as HTMLImageElement).style.display = 'none';
                                   }}
                                   sx={{
@@ -2898,11 +3174,21 @@ export default function ProfilePage() {
                               </Box>
                             )}
 
-                      {index < selectedOrder.paymentNotifications!.length - 1 && (
+                            {/* Show message when no slip */}
+                            {!notification.paymentSlipData && (
+                              <Box sx={{ mt: 2, p: 2, backgroundColor: colors.background.paper, borderRadius: 2 }}>
+                                <Typography variant="body2" sx={{ color: colors.text.secondary, fontStyle: "italic" }}>
+                                  📝 ยังไม่มีหลักฐานการโอนเงิน
+                                </Typography>
+                              </Box>
+                            )}
+
+                      {index < (selectedOrder.paymentNotifications?.length || 0) - 1 && (
                         <Divider sx={{ mt: 2 }} />
                       )}
                     </Box>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}
@@ -2912,17 +3198,19 @@ export default function ProfilePage() {
               variant="h6"
               sx={{ fontWeight: "bold", mb: 2, color: colors.text.primary }}
             >
-              รายการสินค้า ({selectedOrder.items.length} รายการ)
+              รายการสินค้า ({getOrderTotalQuantity(selectedOrder || {} as Order)} รายการ)
             </Typography>
+
 
             <Box
               sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 3 }}
             >
-              {selectedOrder.items.map((item, index) => (
+              {getOrderItems(selectedOrder || {} as Order).length > 0 ? (
+                getOrderItems(selectedOrder || {} as Order).map((item, index) => (
                 <Card key={item.id} sx={{ borderRadius: 2 }}>
                   <CardContent sx={{ p: 2 }}>
                     <Box sx={{ display: "flex", gap: 2 }}>
-                      {item.product.imageUrl ? (
+                      {getMainImage(item.product) ? (
                         <Box
                           sx={{
                             width: 60,
@@ -2943,7 +3231,7 @@ export default function ProfilePage() {
                         >
                           <Box
                             component="img"
-                            src={item.product.imageUrl}
+                            src={getMainImage(item.product)}
                             alt={item.product.name}
                             onClick={() => handleProductClick(item.product)}
                             onError={(e) => {
@@ -3030,7 +3318,7 @@ export default function ProfilePage() {
                             variant="body2"
                             sx={{ color: colors.text.secondary }}
                           >
-                            ฿{item.price.toLocaleString()} x {item.quantity}
+                            ฿{ensureNumber(calculateUnitPrice(item.product, item.price)).toLocaleString()} x {item.quantity}
                           </Typography>
                           <Typography
                             variant="subtitle2"
@@ -3039,14 +3327,21 @@ export default function ProfilePage() {
                               color: colors.primary.main,
                             }}
                           >
-                            ฿{(item.price * item.quantity).toLocaleString()}
+                            ฿{(ensureNumber(calculateUnitPrice(item.product, item.price)) * item.quantity).toLocaleString()}
                           </Typography>
                         </Box>
                       </Box>
                     </Box>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body1" sx={{ color: colors.text.secondary }}>
+                    ไม่พบรายการสินค้าในคำสั่งซื้อนี้
+                  </Typography>
+                </Box>
+              )}
             </Box>
 
             {/* Action Buttons */}
@@ -3074,7 +3369,7 @@ export default function ProfilePage() {
                       },
                     }}
                   >
-                    {(selectedOrder.paymentNotifications && selectedOrder.paymentNotifications.length > 0) 
+                    {(selectedOrder.paymentNotifications && selectedOrder.paymentNotifications?.length > 0) 
                       ? "แจ้งชำระอีกครั้ง" 
                       : "แจ้งชำระเงิน"}
                   </Button>

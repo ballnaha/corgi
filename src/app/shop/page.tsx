@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Box, Typography, CircularProgress, Slide, Container } from "@mui/material";
 import type { SlideProps } from "@mui/material";
 import { colors } from "@/theme/colors";
@@ -27,15 +27,38 @@ export default function ShopPage() {
     return <Slide direction="up" ref={ref} {...props} />;
   });
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showSnackbar, SnackbarComponent } = useThemedSnackbar();
   const { user, isAuthenticated } = useSimpleAuth(); // Add auth state
-  const [selectedCategory, setSelectedCategory] = useState("dogs");
+  
+  // Function to map URL category parameter to internal category keys
+  const mapUrlCategoryToInternal = (urlCategory: string | null): string => {
+    const categoryMap: Record<string, string> = {
+      'bird': 'birds',
+      'dog': 'dogs', 
+      'cat': 'cats',
+      'accessories': 'accessories'
+    };
+    return urlCategory ? (categoryMap[urlCategory] || 'all') : 'dogs';
+  };
+
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    const categoryParam = searchParams.get('category');
+    return mapUrlCategoryToInternal(categoryParam);
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Handle URL category parameter changes
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    const mappedCategory = mapUrlCategoryToInternal(categoryParam);
+    setSelectedCategory(mappedCategory);
+  }, [searchParams]);
 
   // Load cart from localStorage
   useEffect(() => {

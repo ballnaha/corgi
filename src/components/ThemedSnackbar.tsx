@@ -37,10 +37,10 @@ export default function ThemedSnackbar({
     switch (severity) {
       case "success":
         return {
-          shadowColor: "rgba(76, 175, 80, 0.25)",
-          backgroundColor: `${colors.success}15`, // 15 = ~8.5% opacity
-          color: colors.success,
-          borderColor: `${colors.success}40`, // 40 = ~25% opacity
+          shadowColor: "rgba(34, 139, 34, 0.3)", // เงาเขียวเข้ม
+          backgroundColor: "rgba(255, 255, 255, 0.8)", // พื้นขาวแก้ว
+          color: "#1B5E20", // เขียวเข้ม (Dark Green)
+          borderColor: "rgba(76, 175, 80, 0.3)", // ขอบเขียวอ่อน
         };
       case "warning":
         return {
@@ -98,27 +98,47 @@ export default function ThemedSnackbar({
           overflowX: "hidden",
           overflowY: "hidden",
           
-          // Modern shadow with theme colors
-          boxShadow: `0 8px 32px ${snackbarColors.shadowColor}, 0 2px 8px rgba(0,0,0,0.05)`,
+          // Modern shadow with theme colors - เพิ่ม shadow สำหรับ success
+          ...(severity === "success" ? {
+            boxShadow: `0 12px 40px ${snackbarColors.shadowColor}, 0 4px 12px rgba(27, 94, 32, 0.15), 0 1px 4px rgba(255,255,255,0.8) inset`,
+          } : {
+            boxShadow: `0 8px 32px ${snackbarColors.shadowColor}, 0 2px 8px rgba(0,0,0,0.05)`,
+          }),
           
-          // Glassmorphism effect
-          backdropFilter: "saturate(180%) blur(20px)",
-          WebkitBackdropFilter: "saturate(180%) blur(20px)",
+          // Glassmorphism effect - เพิ่ม blur สำหรับ success
+          ...(severity === "success" ? {
+            backdropFilter: "saturate(200%) blur(25px)",
+            WebkitBackdropFilter: "saturate(200%) blur(25px)",
+          } : {
+            backdropFilter: "saturate(180%) blur(20px)",
+            WebkitBackdropFilter: "saturate(180%) blur(20px)",
+          }),
           
-          // Background with theme colors
+          // Background with theme colors - liquid glass สำหรับ success
           backgroundColor: snackbarColors.backgroundColor,
-          backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)`,
+          ...(severity === "success" ? {
+            backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 50%, rgba(248,255,248,0.8) 100%)`,
+          } : {
+            backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)`,
+          }),
           backgroundBlendMode: "overlay",
           
           // Text color
           color: snackbarColors.color,
+          
+          // Text styling สำหรับ success
+          ...(severity === "success" ? {
+            fontWeight: 600,
+            textShadow: "0 1px 2px rgba(27, 94, 32, 0.1)",
+          } : {
+            fontWeight: 500,
+          }),
           
           // Border with theme colors
           border: `1px solid ${snackbarColors.borderColor}`,
           
           // Typography
           fontSize: "0.95rem",
-          fontWeight: 500,
           fontFamily: "Prompt, sans-serif",
           
           // Icon styling

@@ -28,10 +28,10 @@ export default function BannerSection() {
   const fallbackBanners: Banner[] = [
     {
       id: "1",
-      title: "PetShop",
+      title: "Natpi & Cor.",
       subtitle: "ร้านค้าสัตว์เลี้ยง",
       background: 'linear-gradient(135deg, #FFB74D 0%, #FB8C00 50%, #F57C00 100%)',
-      imageUrl: "/images/oong_icon.png",
+      imageUrl: "/images/icon_logo.png",
       imageAlt: "Pet Shop Promotion",
       linkUrl: null,
       sortOrder: 0
@@ -128,14 +128,14 @@ export default function BannerSection() {
       onClick={() => handleBannerClick(banner)}
       sx={{
         background: banner.background,
-        borderRadius: 4,
+        borderRadius: 2,
         p: 3,
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
         overflow: 'visible',
-        minHeight: 140,
+        minHeight: 160,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -185,7 +185,7 @@ export default function BannerSection() {
         sx={{
           position: 'absolute',
           right: 8,
-          top: -20,
+          top: -10,
           zIndex: 2,
           width: 160,
           height: 180,
@@ -448,7 +448,7 @@ export default function BannerSection() {
           display: 'flex',
           justifyContent: 'center',
           gap: 1,
-          mt: 2,
+          mt: 4,
         }}
       >
         {banners.map((_, index) => (

@@ -19,13 +19,13 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "What Da Dog Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
+  title: "Natpi & Corgi Farm and Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
   description: "ร้านขายสัตว์เลี้ยงและอุปกรณ์สัตว์เลี้ยงครบครัน ด้วยความรักและใส่ใจในทุกรายละเอียด สุนัข แมว นก อาหารสัตว์ ของเล่น",
   keywords: "สัตว์เลี้ยง, สุนัข, แมว, นก, อาหารสัตว์, ของเล่นสัตว์, คอร์กี้, pet shop",
-  authors: [{ name: "What Da Dog Pet Shop" }],
+  authors: [{ name: "Natpi & Corgi Farm and Pet Shop" }],
   robots: "index, follow",  
   openGraph: {
-    title: "What Da Dog Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
+    title: "Natpi & Corgi Farm and Pet Shop - ร้านขายสัตว์เลี้ยงและอุปกรณ์ครบครัน",
     description: "ร้านขายสัตว์เลี้ยงและอุปกรณ์สัตว์เลี้ยงครบครัน ด้วยความรักและใส่ใจในทุกรายละเอียด",
     type: "website",
     locale: "th_TH",

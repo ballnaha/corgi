@@ -64,14 +64,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // แปลง type จากฐานข้อมูลให้ตรงกับหน้า frontend
+    const mappedType = discountCode.type === "PERCENTAGE" ? "percentage" : "fixed";
+
     return NextResponse.json({
       valid: true,
       discountCode: {
         id: discountCode.id,
         code: discountCode.code,
-        type: discountCode.type,
+        type: mappedType,
         value: Number(discountCode.value),
         description: discountCode.description,
+        minAmount: discountCode.minAmount ? Number(discountCode.minAmount) : null,
       }
     });
   } catch (error) {

@@ -38,6 +38,9 @@ import {
   History,
   Article,
   Category,
+  Payment,
+  LocalShipping,
+  LocalOffer,
 } from "@mui/icons-material";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -128,6 +131,26 @@ const getNavigationItems = (orderStats: { actionRequiredCount: number }): Naviga
     title: "รายงาน",
     path: "/admin/reports",
     icon: <Assessment />,
+  },
+  {
+    title: "จัดการการชำระเงิน",
+    path: "/admin/payment-methods",
+    icon: <Payment />,
+  },
+  {
+    title: "จัดการค่าจัดส่ง",
+    path: "/admin/shipping-options",
+    icon: <LocalShipping />,
+  },
+  {
+    title: "จัดการโค้ดส่วนลด",
+    path: "/admin/discount-codes",
+    icon: <LocalOffer />,
+  },
+  {
+    title: "การตั้งค่าระบบ",
+    path: "/admin/system-settings",
+    icon: <Settings />,
   },
   {
     title: "ตั้งค่า",
@@ -225,11 +248,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             fontSize: "1.5rem",
           }}
         >
-          <img src="/images/natpi_logo.png" alt="What Da Dog Pet Shop" width={60} height={60} />
+          <img src="/images/icon_logo.png" alt="Natpi & Corgi Farm and Pet Shop" width={60} height={60} />
         </Box>
         <Box>
           <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>
-            What Da Dog Pet Shop
+            Natpi & Cor. <br /> ระบบจัดการ
           </Typography>
           <Typography variant="caption" sx={{ opacity: 0.8 }}>
             Admin Panel
@@ -404,6 +427,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 if (pathname === "/admin/blog/categories") return "จัดการหมวดหมู่บทความ";
                 return "จัดการบทความ";
               }
+              
+              // Check for payment and shipping pages
+              if (pathname === "/admin/payment-methods") return "จัดการการชำระเงิน";
+              if (pathname === "/admin/shipping-options") return "จัดการค่าจัดส่ง";
+              if (pathname === "/admin/discount-codes") return "จัดการโค้ดส่วนลด";
+              if (pathname === "/admin/system-settings") return "การตั้งค่าระบบ";
               
               // Find main navigation item
               const mainItem = getNavigationItems(orderStats).find((item) => isActivePath(item.path));

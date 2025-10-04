@@ -137,6 +137,8 @@ model Order {
   depositAmount    Decimal?        @map("deposit_amount") @db.Decimal(10, 2)
   hasPets          Boolean         @default(false) @map("has_pets")
   paymentType      PaymentType     @default(FULL_PAYMENT) @map("payment_type")
+  paymentMethod    String?         @map("payment_method")
+  paymentMethodId  String?         @map("payment_method_id")
   remainingAmount  Decimal?        @map("remaining_amount") @db.Decimal(10, 2)
   requiresDeposit  Boolean         @default(false) @map("requires_deposit")
   shippingAddress  String?         @map("shipping_address") @db.Text
@@ -151,9 +153,11 @@ model Order {
   paymentNotifications PaymentNotification[]
   shippingOption       ShippingOption?       @relation(fields: [shippingOptionId], references: [id])
   user                 User                  @relation(fields: [userId], references: [id])
+  paymentMethodRef     PaymentMethod?        @relation(fields: [paymentMethodId], references: [id])
 
   @@index([shippingOptionId], map: "orders_shipping_option_id_fkey")
   @@index([userId], map: "orders_user_id_fkey")
+  @@index([paymentMethodId], map: "orders_payment_method_id_fkey")
   @@map("orders")
 }
 
@@ -246,6 +250,9 @@ model PaymentMethod {
   sortOrder   Int      @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  orders      Order[]
 
   @@map("payment_methods")
 }
@@ -353,4 +360,18 @@ model BlogPost {
   @@index([publishedAt])
 
   @@map("blog_posts")
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  type        String   // "string", "number", "boolean", "json"
+  description String?
+  category    String   @default("general")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("system_settings")
 }

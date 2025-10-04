@@ -17,6 +17,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import Image from "next/image";
+import Link from "next/link";
 import { colors } from "@/theme/colors";
 import RegistrationCertificateSheet from "@/components/RegistrationCertificateSheet";
 import ResponsiveHeader from "@/components/ResponsiveHeader";
@@ -116,22 +117,26 @@ export default function HomePage() {
     {
       name: "BIRD",
       imageSrc: "/images/bird1.png",
-      bgColor: "#FF8A50"
+      bgColor: "#FF8A50",
+      link: "/shop?category=bird"
     },
     {
       name: "DOG", 
       imageSrc: "/images/dog1-1.png",
-      bgColor: "#0FB09E"
+      bgColor: "#0FB09E",
+      link: "/shop?category=dog"
     },
     {
       name: "CAT",
       imageSrc: "/images/cat1-1.png",
-      bgColor: "#F4D03F"
+      bgColor: "#F4D03F",
+      link: "/shop?category=cat"
     },
     {
       name: "PET ACCESSORIES",
       imageSrc: "/images/accessories2.png",
-      bgColor: "#52C4F0"
+      bgColor: "#52C4F0",
+      link: "/shop?category=accessories"
     }
   ];
 
@@ -276,7 +281,7 @@ export default function HomePage() {
                   }}
                 >
                   <Image
-                    src="/images/lovecorgi1.png"
+                    src="/images/lovecorgi2.png"
                     alt="cute dog"
                     width={400}
                     height={400}
@@ -531,7 +536,7 @@ export default function HomePage() {
                     }}
                   >
                     <Image 
-                      src="/images/dog_hiphop.png" 
+                      src="/images/dog_nurse.png" 
                       alt="Corgi Puppy" 
                       width={150} 
                       height={150} 
@@ -549,9 +554,9 @@ export default function HomePage() {
                         lineHeight: 1.2,
                         mb: 1
                       }}
+                      
                     >
-                      BORN TO BE A DOG STAR.
-
+                      VACCINATED AND DEWORMED PRIOR TO REHOMING
                     </Typography>
                     <Typography
                       sx={{
@@ -561,7 +566,7 @@ export default function HomePage() {
                         lineHeight: 1.4
                       }}
                     >
-                      เกิดมาเพื่อเป็นดาวเด่น
+                      เราฉีดวัคซีนและถ่ายพยาธิ ให้น้องก่อนส่งมอบ
                     </Typography>
                     
                   </Box>
@@ -615,7 +620,8 @@ export default function HomePage() {
                 width: "100%",
                 maxWidth: "100%"
               }}>
-                <Card
+                <Link href={pet.link} style={{ textDecoration: 'none' }}>
+                  <Card
                   sx={{
                     borderRadius: { xs: 3, sm: 4 },
                     overflow: "hidden",
@@ -978,7 +984,8 @@ export default function HomePage() {
                       {pet.name}
                     </Typography>
                   </CardContent>
-                </Card>
+                  </Card>
+                </Link>
               </Box>
             ))}
           </Box>
@@ -1279,7 +1286,7 @@ export default function HomePage() {
 
             {/* Middle-Bottom: Author */}
             <Box sx={{ p: 3, gridColumn: { lg: 2 }, gridRow: { lg: 3 }, backgroundColor: "#FFFFFF" }}>
-              <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#000" }}>WHAT DA DOG</Typography>
+              <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#000" }}>NATPI & CORGI FARM AND PET SHOP</Typography>
               <Typography sx={{ fontSize: 14, color: "#666" }}>บ้านคอร์กี้นครปฐม</Typography>
             </Box>
 
@@ -1595,7 +1602,7 @@ export default function HomePage() {
               <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <Image
                   src="/images/natpi_logo_white.png"
-                  alt="What Da Dog Pet Shop"
+                  alt="Natpi & Corgi Farm and Pet Shop"
                   width={140}
                   height={60}
                   style={{

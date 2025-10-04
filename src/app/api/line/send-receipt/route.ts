@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { ORDER_STATUS_INFO, type OrderStatus } from "@/lib/order-status";
 
 interface OrderItem {
   productName: string;
@@ -24,32 +26,99 @@ interface ReceiptData {
   remainingAmount?: number;
   shippingMethod: string;
   shippingAddress?: string;
+  orderStatus?: OrderStatus;
+  paymentMethod?: string; // วิธีการชำระเงิน (บัตรเครดิต, โอนเงิน, etc.)
 }
 
 export async function POST(request: NextRequest) {
   console.log("🚀 LINE API called");
 
   try {
-    const session = await getServerSession(authOptions);
-    console.log("👤 LINE User ID:", session?.user?.lineUserId);
+    // ตรวจสอบว่าเป็นการเรียกจาก webhook หรือไม่
+    const userAgent = request.headers.get('user-agent') || '';
+    const isWebhookCall = userAgent.includes('node') || request.headers.get('x-webhook-source') === 'stripe';
+    
+    console.log("🔍 Request source check:");
+    console.log("  User-Agent:", userAgent);
+    console.log("  Is webhook call:", isWebhookCall);
+    console.log("  X-Webhook-Source:", request.headers.get('x-webhook-source'));
 
-    if (!session?.user?.lineUserId) {
-      console.error("❌ No LINE user ID found in session");
-      console.log("Session user:", session?.user);
+    let lineUserId: string | undefined;
 
-      // ถ้าไม่มี LINE login ให้ skip การส่ง LINE message
-      return NextResponse.json(
-        {
-          success: false,
-          message: "LINE messaging requires LINE login",
-          skipLine: true,
-        },
-        { status: 200 }
-      );
-    }
-
+    // Parse ข้อมูล receipt ก่อน
     console.log("📝 Parsing receipt data...");
     const receiptData: ReceiptData = await request.json();
+
+    if (isWebhookCall) {
+      // สำหรับ webhook calls - พยายามดึง LINE User ID จากข้อมูล order
+      console.log("🎯 Webhook call detected - attempting to get LINE User ID from order data");
+      
+      // ค้นหา order ในฐานข้อมูลเพื่อหา LINE User ID และข้อมูลสถานะ
+      if (receiptData.orderNumber) {
+        const order = await prisma.order.findFirst({
+          where: { orderNumber: receiptData.orderNumber },
+          include: { 
+            user: {
+              select: { lineUserId: true }
+            }
+          }
+        });
+        
+        if (order?.user?.lineUserId) {
+          lineUserId = order.user.lineUserId;
+          console.log("✅ Found LINE User ID from order:", lineUserId);
+          
+          // เพิ่มข้อมูลสถานะและวิธีการชำระเงินลงใน receiptData
+          receiptData.orderStatus = order.status as OrderStatus;
+          
+          // กำหนดวิธีการชำระเงินตามสถานะ
+          if (order.status === 'CONFIRMED') {
+            receiptData.paymentMethod = "บัตรเครดิต (Stripe)";
+          } else {
+            receiptData.paymentMethod = "โอนเงิน/แจ้งชำระเงิน";
+          }
+          
+          console.log("📊 Order status:", order.status);
+          console.log("💳 Payment method determined:", receiptData.paymentMethod);
+        } else {
+          console.warn("⚠️ No LINE User ID found in order data");
+        }
+      }
+      
+      if (!lineUserId) {
+        console.warn("❌ Cannot send LINE notification - no LINE User ID available");
+        return NextResponse.json(
+          {
+            success: false,
+            message: "No LINE User ID available for this order",
+            skipLine: true,
+          },
+          { status: 200 }
+        );
+      }
+    } else {
+      // สำหรับ regular API calls - ใช้ session
+      const session = await getServerSession(authOptions);
+      console.log("👤 LINE User ID from session:", session?.user?.lineUserId);
+
+      if (!session?.user?.lineUserId) {
+        console.error("❌ No LINE user ID found in session");
+        console.log("Session user:", session?.user);
+
+        // ถ้าไม่มี LINE login ให้ skip การส่ง LINE message
+        return NextResponse.json(
+          {
+            success: false,
+            message: "LINE messaging requires LINE login",
+            skipLine: true,
+          },
+          { status: 200 }
+        );
+      }
+      
+      lineUserId = session.user.lineUserId;
+    }
+    
     console.log("📊 Receipt data:", {
       orderNumber: receiptData.orderNumber,
       customerName: receiptData.customerName,
@@ -79,7 +148,7 @@ export async function POST(request: NextRequest) {
       };
       
       console.log("🔄 Using fallback text message");
-      const lineResponse = await sendLineMessage(session.user.lineUserId, simpleMessage);
+      const lineResponse = await sendLineMessage(lineUserId, simpleMessage);
       console.log("📨 Fallback message sent with status:", lineResponse.status);
       
       return NextResponse.json({
@@ -104,11 +173,11 @@ export async function POST(request: NextRequest) {
 
     // ส่ง message ไปยัง LINE user
     console.log("🚀 Calling sendLineMessage...");
-    console.log("🎯 Target LINE User ID:", session.user.lineUserId);
+    console.log("🎯 Target LINE User ID:", lineUserId);
     console.log("📏 Flex message size:", JSON.stringify(flexMessage).length, "characters");
     
     const lineResponse = await sendLineMessage(
-      session.user.lineUserId,
+      lineUserId,
       flexMessage
     );
     console.log("📨 sendLineMessage completed with status:", lineResponse.status);
@@ -189,11 +258,25 @@ function validateFlexMessage(message: any) {
 }
 
 function createReceiptFlexMessage(data: ReceiptData) {
-  // คำนวณยอดที่ต้องจ่าย
+  // คำนวณยอดที่ต้องจ่าย 
+  // data.total ควรจะรวมค่าจัดส่งแล้ว แต่เพื่อความแน่ใจให้ตรวจสอบ
+  const subtotalWithShipping = data.subtotal + data.shippingFee;
+  const totalAfterDiscount = subtotalWithShipping - data.discountAmount;
+  
   const finalAmount =
     data.paymentType === "DEPOSIT_PAYMENT"
-      ? data.depositAmount || 0
-      : data.total;
+      ? (data.depositAmount || 0)
+      : totalAfterDiscount;
+
+  // Debug logging
+  console.log("💰 LINE Message Total Calculation:");
+  console.log("  Subtotal:", data.subtotal);
+  console.log("  Shipping Fee:", data.shippingFee);
+  console.log("  Discount Amount:", data.discountAmount);
+  console.log("  Subtotal + Shipping:", subtotalWithShipping);
+  console.log("  Total After Discount:", totalAfterDiscount);
+  console.log("  Final Amount:", finalAmount);
+  console.log("  Payment Type:", data.paymentType);
 
   // สร้าง detailed flex message พร้อมรายละเอียดครบถ้วน
   const itemsToShow = data.items.slice(0, 5); // แสดงสูงสุด 5 รายการ
@@ -201,7 +284,7 @@ function createReceiptFlexMessage(data: ReceiptData) {
 
   return {
     type: "flex",
-    altText: `🔔 รอชำระเงิน ฿${finalAmount.toLocaleString()} - What Da Dog Pet Shop`,
+    altText: `🔔 รอชำระเงิน ฿${finalAmount.toLocaleString()} - Natpi & Corgi Farm and Pet Shop`,
     contents: {
       type: "bubble",
       header: {
@@ -210,7 +293,7 @@ function createReceiptFlexMessage(data: ReceiptData) {
         contents: [
           {
             type: "text",
-            text: "🐕 What Da Dog Pet Shop",
+            text: "Natpi & Corgi Farm and Pet Shop",
             weight: "bold",
             color: "#ffffff",
             size: "lg",
@@ -561,7 +644,8 @@ function createReceiptFlexMessage(data: ReceiptData) {
                     size: "md",
                     color: "#111111",
                     weight: "bold",
-                    flex: 1
+                    flex: 1,
+                    wrap: true
                   },
                   {
                     type: "text",
@@ -619,18 +703,60 @@ function createReceiptFlexMessage(data: ReceiptData) {
                 size: "md"
               },
               {
-                type: "text",
-                text: "⏳ รอการชำระเงิน",
-                size: "md",
-                color: "#FF6B35",
-                weight: "bold",
-                margin: "sm"
+                type: "box",
+                layout: "horizontal",
+                margin: "md",
+                contents: [
+                  {
+                    type: "text",
+                    text: "สถานะ:",
+                    size: "sm",
+                    color: "#555555",
+                    flex: 1
+                  },
+                  {
+                    type: "text",
+                    text: `${data.orderStatus ? ORDER_STATUS_INFO[data.orderStatus].icon : "⏳"} ${data.orderStatus ? ORDER_STATUS_INFO[data.orderStatus].label : "รอการชำระเงิน"}`,
+                    size: "sm",
+                    color: data.orderStatus ? ORDER_STATUS_INFO[data.orderStatus].color : "#FF6B35",
+                    weight: "bold",
+                    align: "end",
+                    flex: 2,
+                    wrap: true
+                  }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                margin: "sm",
+                contents: [
+                  {
+                    type: "text",
+                    text: "วิธีชำระเงิน:",
+                    size: "sm",
+                    color: "#555555",
+                    flex: 1
+                  },
+                  {
+                    type: "text",
+                    text: data.paymentMethod || "โอนเงิน/แจ้งชำระเงิน",
+                    size: "sm",
+                    color: "#111111",
+                    weight: "bold",
+                    align: "end",
+                    flex: 2,
+                    wrap: true
+                  }
+                ]
               },
               {
                 type: "text",
-                text: "กรุณาชำระเงินตามจำนวนที่ระบุและแจ้งการชำระเงินผ่านระบบภายใน 24 ชั่วโมง",
+                text: data.orderStatus === "CONFIRMED" 
+                  ? "✅ ชำระเงินเรียบร้อยแล้ว ทางร้านกำลังจัดเตรียมสินค้า"
+                  : "กรุณาชำระเงินตามจำนวนที่ระบุและแจ้งการชำระเงินผ่านระบบภายใน 24 ชั่วโมง",
                 size: "xs",
-                color: "#666666",
+                color: data.orderStatus === "CONFIRMED" ? "#4CAF50" : "#666666",
                 wrap: true,
                 margin: "sm"
               }
@@ -640,25 +766,7 @@ function createReceiptFlexMessage(data: ReceiptData) {
         paddingAll: "20px",
         spacing: "sm"
       },
-      footer: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          {
-            type: "button",
-            action: {
-              type: "uri",
-              label: "ดูรายละเอียดและแจ้งชำระเงิน 💳",
-              uri: process.env.NEXTAUTH_URL || "https://corgi.theredpotion.com" || "https://red1.theredpotion.com"
-            },
-            style: "primary",
-            color: "#06C755",
-            height: "sm"
-          }
-        ],
-        paddingAll: "20px",
-        spacing: "sm"
-      }
+
     }
   };
 }

@@ -67,7 +67,7 @@ export default function Navigation() {
           }}
           onClick={() => handleLiffNavigation(router, "/")}
         >
-          What Da Dog Pet Shop
+          Natpi & Corgi Farm and Pet Shop
         </Typography>
 
         {isAuthenticated ? (

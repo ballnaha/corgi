@@ -1,7 +1,7 @@
 export const DOMAINS = {
   production: "whatdadog.com",
   test: "corgi.theredpotion.com",
-  local: "localhost:3000",
+  local: "corgi.theredpotion.com",
 } as const;
 
 export const getBaseUrl = () => {
