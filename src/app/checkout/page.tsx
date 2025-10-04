@@ -447,22 +447,41 @@ export default function CheckoutPage() {
         const discountResponse = await fetch("/api/discount-codes");
         if (discountResponse.ok) {
           const discountData = await discountResponse.json();
-          const transformedDiscounts = discountData.map((code: any) => {
-            const rawType = code.type;
-            const normalizedType = typeof rawType === 'string' && rawType.toUpperCase() === 'PERCENTAGE'
-              ? 'percentage'
-              : typeof rawType === 'string' && rawType.toUpperCase() === 'FIXED_AMOUNT'
-              ? 'fixed'
-              : (String(rawType || '').toLowerCase() === 'percentage' ? 'percentage' : 'fixed');
-            return {
-              id: code.id,
-              code: code.code,
-              type: normalizedType as 'percentage' | 'fixed',
-              value: Number(code.value),
-              minAmount: code.minAmount ? Number(code.minAmount) : undefined,
-              description: code.description,
-            } as DiscountCode;
-          });
+          const now = Date.now();
+          const transformedDiscounts = discountData
+            .filter((code: any) => {
+              // Hide expired codes: validUntil exists and is before now
+              if (code.validUntil) {
+                const until = new Date(code.validUntil).getTime();
+                if (isFinite(until) && until < now) return false;
+              }
+              // Hide not-yet-active codes: validFrom exists and is after now
+              if (code.validFrom) {
+                const from = new Date(code.validFrom).getTime();
+                if (isFinite(from) && from > now) return false;
+              }
+              // Only active codes
+              if (code.isActive === false) return false;
+              // Usage limit reached
+              if (code.usageLimit && code.usageCount >= code.usageLimit) return false;
+              return true;
+            })
+            .map((code: any) => {
+              const rawType = code.type;
+              const normalizedType = typeof rawType === 'string' && rawType.toUpperCase() === 'PERCENTAGE'
+                ? 'percentage'
+                : typeof rawType === 'string' && rawType.toUpperCase() === 'FIXED_AMOUNT'
+                ? 'fixed'
+                : (String(rawType || '').toLowerCase() === 'percentage' ? 'percentage' : 'fixed');
+              return {
+                id: code.id,
+                code: code.code,
+                type: normalizedType as 'percentage' | 'fixed',
+                value: Number(code.value),
+                minAmount: code.minAmount ? Number(code.minAmount) : undefined,
+                description: code.description,
+              } as DiscountCode;
+            });
           setAvailableDiscountCodes(transformedDiscounts);
         }
       } catch (error) {
@@ -527,6 +546,8 @@ export default function CheckoutPage() {
     updateOrderAnalysis();
   }, [appliedDiscount, cartItems, selectedPayment, paymentMethods]);
 
+  
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       handleLiffNavigation(router, "/auth/signin");
@@ -553,6 +574,30 @@ export default function CheckoutPage() {
     (sum, item) => sum + calculateUnitPrice(item.product) * item.quantity,
     0
   );
+
+  // Re-validate applied discount to hide it if expired/inactive
+  useEffect(() => {
+    const revalidate = async () => {
+      if (!appliedDiscount) return;
+      try {
+        const res = await fetch('/api/discount-codes/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: appliedDiscount.code, subtotal })
+        });
+        const data = await res.json();
+        if (!res.ok || !data?.valid) {
+          setAppliedDiscount(null);
+          setDiscountCode('');
+          showSnackbar(data?.error || 'รหัสส่วนลดหมดอายุแล้ว', 'warning');
+        }
+      } catch {
+        // ignore network errors for revalidation
+      }
+    };
+    revalidate();
+    // Re-run when subtotal or code changes
+  }, [appliedDiscount?.code, subtotal]);
 
   // ตรวจสอบส่วนลดเมื่อ subtotal เปลี่ยนแปลง
   useEffect(() => {
