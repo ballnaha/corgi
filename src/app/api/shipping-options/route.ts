@@ -72,17 +72,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Normalize numeric/string fields
-    const normalizedPrice = typeof price === 'string' ? Number(price) : price;
-    const normalizedSortOrder = typeof sortOrder === 'string' ? Number(sortOrder) : sortOrder;
-    const normalizedEstimatedDaysStr = estimatedDays === undefined || estimatedDays === null ? undefined : String(estimatedDays);
-    const normalizedForPetsOnly = typeof forPetsOnly === 'string' ? (forPetsOnly === 'true') : !!forPetsOnly;
+  const normalizedPrice = typeof price === 'string' ? Number(price) : price;
+  const normalizedSortOrder = typeof sortOrder === 'string' ? Number(sortOrder) : sortOrder;
+  // Prisma schema requires a non-null string for estimatedDays; coerce missing values to empty string
+  const normalizedEstimatedDays = String(estimatedDays ?? "");
+  const normalizedForPetsOnly = typeof forPetsOnly === 'string' ? (forPetsOnly === 'true') : !!forPetsOnly;
 
     const shippingOption = await prisma.shippingOption.create({
       data: {
         name,
         description,
         price: normalizedPrice,
-        estimatedDays: normalizedEstimatedDaysStr,
+  estimatedDays: normalizedEstimatedDays,
         isActive,
         sortOrder: normalizedSortOrder,
         method,

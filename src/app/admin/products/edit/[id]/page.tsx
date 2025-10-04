@@ -964,7 +964,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                         <DatePicker
                           label="วันเกิด"
                           value={formData.birthDate}
-                          onChange={(newValue) => setFormData(prev => ({ ...prev, birthDate: newValue }))}
+                          onChange={(newValue) => setFormData(prev => ({ ...prev, birthDate: newValue as Dayjs | null }))}
                           format="DD/MM/YYYY"
                           maxDate={dayjs()}
                           slotProps={{
@@ -1020,7 +1020,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                           <DatePicker
                             label="วันที่ฉีดเข็มที่ 1 (จริง)"
                             value={formData.firstVaccineDate}
-                            onChange={(newValue) => setFormData(prev => ({ ...prev, firstVaccineDate: newValue }))}
+                            onChange={(newValue) => setFormData(prev => ({ ...prev, firstVaccineDate: newValue as Dayjs | null }))}
                             format="DD/MM/YYYY"
                             slotProps={{
                               textField: {
@@ -1041,7 +1041,7 @@ export default function EditProductPage({ params }: EditProductPageProps) {
                             <DatePicker
                               label="วันที่ฉีดเข็มที่ 2 (จริง)"
                               value={formData.secondVaccineDate}
-                              onChange={(newValue) => setFormData(prev => ({ ...prev, secondVaccineDate: newValue }))}
+                              onChange={(newValue) => setFormData(prev => ({ ...prev, secondVaccineDate: newValue as Dayjs | null }))}
                               format="DD/MM/YYYY"
                               slotProps={{
                                 textField: {

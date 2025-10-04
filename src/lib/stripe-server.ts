@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
 // Server-side Stripe instance only
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+// Omit apiVersion to use the version bundled with the installed SDK,
+// which avoids mismatched literal type errors during upgrades.
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
