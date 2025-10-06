@@ -312,6 +312,8 @@ model Banner {
   imageAlt    String   @map("image_alt")
   background  String   // Gradient CSS string
   linkUrl     String?  @map("link_url")
+  bannerUrl   String?  @map("banner_url") // Full-size banner URL
+  bannerType  String   @default("custom") @map("banner_type") // custom | fullsize
   isActive    Boolean  @default(true) @map("is_active")
   sortOrder   Int      @default(0) @map("sort_order")
   createdAt   DateTime @default(now()) @map("created_at")

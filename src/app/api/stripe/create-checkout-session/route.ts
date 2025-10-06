@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe-server";
+import { getStripeServer } from "@/lib/stripe-server";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 import { prisma } from "@/lib/prisma";
 
@@ -7,8 +7,18 @@ export async function POST(request: NextRequest) {
   let body: any = {}; // เก็บไว้สำหรับ error handling
   
   try {
+    console.log("=== STRIPE CHECKOUT SESSION START ===");
+    console.log("Request method:", request.method);
+    console.log("Request URL:", request.url);
+    console.log("Environment check:");
+    console.log("  - STRIPE_SECRET_KEY exists:", !!process.env.STRIPE_SECRET_KEY);
+    console.log("  - NEXTAUTH_SECRET exists:", !!process.env.NEXTAUTH_SECRET);
+    console.log("  - NEXTAUTH_URL:", process.env.NEXTAUTH_URL);
+    
     // ตรวจสอบการ authentication
+    console.log("Checking authentication...");
     const authUser = await getAuthenticatedUser(request);
+    console.log("Auth result:", authUser ? `User ${authUser.id}` : "No auth");
     if (!authUser?.id) {
       return NextResponse.json(
         { error: "Unauthorized" },
@@ -51,18 +61,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("Found user:", user.id);
+  console.log("Found user:", user.id);
+
+  // Initialize Stripe early to catch config issues before DB work
+  const stripe = getStripeServer();
     
     // บันทึก order ข้อมูลชั่วคราวเพื่อใช้หลัง payment สำเร็จ
+    // Remove paymentMethodType from orderDataWithoutItems as it's not in schema
+    const { paymentMethodType, ...validOrderData } = orderDataWithoutItems || {};
+    
     await prisma.order.create({
       data: {
-        ...orderDataWithoutItems,
+        ...validOrderData,
         // ensure payment method is captured on pre-created order
-        paymentMethod: orderDataWithoutItems?.paymentMethodType || 'credit_card',
+        paymentMethod: paymentMethodType || 'credit_card',
         orderNumber,
         userId: user.id, // เพิ่ม userId ที่จำเป็น
         status: "PAYMENT_PENDING", // ใช้ค่าที่ valid ใน orders_status enum
-        ...(orderDataWithoutItems?.paymentMethodId ? { paymentMethodId: orderDataWithoutItems.paymentMethodId } : {}),
+        ...(validOrderData?.paymentMethodId ? { paymentMethodId: validOrderData.paymentMethodId } : {}),
         orderItems: {
           create: items?.map((item: any) => ({
             productId: item.productId,
@@ -200,25 +216,55 @@ export async function POST(request: NextRequest) {
     }
 
     // สร้าง Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: lineItems,
-      mode: 'payment',
-      success_url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_number=${orderNumber}`,
-      cancel_url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/checkout/cancelled`,
-      customer_email: customerInfo.email,
-      // ใช้คูปองส่วนลดถ้ามี
-      ...(discounts ? { discounts } : {}),
-      // ปิด billing_address_collection และ shipping_address_collection
-      metadata: {
-        orderNumber,
-        userId: authUser.id,
-        customerName: customerInfo.name,
-        customerEmail: customerInfo.email,
-        customerPhone: customerInfo.phone,
-      },
-      expires_at: Math.floor(Date.now() / 1000) + (30 * 60), // หมดอายุใน 30 นาที
-    });
+    const customerEmail = customerInfo?.email && String(customerInfo.email).includes('@')
+      ? String(customerInfo.email)
+      : undefined;
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: lineItems,
+        mode: 'payment',
+        success_url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_number=${orderNumber}`,
+        cancel_url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/checkout/cancelled`,
+        ...(customerEmail ? { customer_email: customerEmail } : {}),
+        // ใช้คูปองส่วนลดถ้ามี
+        ...(discounts ? { discounts } : {}),
+        // ปิด billing_address_collection และ shipping_address_collection
+        metadata: {
+          orderNumber,
+          userId: authUser.id,
+          customerName: customerInfo.name,
+          customerEmail: customerEmail || '',
+          customerPhone: customerInfo.phone,
+        },
+      });
+    } catch (sessionError: any) {
+      // บางเวอร์ชันของ API อาจไม่รองรับ discounts ที่ session-level
+      const msg = sessionError?.message || '';
+      const code = sessionError?.code || '';
+      const type = sessionError?.type || '';
+      console.warn('Primary session creation failed, retrying without discounts...', { msg, code, type });
+      try {
+        session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          line_items: lineItems,
+          mode: 'payment',
+          success_url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_number=${orderNumber}`,
+          cancel_url: `${process.env.NEXTAUTH_URL || 'https://corgi.theredpotion.com'}/checkout/cancelled`,
+          ...(customerEmail ? { customer_email: customerEmail } : {}),
+          metadata: {
+            orderNumber,
+            userId: authUser.id,
+            customerName: customerInfo.name,
+            customerEmail: customerEmail || '',
+            customerPhone: customerInfo.phone,
+          },
+        });
+      } catch (retryError) {
+        throw retryError;
+      }
+    }
 
     console.log("Checkout session created:", session.id);
     console.log("Checkout URL:", session.url);
@@ -231,9 +277,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("=== STRIPE CHECKOUT ERROR ===");
-    console.error("Error creating checkout session:", error);
+    console.error("Error type:", error?.constructor?.name);
     console.error("Error message:", error?.message);
     console.error("Error code:", error?.code);
+    console.error("Error type field:", error?.type);
     console.error("Error stack:", error?.stack);
     
     // Log ข้อมูลที่เกี่ยวข้อง (ใช้ try-catch เพื่อป้องกัน error)
@@ -255,10 +302,23 @@ export async function POST(request: NextRequest) {
       console.error("Could not stringify error:", stringifyError);
     }
     
+    // Configuration error (e.g., missing STRIPE_SECRET_KEY)
+    if (error?.code === 'CONFIG_ERROR') {
+      console.error("❌ CONFIG_ERROR detected");
+      return NextResponse.json(
+        {
+          error: 'Stripe is not configured',
+          details: error?.message,
+          hint: 'Set STRIPE_SECRET_KEY in your environment',
+        },
+        { status: 500 }
+      );
+    }
+
     // ตรวจสอบ error แต่ละประเภท
     if (error?.code?.startsWith('P')) {
       // Prisma error
-      console.error("Prisma error detected");
+      console.error("❌ Prisma error detected");
       return NextResponse.json(
         { 
           error: "Database error while creating order", 
@@ -271,7 +331,7 @@ export async function POST(request: NextRequest) {
     
     // Stripe error
     if (error?.type) {
-      console.error("Stripe error detected:", error?.type);
+      console.error("❌ Stripe error detected:", error?.type);
       return NextResponse.json(
         { 
           error: "Stripe API error", 
@@ -283,10 +343,13 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Generic error with maximum detail
+    console.error("❌ Generic error, returning detailed response");
     return NextResponse.json(
       { 
         error: "Failed to create checkout session", 
-        details: error?.message || "Unknown error occurred",
+        details: error?.message || String(error) || "Unknown error occurred",
+        errorType: error?.constructor?.name || typeof error,
         timestamp: new Date().toISOString()
       },
       { status: 500 }

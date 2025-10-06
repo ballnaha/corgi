@@ -26,7 +26,7 @@ export default function UserProfile() {
       }}
     >
       <Avatar
-        src={user.pictureUrl || ""}
+        src={user.pictureUrl || undefined}
         alt={user.displayName || "User"}
         sx={{ width: 48, height: 48 }}
       />

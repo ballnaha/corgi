@@ -55,7 +55,18 @@ export async function PATCH(
 
     const body = await request.json();
     
-    const { title, subtitle, imageUrl, imageAlt, background, linkUrl, isActive, sortOrder } = body;
+    const { 
+      title, 
+      subtitle, 
+      imageUrl, 
+      imageAlt, 
+      background, 
+      linkUrl, 
+      bannerUrl, 
+      bannerType,
+      isActive, 
+      sortOrder 
+    } = body;
 
     // ตรวจสอบว่า banner มีอยู่จริง
     const existingBanner = await prisma.banner.findUnique({
@@ -74,10 +85,12 @@ export async function PATCH(
     
     if (title !== undefined) updateData.title = title.trim();
     if (subtitle !== undefined) updateData.subtitle = subtitle?.trim() || null;
-    if (imageUrl !== undefined) updateData.imageUrl = imageUrl.trim();
+    if (imageUrl !== undefined) updateData.imageUrl = imageUrl?.trim() || '/images/icon_logo.png'; // fallback to default logo
     if (imageAlt !== undefined) updateData.imageAlt = imageAlt.trim();
-    if (background !== undefined) updateData.background = background.trim();
+    if (background !== undefined) updateData.background = background?.trim() || '';
     if (linkUrl !== undefined) updateData.linkUrl = linkUrl?.trim() || null;
+    if (bannerUrl !== undefined) updateData.bannerUrl = bannerUrl?.trim() || null;
+    if (bannerType !== undefined) updateData.bannerType = bannerType || 'custom';
     if (isActive !== undefined) updateData.isActive = isActive;
     if (sortOrder !== undefined) updateData.sortOrder = sortOrder;
 

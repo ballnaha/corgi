@@ -1207,7 +1207,7 @@ export default function ProfilePage() {
         >
         {/* User Avatar */}
         <Avatar
-          src={displayData.pictureUrl || authUser?.pictureUrl || ""}
+          src={displayData.pictureUrl || authUser?.pictureUrl || undefined}
           alt={displayData.displayName || authUser?.displayName || "User"}
           sx={{
             width: 100,

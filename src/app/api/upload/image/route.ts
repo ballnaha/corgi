@@ -40,12 +40,21 @@ export async function POST(request: NextRequest) {
     const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const filename = `${timestamp}_${originalName}`;
 
-    // Determine upload directory based on usage (check if it's for blog)
+    // Determine upload directory based on usage
     const usage = formData.get("usage") as string || "products";
     const oldImageUrl = formData.get("oldImageUrl") as string; // For deleting old image
     const isForBlog = usage === "blog";
+    const isForBannerCustom = usage === "banner-custom";
     
-    const uploadDir = path.join(process.cwd(), "public", "uploads", isForBlog ? "blog" : "products");
+    let uploadDir: string;
+    if (isForBlog) {
+      uploadDir = path.join(process.cwd(), "public", "uploads", "blog");
+    } else if (isForBannerCustom) {
+      uploadDir = path.join(process.cwd(), "public", "uploads", "banners");
+    } else {
+      uploadDir = path.join(process.cwd(), "public", "uploads", "products");
+    }
+    
     await mkdir(uploadDir, { recursive: true });
 
     // Delete old image if provided
@@ -62,12 +71,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Process and save images with appropriate aspect ratios
-    // For blog, only save large image (1600x900)
-    const sizes = isForBlog ? [
-      { name: "large", width: 1600, height: 900 }, // 16:9 for blog - only large
-    ] : [
-      { name: "large", width: 1200, height: 1200 }, // 1:1 for products
-    ];
+    let sizes: Array<{ name: string; width: number; height: number }> = [];
+    
+    if (isForBlog) {
+      sizes = [
+        { name: "large", width: 1600, height: 900 }, // 16:9 for blog - only large
+      ];
+    } else if (isForBannerCustom) {
+      sizes = [
+        { name: "large", width: 800, height: 800 }, // Larger size for banner custom images
+      ];
+    } else {
+      sizes = [
+        { name: "large", width: 1200, height: 1200 }, // 1:1 for products
+      ];
+    }
 
     const savedImages = [];
 
@@ -121,10 +139,19 @@ export async function POST(request: NextRequest) {
       const filePath = path.join(uploadDir, sizeFilename);
       await writeFile(filePath, processedBuffer);
 
+      let uploadPath: string;
+      if (isForBlog) {
+        uploadPath = "/uploads/blog";
+      } else if (isForBannerCustom) {
+        uploadPath = "/uploads/banners";
+      } else {
+        uploadPath = "/uploads/products";
+      }
+
       savedImages.push({
         size: size.name,
         filename: sizeFilename,
-        url: `/uploads/${isForBlog ? "blog" : "products"}/${sizeFilename}`,
+        url: `${uploadPath}/${sizeFilename}`,
         width: size.width,
         height: size.height,
       });
@@ -133,12 +160,26 @@ export async function POST(request: NextRequest) {
     // Return the large image URL as the main URL for easier usage
     const mainImage = savedImages.find(img => img.size === "large") || savedImages[0];
     
+    let message: string;
+    let aspectRatio: string;
+    
+    if (isForBlog) {
+      message = 'อัปโหลดรูปภาพสำเร็จ (ขนาด 16:9)';
+      aspectRatio = '16:9';
+    } else if (isForBannerCustom) {
+      message = 'อัปโหลดรูปภาพ Banner สำเร็จ (ขนาด 800x800px)';
+      aspectRatio = '1:1';
+    } else {
+      message = 'อัปโหลดรูปภาพสำเร็จ';
+      aspectRatio = '1:1';
+    }
+    
     return NextResponse.json({
       success: true,
-      url: mainImage.url, // Main URL for blog forms
+      url: mainImage.url, // Main URL for forms
       images: savedImages,
-      message: `อัปโหลดรูปภาพสำเร็จ${isForBlog ? ' (ขนาด 16:9)' : ''}`,
-      aspectRatio: isForBlog ? '16:9' : '1:1',
+      message: message,
+      aspectRatio: aspectRatio,
     });
   } catch (error: any) {
     console.error("Error uploading image:", error);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe-server";
+import { getStripeServer } from "@/lib/stripe-server";
 import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // ตรวจสอบ webhook signature
+    const stripe = getStripeServer();
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
@@ -63,6 +64,12 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("Stripe webhook error:", error.message);
+    if (error?.code === 'CONFIG_ERROR') {
+      return NextResponse.json(
+        { error: 'Stripe not configured', details: error?.message },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 400 }

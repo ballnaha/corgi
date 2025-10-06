@@ -13,6 +13,8 @@ interface Banner {
   imageAlt: string;
   background: string;
   linkUrl: string | null;
+  bannerUrl: string | null;
+  bannerType: string;
   sortOrder: number;
 }
 
@@ -34,9 +36,10 @@ export default function BannerSection() {
       imageUrl: "/images/icon_logo.png",
       imageAlt: "Pet Shop Promotion",
       linkUrl: null,
+      bannerUrl: null,
+      bannerType: "custom",
       sortOrder: 0
     },
-
   ];
 
   // Load banners from API
@@ -122,280 +125,166 @@ export default function BannerSection() {
     }
   };
 
-  const renderBanner = (banner: Banner, index: number) => (
-    <Box
-      key={banner.id}
-      onClick={() => handleBannerClick(banner)}
-      sx={{
-        background: banner.background,
-        borderRadius: 2,
-        p: 3,
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        overflow: 'visible',
-        minHeight: 160,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        opacity: currentSlide === index ? 1 : 0,
-        transform: currentSlide === index ? 'translateX(0)' : 
-                   index > currentSlide ? 'translateX(100%)' : 'translateX(-100%)',
-        transition: 'all 0.5s ease-in-out',
-        cursor: banner.linkUrl ? 'pointer' : 'default',
-        '&:hover': {
-          transform: currentSlide === index ? 'scale(1.02)' : 
-                     index > currentSlide ? 'translateX(100%) scale(1.02)' : 'translateX(-100%) scale(1.02)',
+  const renderBanner = (banner: Banner, index: number) => {
+    // For fullsize banners, use bannerUrl as background image
+    const isFullsize = banner.bannerType === 'fullsize';
+    
+    const bannerStyle = isFullsize && banner.bannerUrl 
+      ? {
+          backgroundImage: `url(${banner.bannerUrl})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
         }
-      }}
-    >
-      {/* Left content */}
-      <Box sx={{ flex: 1, zIndex: 2, maxWidth: '60%' }}>
-        <Typography
-          variant="h4"
-          sx={{
-            color: "white",
-            fontWeight: '600',
-            fontSize: '1.4rem',
-            mb: 0.5,
-            lineHeight: 1.1
-          }}
-        >
-          {banner.title}
-        </Typography>
-        {banner.subtitle && (
-          <Typography
-            variant="h6"
-            sx={{
-              color: "white",
-              fontWeight: '400',
-              fontSize: '0.95rem',
-              lineHeight: 1.2,
-              opacity: 0.8
-            }}
-          >
-            {banner.subtitle}
-          </Typography>
-        )}
-      </Box>
+      : { background: banner.background };
 
-      {/* Right image - 3D effect with overflow */}
+    return (
       <Box
+        key={banner.id}
+        onClick={() => handleBannerClick(banner)}
         sx={{
+          ...bannerStyle,
+          borderRadius: { xs: 2, md: 3 },
+          p: isFullsize ? 0 : { xs: 3, sm: 4, md: 5 },
           position: 'absolute',
-          right: 8,
-          top: -10,
-          zIndex: 2,
-          width: 160,
-          height: 180,
+          top: 0,
+          left: 0,
+          right: 0,
+          overflow: 'visible',
+          minHeight: { xs: 150, sm: 200, md: 400, lg: 400 },
+          height: { xs: 150, sm: 200, md: 400, lg: 400 },
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'space-between',
+          opacity: currentSlide === index ? 1 : 0,
+          transform: currentSlide === index ? 'translateX(0)' : 
+                     index > currentSlide ? 'translateX(100%)' : 'translateX(-100%)',
+          transition: 'all 0.5s ease-in-out',
+          cursor: banner.linkUrl ? 'pointer' : 'default',
+          '&:hover': {
+            transform: currentSlide === index ? 'scale(1.01)' : 
+                       index > currentSlide ? 'translateX(100%) scale(1.01)' : 'translateX(-100%) scale(1.01)',
+          }
         }}
       >
-        <Image
-          src={banner.imageUrl}
-          alt={banner.imageAlt}
-          width={140}
-          height={140}
-          style={{
-            objectFit: 'contain',
-            borderRadius: '12px',
-            zIndex: 9999,
-            filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))'
-          }}
-        />
-      </Box>
+        {/* Text content overlay for fullsize banners */}
+        {isFullsize && (
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.05)',
+              borderRadius: { xs: 2, md: 3 },
+              zIndex: 1
+            }}
+          />
+        )}
 
-      {/* Background decorative stars and paws */}
-      <Box
-        sx={{
-          position: 'absolute',
-          right: 20,
-          top: 20,
-          color: 'rgba(255, 255, 255, 0.4)',
-          fontSize: '1rem',
-          zIndex: 1
-        }}
-      >
-        ✨
-      </Box>
-      
-      {/* Paw icon decorations */}
-      <Box
-        sx={{
-          position: 'absolute',
-          right: 80,
-          top: 35,
-          zIndex: 1,
-          opacity: 0.3,
-          transform: 'rotate(-10deg)'
-        }}
-      >
-        <Image
-          src="/images/icon-paw.png"
-          alt="paw"
-          width={24}
-          height={24}
-          style={{
-            filter: 'brightness(0) invert(1)', // Makes it white
-            opacity: 1
-          }}
-        />
-      </Box>
-      
-      <Box
-        sx={{
-          position: 'absolute',
-          right: 45,
-          bottom: 25,
-          color: 'rgba(255, 255, 255, 0.4)',
-          fontSize: '0.9rem',
-          zIndex: 1
-        }}
-      >
-        ✨
-      </Box>
-      
-      <Box
-        sx={{
-          position: 'absolute',
-          left: 30,
-          top: 15,
-          zIndex: 1,
-          opacity: 0.25,
-          transform: 'rotate(-15deg)'
-        }}
-      >
-        <Image
-          src="/images/icon-paw.png"
-          alt="paw"
-          width={24}
-          height={24}
-          style={{
-            filter: 'brightness(0) invert(1)', // Makes it white
-            opacity: 1
-          }}
-        />
-      </Box>
-      
-      <Box
-        sx={{
-          position: 'absolute',
-          left: 60,
-          bottom: 30,
-          zIndex: 1,
-          opacity: 0.5,
-          transform: 'rotate(25deg)'
-        }}
-      >
-        <Image
-          src="/images/icon-paw.png"
-          alt="paw"
-          width={18}
-          height={18}
-          style={{
-            filter: 'brightness(0) invert(1)', // Makes it white
-            opacity: 0.6
-          }}
-        />
-      </Box>
-      
-      <Box
-        sx={{
-          position: 'absolute',
-          right: 110,
-          bottom: 10,
-          zIndex: 1,
-          opacity: 0.15,
-          transform: 'rotate(45deg)'
-        }}
-      >
-        <Image
-          src="/images/icon-paw.png"
-          alt="paw"
-          width={18}
-          height={18}
-          style={{
-            filter: 'brightness(0) invert(1)', // Makes it white
-            opacity: 0.9
-          }}
-        />
-      </Box>
-      
-      {/* Additional paw decorations using SVG */}
-      <Box
-        sx={{
-          position: 'absolute',
-          left: 15,
-          bottom: 10,
-          zIndex: 1,
-          opacity: 0.1,
-          transform: 'rotate(-30deg)'
-        }}
-      >
-        <Image
-          src="/images/paw-hero.svg"
-          alt="paw"
-          width={20}
-          height={20}
-          style={{
-            filter: 'brightness(0) invert(1)', // Makes it white
-            opacity: 0.5
-          }}
-        />
-      </Box>
-      
-      <Box
-        sx={{
-          position: 'absolute',
-          right: 25,
-          bottom: 40,
-          zIndex: 1,
-          opacity: 0.12,
-          transform: 'rotate(60deg)'
-        }}
-      >
-        <Image
-          src="/images/paw-hero.svg"
-          alt="paw"
-          width={15}
-          height={15}
-          style={{
-            filter: 'brightness(0) invert(1)', // Makes it white
-            opacity: 0.7
-          }}
-        />
-      </Box>
+        {/* Left content - Hide text for fullsize banners */}
+        {!isFullsize && (
+          <Box sx={{ flex: 1, zIndex: 2, maxWidth: { xs: '60%', md: '65%' } }}>
+            <Typography
+              variant="h4"
+              sx={{
+                color: "white",
+                fontWeight: '600',
+                fontSize: { xs: '1.8rem', sm: '1.3rem', md: '2rem', lg: '2.5rem' },
+                mb: { xs: 0.5, md: 1 },
+                lineHeight: 1.1
+              }}
+            >
+              {banner.title}
+            </Typography>
+            {banner.subtitle && (
+              <Typography
+                variant="h6"
+                sx={{
+                  color: "white",
+                  fontWeight: '400',
+                  fontSize: { xs: '1.3rem', sm: '0.9rem', md: '1.2rem', lg: '1.4rem' },
+                  lineHeight: 1.2,
+                  opacity: 0.9
+                }}
+              >
+                {banner.subtitle}
+              </Typography>
+            )}
+          </Box>
+        )}
 
-      {/* Background decorative circles */}
-      <Box
-        sx={{
-          position: 'absolute',
-          right: -30,
-          top: -30,
-          width: 100,
-          height: 100,
-          borderRadius: '50%',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          zIndex: 1
-        }}
-      />
-      <Box
-        sx={{
-          position: 'absolute',
-          left: -20,
-          bottom: -20,
-          width: 60,
-          height: 60,
-          borderRadius: '50%',
-          backgroundColor: 'rgba(255, 255, 255, 0.08)',
-          zIndex: 1
-        }}
-      />
-    </Box>
-  );
+        {/* Right image - Only show for custom banners */}
+        {!isFullsize && (
+          <Box
+            sx={{
+              position: 'absolute',
+              right: { xs: 8, md: 16 },
+              top: { xs: -10, md: -20 },
+              zIndex: 2,
+              width: { xs: 120, sm: 140, md: 200, lg: 240 },
+              height: { xs: 140, sm: 160, md: 220, lg: 260 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {banner.imageUrl && (
+              <Image
+                src={banner.imageUrl}
+                alt={banner.imageAlt}
+                width={0}
+                height={0}
+                sizes="(max-width: 600px) 120px, (max-width: 900px) 140px, (max-width: 1200px) 200px, 240px"
+                style={{
+                  width: '100%',
+                  height: 'auto',
+                  maxWidth: '240px',
+                  maxHeight: '240px',
+                  objectFit: 'contain',
+                  borderRadius: '12px',
+                  zIndex: 9999,
+                  filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.15))'
+                }}
+              />
+            )}
+          </Box>
+        )}
+
+        {/* Background decorative stars and paws - Only show for custom banners */}
+        {!isFullsize && (
+          <>
+            <Box
+              sx={{
+                position: 'absolute',
+                right: { xs: 20, md: 30 },
+                top: { xs: 20, md: 30 },
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: { xs: '1rem', md: '1.5rem' },
+                zIndex: 1
+              }}
+            >
+              ✨
+            </Box>
+
+            <Box
+              sx={{
+                position: 'absolute',
+                left: { xs: 15, md: 25 },
+                bottom: { xs: 15, md: 25 },
+                color: 'rgba(255, 255, 255, 1)',
+                fontSize: { xs: '1.2rem', md: '1.8rem' },
+                zIndex: 1
+              }}
+            >
+              🐾
+            </Box>
+          </>
+        )}
+      </Box>
+    );
+  };
 
   // Don't render anything while loading
   if (loading) {
@@ -429,11 +318,12 @@ export default function BannerSection() {
       <Box
         sx={{
           position: 'relative',
-          minHeight: 140,
+          minHeight: { xs: 150, sm: 200, md: 400, lg: 400 },
+          height: 'auto',
           overflow: 'visible',
-          borderRadius: 4,
-          touchAction: 'pan-y', // Allow vertical scrolling but handle horizontal touches
-          userSelect: 'none', // Prevent text selection during swipe
+          borderRadius: { xs: 4, md: 5 },
+          touchAction: 'pan-y',
+          userSelect: 'none',
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -447,8 +337,8 @@ export default function BannerSection() {
         sx={{
           display: 'flex',
           justifyContent: 'center',
-          gap: 1,
-          mt: 4,
+          gap: { xs: 1, md: 1.5 },
+          mt: { xs: 3, md: 4 },
         }}
       >
         {banners.map((_, index) => (
@@ -456,8 +346,8 @@ export default function BannerSection() {
             key={index}
             onClick={() => handleDotClick(index)}
             sx={{
-              width: 8,
-              height: 8,
+              width: { xs: 8, md: 10 },
+              height: { xs: 8, md: 10 },
               borderRadius: '50%',
               backgroundColor: currentSlide === index ? colors.primary.main : 'rgba(0, 0, 0, 0.3)',
               cursor: 'pointer',
@@ -465,6 +355,7 @@ export default function BannerSection() {
               transform: currentSlide === index ? 'scale(1.2)' : 'scale(1)',
               '&:hover': {
                 backgroundColor: currentSlide === index ? colors.primary.main : 'rgba(0, 0, 0, 0.5)',
+                transform: 'scale(1.3)',
               }
             }}
           />

@@ -64,9 +64,10 @@ export default function ProductDetail({
   // Use product images if available, otherwise use main image
   const productImages = React.useMemo(() => {
     if (product.images && product.images.length > 0) {
-      return product.images.map((img) => getImageUrl(img.imageUrl));
+      return product.images.map((img) => getImageUrl(img.imageUrl)).filter(url => url);
     }
-    return [getImageUrl(product.image || product.imageUrl || "")];
+    const mainImageUrl = getImageUrl(product.image || product.imageUrl || "");
+    return mainImageUrl ? [mainImageUrl] : [];
   }, [product.images, product.image, product.imageUrl]);
 
   // Get background color based on product category

@@ -100,23 +100,53 @@ export async function POST(request: NextRequest) {
       // สำหรับ regular API calls - ใช้ session
       const session = await getServerSession(authOptions);
       console.log("👤 LINE User ID from session:", session?.user?.lineUserId);
+      console.log("👤 Full session user:", session?.user);
 
       if (!session?.user?.lineUserId) {
-        console.error("❌ No LINE user ID found in session");
-        console.log("Session user:", session?.user);
-
-        // ถ้าไม่มี LINE login ให้ skip การส่ง LINE message
-        return NextResponse.json(
-          {
-            success: false,
-            message: "LINE messaging requires LINE login",
-            skipLine: true,
-          },
-          { status: 200 }
-        );
+        console.warn("❌ No LINE user ID found in session, trying to find from database...");
+        
+        // พยายามหา LINE User ID จากฐานข้อมูลผ่าอี email หรือ phone
+        if (receiptData.customerEmail || receiptData.customerPhone) {
+          try {
+            const user = await prisma.user.findFirst({
+              where: {
+                OR: [
+                  receiptData.customerEmail ? { email: receiptData.customerEmail } : {},
+                  receiptData.customerPhone ? { phoneNumber: receiptData.customerPhone } : {}
+                ].filter(condition => Object.keys(condition).length > 0)
+              },
+              select: { lineUserId: true, email: true, phoneNumber: true }
+            });
+            
+            if (user?.lineUserId) {
+              lineUserId = user.lineUserId;
+              console.log("✅ Found LINE User ID from database:", lineUserId);
+              console.log("📧 Matched by email:", user.email);
+              console.log("📱 Matched by phone:", user.phoneNumber);
+            } else {
+              console.warn("⚠️ User found in database but no LINE User ID available");
+            }
+          } catch (dbError) {
+            console.error("❌ Database query failed:", dbError);
+          }
+        }
+        
+        if (!lineUserId) {
+          console.error("❌ No LINE user ID found in session or database");
+          
+          // ถ้าไม่มี LINE login ให้ skip การส่ง LINE message
+          return NextResponse.json(
+            {
+              success: false,
+              message: "LINE messaging requires LINE login or linked account",
+              skipLine: true,
+            },
+            { status: 200 }
+          );
+        }
+      } else {
+        lineUserId = session.user.lineUserId;
       }
-      
-      lineUserId = session.user.lineUserId;
     }
     
     console.log("📊 Receipt data:", {
@@ -181,6 +211,23 @@ export async function POST(request: NextRequest) {
       flexMessage
     );
     console.log("📨 sendLineMessage completed with status:", lineResponse.status);
+
+    // ส่ง notification ให้ admin ด้วย (ถ้ามีการตั้งค่า LINE_ADMIN_USER_ID)
+    const adminLineUserId = process.env.LINE_ADMIN_USER_ID;
+    if (adminLineUserId && adminLineUserId.trim()) {
+      console.log("👨‍💼 Sending admin notification to:", adminLineUserId);
+      
+      try {
+        const adminMessage = createAdminNotificationMessage(receiptData);
+        const adminResponse = await sendLineMessage(adminLineUserId, adminMessage);
+        console.log("✅ Admin notification sent successfully with status:", adminResponse.status);
+      } catch (adminError) {
+        console.error("❌ Failed to send admin notification:", adminError);
+        // ไม่ throw error เพื่อให้การส่งให้ user ยังคงสำเร็จ
+      }
+    } else {
+      console.log("ℹ️ LINE_ADMIN_USER_ID not configured - skipping admin notification");
+    }
 
     return NextResponse.json({
       success: true,
@@ -255,6 +302,353 @@ function validateFlexMessage(message: any) {
   }
   
   console.log(`✅ Flex message validation passed (${messageSize} characters)`);
+}
+
+function createAdminNotificationMessage(data: ReceiptData) {
+  // คำนวณยอดที่ลูกค้าต้องจ่าย
+  const subtotalWithShipping = data.subtotal + data.shippingFee;
+  const totalAfterDiscount = subtotalWithShipping - data.discountAmount;
+  const finalAmount = data.paymentType === "DEPOSIT_PAYMENT" 
+    ? (data.depositAmount || 0) 
+    : totalAfterDiscount;
+
+  // สร้าง message แบบย่อสำหรับ admin
+  return {
+    type: "flex",
+    altText: `🔔 [Admin] คำสั่งซื้อใหม่ #${data.orderNumber} - ฿${finalAmount.toLocaleString()}`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "🔔 คำสั่งซื้อใหม่!",
+            weight: "bold",
+            color: "#ffffff",
+            size: "xl",
+            align: "center"
+          },
+          {
+            type: "text",
+            text: "Natpi & Corgi Farm [Admin] ",
+            color: "#ffffff",
+            size: "xs",
+            align: "center",
+            margin: "sm"
+          }
+        ],
+        paddingAll: "20px",
+        backgroundColor: "#FF6B35",
+        spacing: "sm"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              {
+                type: "text",
+                text: "คำสั่งซื้อ:",
+                size: "sm",
+                color: "#555555",
+                flex: 2
+              },
+              {
+                type: "text",
+                text: `#${data.orderNumber}`,
+                size: "sm",
+                color: "#111111",
+                weight: "bold",
+                align: "end",
+                flex: 3
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "md",
+            contents: [
+              {
+                type: "text",
+                text: "ลูกค้า:",
+                size: "sm",
+                color: "#555555",
+                flex: 2
+              },
+              {
+                type: "text",
+                text: data.customerName,
+                size: "sm",
+                color: "#111111",
+                weight: "bold",
+                align: "end",
+                wrap: true,
+                flex: 3
+              }
+            ]
+          },
+          ...(data.customerPhone ? [{
+            type: "box",
+            layout: "horizontal",
+            margin: "sm",
+            contents: [
+              {
+                type: "text",
+                text: "เบอร์:",
+                size: "sm",
+                color: "#555555",
+                flex: 2
+              },
+              {
+                type: "text",
+                text: data.customerPhone,
+                size: "sm",
+                color: "#111111",
+                align: "end",
+                flex: 3
+              }
+            ]
+          }] : []),
+          {
+            type: "separator",
+            margin: "lg"
+          },
+          {
+            type: "text",
+            text: `🛍️ สินค้า (${data.items.length} รายการ)`,
+            size: "sm",
+            color: "#333333",
+            weight: "bold",
+            margin: "lg"
+          },
+          // รายการสินค้า (แสดงสูงสุด 3 รายการ)
+          ...data.items.slice(0, 3).map((item, index) => ({
+            type: "box",
+            layout: "horizontal",
+            margin: index === 0 ? "md" : "sm",
+            contents: [
+              {
+                type: "text",
+                text: `${index + 1}. ${item.productName}`,
+                size: "xs",
+                color: "#333333",
+                flex: 3,
+                wrap: true
+              },
+              {
+                type: "text",
+                text: `x${item.quantity}`,
+                size: "xs",
+                color: "#666666",
+                align: "center",
+                flex: 1
+              },
+              {
+                type: "text",
+                text: `฿${item.total.toLocaleString()}`,
+                size: "xs",
+                color: "#111111",
+                weight: "bold",
+                align: "end",
+                flex: 2
+              }
+            ]
+          })),
+          // แสดงข้อความถ้ามีสินค้ามากกว่า 3 รายการ
+          ...(data.items.length > 3 ? [{
+            type: "text",
+            text: `... และอีก ${data.items.length - 3} รายการ`,
+            size: "xxs",
+            color: "#999999",
+            margin: "sm",
+            style: "italic"
+          }] : []),
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "md",
+            contents: [
+              {
+                type: "text",
+                text: "การจัดส่ง:",
+                size: "sm",
+                color: "#555555",
+                flex: 2
+              },
+              {
+                type: "text",
+                text: data.shippingMethod,
+                size: "sm",
+                color: "#111111",
+                align: "end",
+                wrap: true,
+                flex: 3
+              }
+            ]
+          },
+          {
+            type: "separator",
+            margin: "lg"
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "lg",
+            contents: [
+              {
+                type: "text",
+                text: data.paymentType === "DEPOSIT_PAYMENT" ? "💳 ยอดมัดจำ:" : "💰 ยอดรวม:",
+                size: "md",
+                color: "#111111",
+                weight: "bold",
+                flex: 2
+              },
+              {
+                type: "text",
+                text: `฿${finalAmount.toLocaleString()}`,
+                size: "xl",
+                color: "#FF6B35",
+                weight: "bold",
+                align: "end",
+                flex: 3
+              }
+            ]
+          },
+          ...(data.paymentType === "DEPOSIT_PAYMENT" && data.remainingAmount ? [{
+            type: "box",
+            layout: "horizontal",
+            margin: "sm",
+            contents: [
+              {
+                type: "text",
+                text: "ยอดคงเหลือ:",
+                size: "sm",
+                color: "#FF9800",
+                flex: 2
+              },
+              {
+                type: "text",
+                text: `฿${data.remainingAmount.toLocaleString()}`,
+                size: "md",
+                color: "#FF9800",
+                weight: "bold",
+                align: "end",
+                flex: 3
+              }
+            ]
+          }] : []),
+          {
+            type: "separator",
+            margin: "lg"
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "lg",
+            contents: [
+              {
+                type: "text",
+                text: "สถานะ:",
+                size: "sm",
+                color: "#555555",
+                flex: 2
+              },
+              {
+                type: "text",
+                text: data.orderStatus === "CONFIRMED" ? "✅ ชำระแล้ว" : "⏳ รอชำระเงิน",
+                size: "sm",
+                color: data.orderStatus === "CONFIRMED" ? "#4CAF50" : "#FF6B35",
+                weight: "bold",
+                align: "end",
+                flex: 3
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            margin: "sm",
+            contents: [
+              {
+                type: "text",
+                text: "วิธีชำระ:",
+                size: "sm",
+                color: "#555555",
+                flex: 2
+              },
+              {
+                type: "text",
+                text: data.paymentMethod || "โอนเงิน",
+                size: "sm",
+                color: "#111111",
+                align: "end",
+                wrap: true,
+                flex: 3
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            margin: "lg",
+            paddingAll: "12px",
+            backgroundColor: "#F5F5F5",
+            cornerRadius: "8px",
+            contents: [
+              {
+                type: "text",
+                text: "📍 ที่อยู่จัดส่ง:",
+                size: "xs",
+                color: "#666666",
+                weight: "bold",
+                margin: "none"
+              },
+              {
+                type: "text",
+                text: data.shippingAddress || "ไม่ระบุ",
+                size: "xs",
+                color: "#333333",
+                wrap: true,
+                margin: "sm"
+              }
+            ]
+          }
+        ],
+        paddingAll: "20px",
+        spacing: "sm"
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+
+          {
+            type: "text",
+            text: `วันที่: ${new Date().toLocaleDateString('th-TH', { 
+              year: 'numeric', 
+              month: 'short', 
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              timeZone: 'Asia/Bangkok'
+            })}`,
+            size: "xxs",
+            color: "#999999",
+            align: "center",
+            margin: "md"
+          }
+        ],
+        spacing: "sm",
+        paddingAll: "16px"
+      }
+    }
+  };
 }
 
 function createReceiptFlexMessage(data: ReceiptData) {

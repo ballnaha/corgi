@@ -39,24 +39,57 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     
-    const { title, subtitle, imageUrl, imageAlt, background, linkUrl, isActive, sortOrder } = body;
+    const { 
+      title, 
+      subtitle, 
+      imageUrl, 
+      imageAlt, 
+      background, 
+      linkUrl, 
+      bannerUrl, 
+      bannerType = 'custom',
+      isActive, 
+      sortOrder 
+    } = body;
 
-    // Validate required fields
-    if (!title || !imageUrl || !imageAlt || !background) {
+    // Enhanced validation based on banner type
+    if (!title || !imageAlt) {
       return NextResponse.json(
-        { error: "กรุณากรอกข้อมูลที่จำเป็น: title, imageUrl, imageAlt, background" },
+        { error: "กรุณากรอกข้อมูลที่จำเป็น: ชื่อ banner และ Alt Text" },
         { status: 400 }
       );
     }
+
+    // Validate based on banner type
+    if (bannerType === 'custom') {
+      if (!imageUrl || !background) {
+        return NextResponse.json(
+          { error: "Banner แบบกำหนดเอง: ต้องมีรูปภาพและพื้นหลัง" },
+          { status: 400 }
+        );
+      }
+    } else if (bannerType === 'fullsize') {
+      if (!bannerUrl) {
+        return NextResponse.json(
+          { error: "Banner แบบเต็มขนาด: ต้องมี URL banner" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Ensure imageUrl is never null (schema requirement)
+    const finalImageUrl = imageUrl?.trim() || '/images/icon_logo.png'; // fallback to default logo
 
     const banner = await prisma.banner.create({
       data: {
         title: title.trim(),
         subtitle: subtitle?.trim() || null,
-        imageUrl: imageUrl.trim(),
+        imageUrl: finalImageUrl,
         imageAlt: imageAlt.trim(),
-        background: background.trim(),
+        background: background?.trim() || '',
         linkUrl: linkUrl?.trim() || null,
+        bannerUrl: bannerUrl?.trim() || null,
+        bannerType: bannerType || 'custom',
         isActive: isActive ?? true,
         sortOrder: sortOrder ?? 0,
       }

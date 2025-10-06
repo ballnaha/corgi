@@ -83,7 +83,7 @@ export default function Navigation() {
             </Typography>
             <IconButton onClick={handleMenuOpen}>
               <Avatar
-                src={user?.pictureUrl || ""}
+                src={user?.pictureUrl || undefined}
                 alt={user?.displayName || "User"}
                 sx={{ width: 32, height: 32 }}
               />
@@ -103,7 +103,7 @@ export default function Navigation() {
             >
               <MenuItem onClick={handleProfileClick}>
                   <Avatar
-                    src={user?.pictureUrl || ""}
+                    src={user?.pictureUrl || undefined}
                     alt={user?.displayName || "User"}
                   sx={{ width: 24, height: 24, mr: 2 }}
                 />

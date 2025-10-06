@@ -59,103 +59,119 @@ interface NavigationItem {
   icon: React.ReactNode;
   badge?: number;
   children?: NavigationItem[];
+  isGroupHeader?: boolean;
 }
 
-const getNavigationItems = (orderStats: { actionRequiredCount: number }): NavigationItem[] => [
+interface NavigationGroup {
+  groupTitle: string;
+  items: NavigationItem[];
+}
+
+const getNavigationItems = (orderStats: { actionRequiredCount: number }): NavigationGroup[] => [
   {
-    title: "Dashboard",
-    path: "/admin",
-    icon: <Dashboard />,
+    groupTitle: "หลัก",
+    items: [
+      {
+        title: "Dashboard",
+        path: "/admin",
+        icon: <Dashboard />,
+      },
+      {
+        title: "จัดการคำสั่งซื้อ",
+        path: "/admin/orders",
+        icon: <ShoppingCart />,
+        badge: orderStats.actionRequiredCount > 0 ? orderStats.actionRequiredCount : undefined,
+      },
+      {
+        title: "ประวัติการซื้อ",
+        path: "/admin/customer-history",
+        icon: <History />,
+      },
+    ]
   },
   {
-    title: "จัดการสินค้า",
-    path: "/admin/products",
-    icon: <Inventory />,
-    children: [
+    groupTitle: "จัดการเนื้อหา",
+    items: [
       {
-        title: "รายการสินค้า",
+        title: "จัดการสินค้า",
         path: "/admin/products",
         icon: <Inventory />,
+        children: [
+          {
+            title: "รายการสินค้า",
+            path: "/admin/products",
+            icon: <Inventory />,
+          },
+          {
+            title: "เพิ่มสินค้าใหม่",
+            path: "/admin/products/new",
+            icon: <Add />,
+          },
+        ],
       },
       {
-        title: "เพิ่มสินค้าใหม่",
-        path: "/admin/products/new",
-        icon: <Add />,
-      },
-    ],
-  },
-  {
-    title: "จัดการคำสั่งซื้อ",
-    path: "/admin/orders",
-    icon: <ShoppingCart />,
-    badge: orderStats.actionRequiredCount > 0 ? orderStats.actionRequiredCount : undefined,
-  },
-  {
-    title: "จัดการผู้ใช้",
-    path: "/admin/users",
-    icon: <People />,
-  },
-  {
-    title: "จัดการบทความ",
-    path: "/admin/blog",
-    icon: <Article />,
-    children: [
-      {
-        title: "รายการบทความ",
+        title: "จัดการบทความ",
         path: "/admin/blog",
         icon: <Article />,
+        children: [
+          {
+            title: "รายการบทความ",
+            path: "/admin/blog",
+            icon: <Article />,
+          },
+          {
+            title: "เขียนบทความใหม่",
+            path: "/admin/blog/new",
+            icon: <Add />,
+          },
+          {
+            title: "จัดการหมวดหมู่",
+            path: "/admin/blog/categories",
+            icon: <Category />,
+          },
+        ],
       },
       {
-        title: "เขียนบทความใหม่",
-        path: "/admin/blog/new",
-        icon: <Add />,
+        title: "จัดการ Banner",
+        path: "/admin/banners",
+        icon: <ViewCarousel />,
+      },
+    ]
+  },
+  {
+    groupTitle: "ผู้ใช้งาน",
+    items: [
+      {
+        title: "จัดการผู้ใช้",
+        path: "/admin/users",
+        icon: <People />,
+      },
+    ]
+  },
+  {
+    groupTitle: "การตั้งค่า",
+    items: [
+      {
+        title: "จัดการการชำระเงิน",
+        path: "/admin/payment-methods",
+        icon: <Payment />,
       },
       {
-        title: "จัดการหมวดหมู่",
-        path: "/admin/blog/categories",
-        icon: <Category />,
+        title: "จัดการค่าจัดส่ง",
+        path: "/admin/shipping-options",
+        icon: <LocalShipping />,
       },
-    ],
-  },
-  {
-    title: "ประวัติการซื้อ",
-    path: "/admin/customer-history",
-    icon: <History />,
-  },
-  {
-    title: "จัดการ Banner",
-    path: "/admin/banners",
-    icon: <ViewCarousel />,
-  },
-  {
-    title: "รายงาน",
-    path: "/admin/reports",
-    icon: <Assessment />,
-  },
-  {
-    title: "จัดการการชำระเงิน",
-    path: "/admin/payment-methods",
-    icon: <Payment />,
-  },
-  {
-    title: "จัดการค่าจัดส่ง",
-    path: "/admin/shipping-options",
-    icon: <LocalShipping />,
-  },
-  {
-    title: "จัดการโค้ดส่วนลด",
-    path: "/admin/discount-codes",
-    icon: <LocalOffer />,
-  },
-  {
-    title: "การตั้งค่าระบบ",
-    path: "/admin/system-settings",
-    icon: <Settings />,
-  },
-  {
-    title: "ตั้งค่า",
-    path: "/admin/settings",
-    icon: <Settings />,
+      {
+        title: "จัดการโค้ดส่วนลด",
+        path: "/admin/discount-codes",
+        icon: <LocalOffer />,
+      },
+      {
+        title: "การตั้งค่าระบบ",
+        path: "/admin/system-settings",
+        icon: <Settings />,
+      },
+    ]
   },
 ];
 
@@ -263,68 +279,43 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       {/* Navigation */}
       <Box sx={{ flex: 1, overflow: "auto" }}>
         <List sx={{ p: 1 }}>
-          {getNavigationItems(orderStats).map((item) => (
-            <React.Fragment key={item.path}>
-              <ListItem disablePadding>
-                <ListItemButton
-                  onClick={() => handleNavigate(item.path)}
+          {getNavigationItems(orderStats).map((group, groupIndex) => (
+            <React.Fragment key={group.groupTitle}>
+              {/* Group Header */}
+              {groupIndex > 0 && (
+                <Box sx={{ mt: 2, mb: 1 }}>
+                  <Divider />
+                </Box>
+              )}
+              <Box sx={{ px: 2, py: 1, mb: 1 }}>
+                <Typography
+                  variant="overline"
                   sx={{
-                    borderRadius: 2,
-                    mb: 0.5,
-                    backgroundColor: isActivePath(item.path)
-                      ? `${colors.primary.main}15`
-                      : "transparent",
-                    color: isActivePath(item.path)
-                      ? colors.primary.main
-                      : colors.text.primary,
-                    "&:hover": {
-                      backgroundColor: `${colors.primary.main}10`,
-                    },
+                    fontSize: "0.75rem",
+                    fontWeight: 600,
+                    color: colors.text.secondary,
+                    letterSpacing: "0.5px",
                   }}
                 >
-                  <ListItemIcon
-                    sx={{
-                      color: isActivePath(item.path)
-                        ? colors.primary.main
-                        : colors.text.secondary,
-                      minWidth: 40,
-                    }}
-                  >
-                    {item.badge ? (
-                      <Badge badgeContent={item.badge} color="error">
-                        {item.icon}
-                      </Badge>
-                    ) : (
-                      item.icon
-                    )}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.title}
-                    primaryTypographyProps={{
-                      fontSize: "0.9rem",
-                      fontWeight: isActivePath(item.path) ? 600 : 400,
-                    }}
-                  />
-                </ListItemButton>
-              </ListItem>
+                  {group.groupTitle}
+                </Typography>
+              </Box>
 
-              {/* Sub-navigation items */}
-              {item.children &&
-                isActivePath(item.path) &&
-                item.children.map((child) => (
-                  <ListItem key={child.path} disablePadding>
+              {/* Group Items */}
+              {group.items.map((item) => (
+                <React.Fragment key={item.path}>
+                  <ListItem disablePadding>
                     <ListItemButton
-                      onClick={() => handleNavigate(child.path)}
+                      onClick={() => handleNavigate(item.path)}
                       sx={{
                         borderRadius: 2,
                         mb: 0.5,
-                        ml: 2,
-                        backgroundColor: pathname === child.path
-                          ? `${colors.primary.main}20`
+                        backgroundColor: isActivePath(item.path)
+                          ? `${colors.primary.main}15`
                           : "transparent",
-                        color: pathname === child.path
+                        color: isActivePath(item.path)
                           ? colors.primary.main
-                          : colors.text.secondary,
+                          : colors.text.primary,
                         "&:hover": {
                           backgroundColor: `${colors.primary.main}10`,
                         },
@@ -332,24 +323,74 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     >
                       <ListItemIcon
                         sx={{
-                          color: pathname === child.path
+                          color: isActivePath(item.path)
                             ? colors.primary.main
                             : colors.text.secondary,
-                          minWidth: 35,
+                          minWidth: 40,
                         }}
                       >
-                        {child.icon}
+                        {item.badge ? (
+                          <Badge badgeContent={item.badge} color="error">
+                            {item.icon}
+                          </Badge>
+                        ) : (
+                          item.icon
+                        )}
                       </ListItemIcon>
                       <ListItemText
-                        primary={child.title}
+                        primary={item.title}
                         primaryTypographyProps={{
-                          fontSize: "0.85rem",
-                          fontWeight: pathname === child.path ? 600 : 400,
+                          fontSize: "0.9rem",
+                          fontWeight: isActivePath(item.path) ? 600 : 400,
                         }}
                       />
                     </ListItemButton>
                   </ListItem>
-                ))}
+
+                  {/* Sub-navigation items */}
+                  {item.children &&
+                    isActivePath(item.path) &&
+                    item.children.map((child) => (
+                      <ListItem key={child.path} disablePadding>
+                        <ListItemButton
+                          onClick={() => handleNavigate(child.path)}
+                          sx={{
+                            borderRadius: 2,
+                            mb: 0.5,
+                            ml: 2,
+                            backgroundColor: pathname === child.path
+                              ? `${colors.primary.main}20`
+                              : "transparent",
+                            color: pathname === child.path
+                              ? colors.primary.main
+                              : colors.text.secondary,
+                            "&:hover": {
+                              backgroundColor: `${colors.primary.main}10`,
+                            },
+                          }}
+                        >
+                          <ListItemIcon
+                            sx={{
+                              color: pathname === child.path
+                                ? colors.primary.main
+                                : colors.text.secondary,
+                              minWidth: 35,
+                            }}
+                          >
+                            {child.icon}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={child.title}
+                            primaryTypographyProps={{
+                              fontSize: "0.85rem",
+                              fontWeight: pathname === child.path ? 600 : 400,
+                            }}
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    ))}
+                </React.Fragment>
+              ))}
             </React.Fragment>
           ))}
         </List>
@@ -368,7 +409,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           }}
         >
           <Avatar
-            src={session?.user?.image || ""}
+            src={session?.user?.image || undefined}
             sx={{ width: 32, height: 32 }}
           >
             {session?.user?.name?.[0]}
@@ -434,15 +475,25 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               if (pathname === "/admin/discount-codes") return "จัดการโค้ดส่วนลด";
               if (pathname === "/admin/system-settings") return "การตั้งค่าระบบ";
               
-              // Find main navigation item
-              const mainItem = getNavigationItems(orderStats).find((item) => isActivePath(item.path));
-              if (mainItem?.children) {
-                // Check for sub-navigation match
-                const subItem = mainItem.children.find(child => pathname === child.path);
-                return subItem?.title || mainItem.title;
+              // Find main navigation item across all groups
+              const allGroups = getNavigationItems(orderStats);
+              let foundItem: NavigationItem | undefined;
+              
+              for (const group of allGroups) {
+                const mainItem = group.items.find((item) => isActivePath(item.path));
+                if (mainItem) {
+                  foundItem = mainItem;
+                  break;
+                }
               }
               
-              return mainItem?.title || "Admin Panel";
+              if (foundItem?.children) {
+                // Check for sub-navigation match
+                const subItem = foundItem.children.find(child => pathname === child.path);
+                return subItem?.title || foundItem.title;
+              }
+              
+              return foundItem?.title || "Admin Panel";
             })()}
           </Typography>
 
@@ -456,7 +507,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {/* User menu */}
           <IconButton onClick={handleUserMenuOpen} color="inherit">
             <Avatar
-              src={session?.user?.image || ""}
+              src={session?.user?.image || undefined}
               sx={{ width: 32, height: 32 }}
             >
               {session?.user?.name?.[0]}

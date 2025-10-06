@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe-server";
+import { getStripeServer } from "@/lib/stripe-server";
 import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth-utils";
 
@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ตรวจสอบ session จาก Stripe
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const stripe = getStripeServer();
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status !== 'paid') {
       return NextResponse.json(
@@ -145,6 +146,15 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error("Error verifying Stripe payment:", error);
+    if (error?.code === 'CONFIG_ERROR') {
+      return NextResponse.json(
+        {
+          error: 'Stripe is not configured',
+          details: error?.message,
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(
       { 
         error: "Failed to verify payment", 

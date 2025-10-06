@@ -69,7 +69,6 @@ export default function BannersAdminPage() {
   const { showSnackbar, SnackbarComponent } = useThemedSnackbar();
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBannerType, setSelectedBannerType] = useState<'all' | 'custom' | 'fullsize'>('all');
 
   // Dialog states
   const [openDialog, setOpenDialog] = useState(false);
@@ -108,32 +107,6 @@ export default function BannersAdminPage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
-
-  // Validation function
-  const validateForm = (): string | null => {
-    if (!formData.title.trim()) {
-      return "กรุณาใส่ชื่อ banner";
-    }
-
-    if (!formData.imageAlt.trim()) {
-      return "กรุณาใส่ Alt Text สำหรับรูปภาพ";
-    }
-
-    if (formData.bannerType === 'custom') {
-      if (!formData.imageUrl && !selectedFile) {
-        return "กรุณาเลือกรูปภาพหรือใส่ URL รูปภาพ";
-      }
-      if (!formData.background) {
-        return "กรุณาเลือกพื้นหลัง";
-      }
-    } else if (formData.bannerType === 'fullsize') {
-      if (!formData.bannerUrl && !selectedBannerFile) {
-        return "กรุณาเลือก banner หรือใส่ URL banner";
-      }
-    }
-
-    return null;
-  };
 
 // Predefined gradient options (based on attached images)
 const gradientOptions = [
@@ -223,14 +196,8 @@ const gradientOptions = [
     if (!selectedFile) return null;
 
     try {
-      // Delete old image file if updating existing banner
-      if (editingBanner && editingBanner.imageUrl && editingBanner.imageUrl.startsWith('/uploads/')) {
-        await deleteOldBannerFile(editingBanner.imageUrl);
-      }
-
       const uploadFormData = new FormData();
       uploadFormData.append('image', selectedFile);
-      uploadFormData.append('usage', 'banner-custom'); // Specify banner custom usage
 
       const response = await fetch('/api/upload/image', {
         method: 'POST',
@@ -274,37 +241,11 @@ const gradientOptions = [
     setBannerPreview(previewUrl);
   };
 
-  // Delete old banner file from server
-  const deleteOldBannerFile = async (bannerUrl: string): Promise<void> => {
-    if (!bannerUrl || !bannerUrl.startsWith('/uploads/')) return;
-
-    try {
-      const response = await fetch('/api/upload/delete', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ filePath: bannerUrl }),
-      });
-
-      if (!response.ok) {
-        console.warn('Failed to delete old banner file:', bannerUrl);
-      }
-    } catch (error) {
-      console.warn('Error deleting old banner file:', error);
-    }
-  };
-
   // Upload the selected banner file
   const uploadSelectedBannerFile = async (): Promise<string | null> => {
     if (!selectedBannerFile) return null;
 
     try {
-      // Delete old banner file if updating existing banner
-      if (editingBanner && editingBanner.bannerUrl) {
-        await deleteOldBannerFile(editingBanner.bannerUrl);
-      }
-
       const uploadFormData = new FormData();
       uploadFormData.append('image', selectedBannerFile);
       uploadFormData.append('type', 'banner'); // Specify banner type for sizing
@@ -369,32 +310,16 @@ const gradientOptions = [
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Enhanced validation based on banner type
-    if (!formData.title.trim()) {
-      showSnackbar("กรุณาใส่ชื่อ banner", "error");
+    // Validate required fields
+    if (!formData.title.trim() || !formData.imageAlt.trim()) {
+      showSnackbar("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน", "error");
       return;
     }
 
-    if (!formData.imageAlt.trim()) {
-      showSnackbar("กรุณาใส่ Alt Text สำหรับรูปภาพ", "error");
+    // Check if we have either a file to upload or an existing URL
+    if (!selectedFile && !formData.imageUrl.trim()) {
+      showSnackbar("กรุณาเลือกรูปภาพหรือใส่ URL รูปภาพ", "error");
       return;
-    }
-
-    // Validate based on banner type
-    if (formData.bannerType === 'custom') {
-      if (!selectedFile && !formData.imageUrl.trim()) {
-        showSnackbar("กรุณาเลือกรูปภาพหรือใส่ URL รูปภาพ", "error");
-        return;
-      }
-      if (!formData.background) {
-        showSnackbar("กรุณาเลือกพื้นหลัง", "error");
-        return;
-      }
-    } else if (formData.bannerType === 'fullsize') {
-      if (!selectedBannerFile && !formData.bannerUrl.trim()) {
-        showSnackbar("กรุณาเลือก banner หรือใส่ URL banner", "error");
-        return;
-      }
     }
 
     try {
@@ -492,10 +417,6 @@ const gradientOptions = [
     if (!deleteConfirm.bannerId) return;
 
     try {
-      // First, get banner details to know which files to delete
-      const bannerToDelete = banners.find(b => b.id === deleteConfirm.bannerId);
-      
-      // Delete the banner from database
       const response = await fetch(`/api/admin/banners/${deleteConfirm.bannerId}`, {
         method: "DELETE",
       });
@@ -505,20 +426,7 @@ const gradientOptions = [
         throw new Error(errorData.error || "Failed to delete banner");
       }
 
-      // Delete associated files after successful database deletion
-      if (bannerToDelete) {
-        // Delete banner image file
-        if (bannerToDelete.bannerUrl && bannerToDelete.bannerUrl.startsWith('/uploads/')) {
-          await deleteOldBannerFile(bannerToDelete.bannerUrl);
-        }
-        
-        // Delete regular image file
-        if (bannerToDelete.imageUrl && bannerToDelete.imageUrl.startsWith('/uploads/')) {
-          await deleteOldBannerFile(bannerToDelete.imageUrl);
-        }
-      }
-
-      showSnackbar("ลบ banner และไฟล์ที่เกี่ยวข้องสำเร็จ", "success");
+      showSnackbar("ลบ banner สำเร็จ", "success");
       loadBanners();
     } catch (error: any) {
       console.error("Error deleting banner:", error);
@@ -622,11 +530,6 @@ const gradientOptions = [
     setOpenDialog(true);
   };
 
-  // Filter banners based on selected type
-  const filteredBanners = selectedBannerType === 'all' 
-    ? banners 
-    : banners.filter(banner => banner.bannerType === selectedBannerType);
-
   if (loading) {
     return (
       <Box sx={{ p: 3 }}>
@@ -673,62 +576,6 @@ const gradientOptions = [
         </Button>
       </Box>
 
-      {/* Banner Type Filter */}
-      <Box sx={{ mb: 3 }}>
-        <Box sx={{ 
-          display: "flex", 
-          gap: 1, 
-          flexWrap: "wrap",
-          justifyContent: { xs: "center", sm: "flex-start" }
-        }}>
-          <Button
-            variant={selectedBannerType === 'all' ? 'contained' : 'outlined'}
-            onClick={() => setSelectedBannerType('all')}
-            size="small"
-            sx={{
-              backgroundColor: selectedBannerType === 'all' ? colors.primary.main : 'transparent',
-              borderColor: colors.primary.main,
-              color: selectedBannerType === 'all' ? 'white' : colors.primary.main,
-              '&:hover': {
-                backgroundColor: selectedBannerType === 'all' ? colors.primary.dark : colors.primary.light + '20'
-              }
-            }}
-          >
-            ทั้งหมด ({banners.length})
-          </Button>
-          <Button
-            variant={selectedBannerType === 'custom' ? 'contained' : 'outlined'}
-            onClick={() => setSelectedBannerType('custom')}
-            size="small"
-            sx={{
-              backgroundColor: selectedBannerType === 'custom' ? colors.primary.main : 'transparent',
-              borderColor: colors.primary.main,
-              color: selectedBannerType === 'custom' ? 'white' : colors.primary.main,
-              '&:hover': {
-                backgroundColor: selectedBannerType === 'custom' ? colors.primary.dark : colors.primary.light + '20'
-              }
-            }}
-          >
-            กำหนดเอง ({banners.filter(b => b.bannerType === 'custom').length})
-          </Button>
-          <Button
-            variant={selectedBannerType === 'fullsize' ? 'contained' : 'outlined'}
-            onClick={() => setSelectedBannerType('fullsize')}
-            size="small"
-            sx={{
-              backgroundColor: selectedBannerType === 'fullsize' ? colors.secondary.main : 'transparent',
-              borderColor: colors.secondary.main,
-              color: selectedBannerType === 'fullsize' ? 'white' : colors.secondary.main,
-              '&:hover': {
-                backgroundColor: selectedBannerType === 'fullsize' ? colors.secondary.dark : colors.secondary.light + '20'
-              }
-            }}
-          >
-            เต็มขนาด ({banners.filter(b => b.bannerType === 'fullsize').length})
-          </Button>
-        </Box>
-      </Box>
-
       {/* Desktop Table View */}
       <Box sx={{ display: { xs: "none", md: "block" } }}>
         <TableContainer component={Paper}>
@@ -736,86 +583,45 @@ const gradientOptions = [
             <TableHead>
               <TableRow>
                 <TableCell>รูปภาพ</TableCell>
-                <TableCell>ชื่อ & คำบรรยาย</TableCell>
-                <TableCell>ประเภท</TableCell>
-                <TableCell>Alt Text</TableCell>
+                <TableCell>ชื่อ</TableCell>
+                <TableCell>คำบรรยาย</TableCell>
                 <TableCell>สถานะ</TableCell>
                 <TableCell>ลำดับ</TableCell>
                 <TableCell>การจัดการ</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredBanners.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} sx={{ textAlign: "center", py: 4 }}>
-                    <Typography color="text.secondary">
-                      {selectedBannerType === 'all' 
-                        ? 'ยังไม่มี banner'
-                        : `ยังไม่มี banner ประเภท ${selectedBannerType === 'custom' ? 'กำหนดเอง' : 'เต็มขนาด'}`
-                      }
-                    </Typography>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredBanners.map((banner) => (
+              {banners.map((banner) => (
                 <TableRow key={banner.id}>
                   <TableCell>
-                    <Box
+                    <Avatar
                       sx={{
                         width: 60,
                         height: 40,
                         borderRadius: 2,
-                        background: banner.bannerType === 'fullsize' && banner.bannerUrl 
-                          ? 'transparent' 
-                          : banner.background,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        position: "relative",
-                        overflow: "hidden",
+                        background: banner.background,
                       }}
                     >
-                      {banner.bannerType === 'fullsize' && banner.bannerUrl ? (
-                        <Image
-                          src={banner.bannerUrl}
-                          alt={banner.imageAlt}
-                          fill
-                          style={{ objectFit: "cover" }}
-                        />
-                      ) : banner.imageUrl ? (
-                        <Image
-                          src={banner.imageUrl}
-                          alt={banner.imageAlt}
-                          width={40}
-                          height={40}
-                          style={{ objectFit: "contain" }}
-                        />
-                      ) : null}
-                    </Box>
+                      <Image
+                        src={banner.imageUrl}
+                        alt={banner.imageAlt}
+                        width={40}
+                        height={40}
+                        style={{ objectFit: "contain" }}
+                      />
+                    </Avatar>
                   </TableCell>
                   <TableCell>
                     <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
-                      {banner.bannerType === 'fullsize' ? 'Banner เต็มรูป' : banner.title}
+                      {banner.title}
                     </Typography>
-                    {banner.bannerType === 'custom' && banner.subtitle && (
-                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    {banner.subtitle && (
+                      <Typography variant="caption" color="text.secondary">
                         {banner.subtitle}
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={banner.bannerType === 'fullsize' ? 'เต็มขนาด' : 'กำหนดเอง'} 
-                      size="small"
-                      color={banner.bannerType === 'fullsize' ? 'secondary' : 'primary'}
-                      variant="outlined"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="caption" color="text.secondary">
-                      {banner.imageAlt}
-                    </Typography>
-                  </TableCell>
+                  <TableCell>{banner.imageAlt}</TableCell>
                   <TableCell>
                     <Chip
                       label={banner.isActive ? "เปิดใช้งาน" : "ปิดใช้งาน"}
@@ -835,7 +641,6 @@ const gradientOptions = [
                         size="small"
                         onClick={() => handleToggleActive(banner)}
                         color={banner.isActive ? "warning" : "success"}
-                        title={banner.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
                       >
                         {banner.isActive ? <VisibilityOff /> : <Visibility />}
                       </IconButton>
@@ -843,7 +648,6 @@ const gradientOptions = [
                         size="small"
                         onClick={() => openEditDialog(banner)}
                         color="primary"
-                        title="แก้ไข"
                       >
                         <Edit />
                       </IconButton>
@@ -851,14 +655,21 @@ const gradientOptions = [
                         size="small"
                         onClick={() => handleDeleteRequest(banner)}
                         color="error"
-                        title="ลบ"
                       >
                         <Delete />
                       </IconButton>
                     </Box>
                   </TableCell>
                 </TableRow>
-                ))
+              ))}
+              {banners.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center">
+                    <Typography color="text.secondary">
+                      ยังไม่มี banner
+                    </Typography>
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>
@@ -867,18 +678,15 @@ const gradientOptions = [
 
       {/* Mobile Card View */}
       <Box sx={{ display: { xs: "block", md: "none" } }}>
-        {filteredBanners.length === 0 ? (
+        {banners.length === 0 ? (
           <Paper sx={{ p: 3, textAlign: "center" }}>
             <Typography color="text.secondary">
-              {selectedBannerType === 'all' 
-                ? 'ยังไม่มี banner'
-                : `ยังไม่มี banner ประเภท ${selectedBannerType === 'custom' ? 'กำหนดเอง' : 'เต็มขนาด'}`
-              }
+              ยังไม่มี banner
             </Typography>
           </Paper>
         ) : (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {filteredBanners.map((banner) => (
+            {banners.map((banner) => (
               <Paper key={banner.id} sx={{ p: 2 }}>
                 <Box sx={{ display: "flex", gap: 2 }}>
                   {/* Banner Preview */}
@@ -887,9 +695,7 @@ const gradientOptions = [
                       minWidth: 80,
                       height: 60,
                       borderRadius: 2,
-                      background: banner.bannerType === 'fullsize' && banner.bannerUrl 
-                        ? 'transparent' 
-                        : banner.background,
+                      background: banner.background,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -897,22 +703,13 @@ const gradientOptions = [
                       overflow: "hidden",
                     }}
                   >
-                    {banner.bannerType === 'fullsize' && banner.bannerUrl ? (
-                      <Image
-                        src={banner.bannerUrl}
-                        alt={banner.imageAlt}
-                        fill
-                        style={{ objectFit: "cover" }}
-                      />
-                    ) : banner.imageUrl ? (
-                      <Image
-                        src={banner.imageUrl}
-                        alt={banner.imageAlt}
-                        width={50}
-                        height={50}
-                        style={{ objectFit: "contain" }}
-                      />
-                    ) : null}
+                    <Image
+                      src={banner.imageUrl}
+                      alt={banner.imageAlt}
+                      width={50}
+                      height={50}
+                      style={{ objectFit: "contain" }}
+                    />
                   </Box>
 
                   {/* Banner Info */}
@@ -945,19 +742,12 @@ const gradientOptions = [
                           </Typography>
                         )}
                       </Box>
-                      <Box sx={{ display: "flex", gap: 0.5, alignItems: "center" }}>
-                        <Chip 
-                          label={banner.bannerType === 'fullsize' ? 'เต็มขนาด' : 'กำหนดเอง'} 
-                          size="small"
-                          color={banner.bannerType === 'fullsize' ? 'secondary' : 'primary'}
-                          variant="outlined"
-                        />
-                        <Chip
-                          label={banner.isActive ? "เปิด" : "ปิด"}
-                          color={banner.isActive ? "success" : "default"}
-                          size="small"
-                        />
-                      </Box>
+                      <Chip
+                        label={banner.isActive ? "เปิด" : "ปิด"}
+                        color={banner.isActive ? "success" : "default"}
+                        size="small"
+                        sx={{ ml: 1 }}
+                      />
                     </Box>
 
                     <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1034,18 +824,26 @@ const gradientOptions = [
                   ข้อมูลพื้นฐาน
                 </Typography>
                 
-                {/* For fullsize banners, title is required but hidden from user */}
-                {formData.bannerType === 'fullsize' && (
-                  <Box sx={{ display: 'none' }}>
-                    <TextField
-                      value={formData.title || 'Banner เต็มรูป'}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                      fullWidth
-                    />
-                  </Box>
-                )}
+                <TextField
+                  label="ชื่อ Banner"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  required
+                  fullWidth
+                />
+                
+                <TextField
+                  label="คำบรรยาย (ไม่บังคับ)"
+                  value={formData.subtitle}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subtitle: e.target.value })
+                  }
+                  fullWidth
+                  multiline
+                  rows={2}
+                />
 
                 {/* Banner Type Selection */}
                 <Box>
@@ -1060,12 +858,7 @@ const gradientOptions = [
                   }}>
                     {/* Custom Banner Option */}
                     <Box
-                      onClick={() => setFormData({ 
-                        ...formData, 
-                        bannerType: 'custom',
-                        // Reset title if it was auto-generated
-                        title: formData.title === 'Banner เต็มรูป' ? '' : formData.title
-                      })}
+                      onClick={() => setFormData({ ...formData, bannerType: 'custom' })}
                       sx={{
                         p: 2,
                         border: formData.bannerType === 'custom' 
@@ -1094,13 +887,7 @@ const gradientOptions = [
 
                     {/* Full-size Banner Option */}
                     <Box
-                      onClick={() => setFormData({ 
-                        ...formData, 
-                        bannerType: 'fullsize',
-                        // Set default title for fullsize banners
-                        title: 'Banner เต็มรูป',
-                        subtitle: '' // Clear subtitle for fullsize
-                      })}
+                      onClick={() => setFormData({ ...formData, bannerType: 'fullsize' })}
                       sx={{
                         p: 2,
                         border: formData.bannerType === 'fullsize' 
@@ -1123,7 +910,7 @@ const gradientOptions = [
                         🖼️ Banner เต็มรูป
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
-                        ใช้รูปภาพเต็มขนาด 1200x600px (อัตราส่วน 2:1) พร้อมข้อความฝังในภาพ
+                        ใช้รูปภาพเต็มขนาด 1200x400px
                       </Typography>
                     </Box>
                   </Box>
@@ -1132,160 +919,229 @@ const gradientOptions = [
                 {/* Conditional Content based on Banner Type */}
                 {formData.bannerType === 'custom' ? (
                   <>
-                    {/* Custom Banner Sections */}
-                    
-                    {/* Custom Banner Text Fields */}
-                    <TextField
-                      label="ชื่อ Banner"
-                      value={formData.title}
-                      onChange={(e) =>
-                        setFormData({ ...formData, title: e.target.value })
-                      }
-                      required
-                      fullWidth
-                      placeholder="เช่น โปรโมชั่นพิเศษ"
-                    />
-                    
-                    <TextField
-                      label="คำบรรยาย (ไม่บังคับ)"
-                      value={formData.subtitle}
-                      onChange={(e) =>
-                        setFormData({ ...formData, subtitle: e.target.value })
-                      }
-                      fullWidth
-                      multiline
-                      rows={2}
-                      placeholder="เช่น ลดราคาสินค้าทุกชิ้น 20%"
-                    />
-                    
-                    {/* Image Upload Section for Custom Banner */}
+                    {/* Image Upload Section */}
                     <Box>
-                      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                        รูปภาพประกอบ Banner
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: "block" }}>
-                        รูปภาพจะถูกปรับขนาดเป็น 800x800px และเก็บในโฟลเดอร์ banners
-                      </Typography>
-                      
-                      {/* Image Preview */}
-                      {(imagePreview || formData.imageUrl) && (
-                        <Box sx={{ mb: 2 }}>
-                          <Box
-                            sx={{
-                              width: "100%",
-                              height: 140, // Increased for better proportions
-                              border: "2px dashed #ccc",
-                              borderRadius: 2,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              position: "relative",
-                              overflow: "hidden",
-                              background: formData.background,
-                            }}
-                          >
-                            {(imagePreview || formData.imageUrl) && (
-                              <Image
-                                src={imagePreview || formData.imageUrl}
-                                alt="Preview"
-                                fill
-                                style={{ objectFit: "contain" }}
-                              />
-                            )}
-                          </Box>
-                        </Box>
-                      )}
-
-                      {/* Upload Area */}
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    รูปภาพ Banner
+                  </Typography>
+                  
+                  {/* Image Preview */}
+                  {(imagePreview || formData.imageUrl) && (
+                    <Box sx={{ mb: 2 }}>
                       <Box
-                        onDrop={handleDrop}
-                        onDragOver={handleDragOver}
                         sx={{
+                          width: "100%",
+                          height: 120,
                           border: "2px dashed #ccc",
                           borderRadius: 2,
-                          p: 3,
-                          textAlign: "center",
-                          cursor: "pointer",
-                          transition: "border-color 0.3s",
-                          "&:hover": {
-                            borderColor: colors.primary.main,
-                          },
-                          backgroundColor: uploading ? "#f5f5f5" : "transparent",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          position: "relative",
+                          overflow: "hidden",
+                          background: formData.background,
                         }}
-                        onClick={() => document.getElementById('banner-image-input')?.click()}
                       >
-                        <input
-                          id="banner-image-input"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleFileInputChange}
-                          style={{ display: "none" }}
-                          disabled={uploading}
-                        />
-                        
-                        {selectedFile ? (
-                          <Box>
-                            <Typography color="primary" sx={{ mb: 1 }}>
-                              ✓ เลือกไฟล์แล้ว: {selectedFile.name}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              รูปภาพจะถูกอัปโหลดเมื่อกดบันทึก
-                            </Typography>
-                          </Box>
-                        ) : (
-                          <Box>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                              คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              รองรับไฟล์: JPG, PNG, GIF (ขนาดไม่เกิน 10MB) • จะปรับเป็น 800x800px
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-
-                      {/* Manual URL Input (Alternative) */}
-                      <Box sx={{ mt: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
-                          หรือใส่ URL รูปภาพ:
-                        </Typography>
-                        <TextField
-                          label="URL รูปภาพ"
-                          value={formData.imageUrl}
-                          onChange={(e) => {
-                            setFormData({ ...formData, imageUrl: e.target.value });
-                            setImagePreview(e.target.value);
-                          }}
-                          fullWidth
-                          size="small"
-                          placeholder="https://example.com/image.jpg"
+                        <Image
+                          src={imagePreview || formData.imageUrl}
+                          alt="Preview"
+                          fill
+                          style={{ objectFit: "contain" }}
                         />
                       </Box>
                     </Box>
+                  )}
 
-                    <TextField
-                      label="Alt Text สำหรับรูปภาพ"
-                      value={formData.imageAlt}
-                      onChange={(e) =>
-                        setFormData({ ...formData, imageAlt: e.target.value })
-                      }
-                      required
-                      fullWidth
-                      helperText="ข้อความอธิบายรูปภาพสำหรับผู้ที่มีความบกพร่องทางการมองเห็น"
+                  {/* Upload Area */}
+                  <Box
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
+                    sx={{
+                      border: "2px dashed #ccc",
+                      borderRadius: 2,
+                      p: 3,
+                      textAlign: "center",
+                      cursor: "pointer",
+                      transition: "border-color 0.3s",
+                      "&:hover": {
+                        borderColor: colors.primary.main,
+                      },
+                      backgroundColor: uploading ? "#f5f5f5" : "transparent",
+                    }}
+                    onClick={() => document.getElementById('banner-image-input')?.click()}
+                  >
+                    <input
+                      id="banner-image-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileInputChange}
+                      style={{ display: "none" }}
+                      disabled={uploading}
                     />
-                  </>
+                    
+                    {selectedFile ? (
+                      <Box>
+                        <Typography color="primary" sx={{ mb: 1 }}>
+                          ✓ เลือกไฟล์แล้ว: {selectedFile.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          รูปภาพจะถูกอัปโหลดเมื่อกดบันทึก
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          คลิกเพื่อเลือกไฟล์ หรือลากไฟล์มาวางที่นี่
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          รองรับไฟล์: JPG, PNG, GIF (ขนาดไม่เกิน 10MB)
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Manual URL Input (Alternative) */}
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+                      หรือใส่ URL รูปภาพ:
+                    </Typography>
+                    <TextField
+                      label="URL รูปภาพ"
+                      value={formData.imageUrl}
+                      onChange={(e) => {
+                        setFormData({ ...formData, imageUrl: e.target.value });
+                        setImagePreview(e.target.value);
+                      }}
+                      fullWidth
+                      size="small"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </Box>
+                </Box>
+
+                {/* Banner Upload Section (Full Size) */}
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Banner เต็มขนาด (ไม่บังคับ)
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: "block" }}>
+                    อัปโหลด banner เต็มขนาดแทนการใช้พื้นหลังและรูปภาพแยก (แนะนำขนาด: 1200x400 พิกเซล)
+                  </Typography>
+                  
+                  {/* Banner Preview */}
+                  {(bannerPreview || formData.bannerUrl) && (
+                    <Box sx={{ mb: 2 }}>
+                      <Box
+                        sx={{
+                          width: "100%",
+                          height: 150,
+                          border: "2px dashed #ccc",
+                          borderRadius: 2,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          position: "relative",
+                          overflow: "hidden",
+                          backgroundColor: "#f5f5f5",
+                        }}
+                      >
+                        <Image
+                          src={bannerPreview || formData.bannerUrl}
+                          alt="Banner Preview"
+                          fill
+                          style={{ objectFit: "cover" }}
+                        />
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Banner Upload Area */}
+                  <Box
+                    onDrop={handleBannerDrop}
+                    onDragOver={handleDragOver}
+                    sx={{
+                      border: "2px dashed #ccc",
+                      borderRadius: 2,
+                      p: 3,
+                      textAlign: "center",
+                      cursor: "pointer",
+                      transition: "border-color 0.3s",
+                      "&:hover": {
+                        borderColor: colors.primary.main,
+                      },
+                      backgroundColor: uploadingBanner ? "#f5f5f5" : "transparent",
+                    }}
+                    onClick={() => document.getElementById('banner-file-input')?.click()}
+                  >
+                    <input
+                      id="banner-file-input"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleBannerFileInputChange}
+                      style={{ display: "none" }}
+                      disabled={uploadingBanner}
+                    />
+                    
+                    {selectedBannerFile ? (
+                      <Box>
+                        <Typography color="primary" sx={{ mb: 1 }}>
+                          ✓ เลือก Banner แล้ว: {selectedBannerFile.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Banner จะถูกอัปโหลดเมื่อกดบันทึก
+                        </Typography>
+                      </Box>
+                    ) : (
+                      <Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                          คลิกเพื่อเลือก Banner หรือลากไฟล์มาวางที่นี่
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          รองรับไฟล์: JPG, PNG (ขนาดไม่เกิน 20MB) | แนะนำขนาด: 1200x400px
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  {/* Banner URL Input (Alternative) */}
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: "block" }}>
+                      หรือใส่ URL Banner:
+                    </Typography>
+                    <TextField
+                      label="URL Banner เต็มขนาด"
+                      value={formData.bannerUrl}
+                      onChange={(e) => {
+                        setFormData({ ...formData, bannerUrl: e.target.value });
+                        setBannerPreview(e.target.value);
+                      }}
+                      fullWidth
+                      size="small"
+                      placeholder="https://example.com/banner.jpg"
+                    />
+                  </Box>
+                </Box>
+
+                <TextField
+                  label="Alt Text สำหรับรูปภาพ"
+                  value={formData.imageAlt}
+                  onChange={(e) =>
+                    setFormData({ ...formData, imageAlt: e.target.value })
+                  }
+                  required
+                  fullWidth
+                  helperText="ข้อความอธิบายรูปภาพสำหรับผู้ที่มีความบกพร่องทางการมองเห็น"
+                />
+                </>
                 ) : (
                   <>
-                    {/* Fullsize Banner Sections */}
-                    
-                    {/* Banner Upload Section (Full Size Only) */}
+                    {/* Banner Upload Section (Full Size) */}
                     <Box>
                       <Typography variant="subtitle2" sx={{ mb: 1 }}>
                         Banner เต็มขนาด
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: "block" }}>
-                        อัปโหลด banner เต็มขนาด (แนะนำขนาด: 1200x600 พิกเซล, อัตราส่วน 2:1)<br/>
-                        เหมาะสำหรับทั้ง desktop และ mobile • ใส่ข้อความลงในภาพได้
+                        อัปโหลด banner เต็มขนาด (แนะนำขนาด: 1200x400 พิกเซล)
                       </Typography>
                       
                       {/* Banner Preview */}
@@ -1294,7 +1150,7 @@ const gradientOptions = [
                           <Box
                             sx={{
                               width: "100%",
-                              height: 180, // Increased for 1200x600 ratio
+                              height: 150,
                               border: "2px dashed #ccc",
                               borderRadius: 2,
                               display: "flex",
@@ -1357,7 +1213,7 @@ const gradientOptions = [
                               คลิกเพื่อเลือก Banner หรือลากไฟล์มาวางที่นี่
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              รองรับไฟล์: JPG, PNG (ขนาดไม่เกิน 20MB) | แนะนำขนาด: 1200x600px
+                              รองรับไฟล์: JPG, PNG (ขนาดไม่เกิน 20MB) | แนะนำขนาด: 1200x400px
                             </Typography>
                           </Box>
                         )}
@@ -1383,7 +1239,7 @@ const gradientOptions = [
                     </Box>
 
                     <TextField
-                      label="Alt Text สำหรับ Banner"
+                      label="Alt Text สำหรับรูปภาพ"
                       value={formData.imageAlt}
                       onChange={(e) =>
                         setFormData({ ...formData, imageAlt: e.target.value })
@@ -1395,7 +1251,6 @@ const gradientOptions = [
                   </>
                 )}
 
-                {/* Common Fields for both types */}
                 <TextField
                   label="Link URL (ไม่บังคับ)"
                   value={formData.linkUrl}
@@ -1404,104 +1259,100 @@ const gradientOptions = [
                   }
                   fullWidth
                   placeholder="https://example.com"
-                  helperText="URL ที่จะเปิดเมื่อคลิกที่ banner"
                 />
               </Box>
 
               {/* Right Column - Design & Settings */}
               <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
                 <Typography variant="h6" sx={{ fontWeight: "bold", mb: 1, color: colors.text.primary }}>
-                  {formData.bannerType === 'custom' ? 'การออกแบบและการตั้งค่า' : 'การตั้งค่า'}
+                  การออกแบบและการตั้งค่า
                 </Typography>
 
-                {/* Background Color Selection - Only for Custom Banners */}
-                {formData.bannerType === 'custom' && (
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ mb: 2 }}>
-                      เลือกสีพื้นหลัง
-                    </Typography>
-                    <Box sx={{ 
-                      display: "grid", 
-                      gridTemplateColumns: { xs: "repeat(3, 1fr)", sm: "repeat(5, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(5, 1fr)" },
-                      gap: 1
-                    }}>
-                      {gradientOptions.map((option, index) => {
-                        const selectedGradient = gradientOptions.find(g => g.value === formData.background);
-                        const isSelected = formData.background === option.value;
-                        
-                        return (
+                <Box>
+                  <Typography variant="subtitle2" sx={{ mb: 2 }}>
+                    เลือกสีพื้นหลัง
+                  </Typography>
+                  <Box sx={{ 
+                    display: "grid", 
+                    gridTemplateColumns: { xs: "repeat(3, 1fr)", sm: "repeat(5, 1fr)", md: "repeat(3, 1fr)", lg: "repeat(5, 1fr)" },
+                    gap: 1
+                  }}>
+                    {gradientOptions.map((option, index) => {
+                      const selectedGradient = gradientOptions.find(g => g.value === formData.background);
+                      const isSelected = formData.background === option.value;
+                      
+                      return (
+                        <Box
+                          key={index}
+                          onClick={() =>
+                            setFormData({ ...formData, background: option.value })
+                          }
+                          sx={{
+                            width: "100%",
+                            height: { xs: 60, sm: 50, md: 60 },
+                            borderRadius: 2,
+                            background: option.value,
+                            backgroundImage: option.pattern,
+                            backgroundSize: "20px 20px, 30px 30px",
+                            cursor: "pointer",
+                            border: isSelected
+                              ? `3px solid ${colors.primary.main}`
+                              : "2px solid rgba(255,255,255,0.3)",
+                            boxShadow: isSelected 
+                              ? "0 4px 12px rgba(0,0,0,0.2)" 
+                              : "0 2px 8px rgba(0,0,0,0.1)",
+                            transition: "all 0.3s ease",
+                            "&:hover": {
+                              border: `2px solid ${colors.primary.light}`,
+                              transform: "translateY(-2px)",
+                              boxShadow: "0 6px 16px rgba(0,0,0,0.15)",
+                            },
+                            display: "flex",
+                            alignItems: "flex-end",
+                            justifyContent: "center",
+                            position: "relative",
+                            overflow: "hidden",
+                          }}
+                          title={option.name}
+                        >
+                          {/* Pattern overlay for visual effect */}
                           <Box
-                            key={index}
-                            onClick={() =>
-                              setFormData({ ...formData, background: option.value })
-                            }
                             sx={{
-                              width: "100%",
-                              height: { xs: 60, sm: 50, md: 60 },
-                              borderRadius: 2,
-                              background: option.value,
-                              backgroundImage: option.pattern,
-                              backgroundSize: "20px 20px, 30px 30px",
-                              cursor: "pointer",
-                              border: isSelected
-                                ? `3px solid ${colors.primary.main}`
-                                : "2px solid rgba(255,255,255,0.3)",
-                              boxShadow: isSelected 
-                                ? "0 4px 12px rgba(0,0,0,0.2)" 
-                                : "0 2px 8px rgba(0,0,0,0.1)",
-                              transition: "all 0.3s ease",
-                              "&:hover": {
-                                border: `2px solid ${colors.primary.light}`,
-                                transform: "translateY(-2px)",
-                                boxShadow: "0 6px 16px rgba(0,0,0,0.15)",
-                              },
-                              display: "flex",
-                              alignItems: "flex-end",
-                              justifyContent: "center",
-                              position: "relative",
-                              overflow: "hidden",
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              background: option.pattern,
+                              backgroundSize: "15px 15px, 25px 25px",
+                              opacity: 0.6,
                             }}
-                            title={option.name}
+                          />
+                          
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              display: { xs: "none", sm: "block" },
+                              color: "rgba(255,255,255,0.9)",
+                              fontSize: "0.65rem",
+                              textAlign: "center",
+                              px: 0.5,
+                              py: 0.5,
+                              backgroundColor: "rgba(0,0,0,0.3)",
+                              borderRadius: 1,
+                              fontWeight: 600,
+                              textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                              zIndex: 1,
+                              position: "relative",
+                            }}
                           >
-                            {/* Pattern overlay for visual effect */}
-                            <Box
-                              sx={{
-                                position: "absolute",
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                bottom: 0,
-                                background: option.pattern,
-                                backgroundSize: "15px 15px, 25px 25px",
-                                opacity: 0.6,
-                              }}
-                            />
-                            
-                            <Typography 
-                              variant="caption" 
-                              sx={{ 
-                                display: { xs: "none", sm: "block" },
-                                color: "rgba(255,255,255,0.9)",
-                                fontSize: "0.65rem",
-                                textAlign: "center",
-                                px: 0.5,
-                                py: 0.5,
-                                backgroundColor: "rgba(0,0,0,0.3)",
-                                borderRadius: 1,
-                                fontWeight: 600,
-                                textShadow: "0 1px 2px rgba(0,0,0,0.3)",
-                                zIndex: 1,
-                                position: "relative",
-                              }}
-                            >
-                              {option.name.split(' ')[0]}
-                            </Typography>
-                          </Box>
-                        );
-                      })}
-                    </Box>
+                            {option.name.split(' ')[0]}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
                   </Box>
-                )}
+                </Box>
 
                 <Box sx={{ display: "flex", gap: 2 }}>
                   <TextField
@@ -1552,7 +1403,7 @@ const gradientOptions = [
                             borderRadius: 4,
                             p: { xs: 2, md: 3 },
                             position: "relative",
-                            minHeight: { xs: 140, md: 160 }, // Increased for better proportions
+                            minHeight: { xs: 120, md: 140 },
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
@@ -1699,7 +1550,7 @@ const gradientOptions = [
                         <Box
                           sx={{
                             width: "100%",
-                            minHeight: { xs: 160, md: 200 }, // Increased to match 1200x600 ratio
+                            minHeight: { xs: 120, md: 140 },
                             borderRadius: 4,
                             overflow: "hidden",
                             position: "relative",

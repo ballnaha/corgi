@@ -71,9 +71,10 @@ export default function ProductDetailDesktop({
   // Use product images if available, otherwise use main image
   const productImages = React.useMemo(() => {
     if (product.images && product.images.length > 0) {
-      return product.images.map((img) => getImageUrl(img.imageUrl));
+      return product.images.map((img) => getImageUrl(img.imageUrl)).filter(url => url);
     }
-    return [getImageUrl(product.image || product.imageUrl || "")];
+    const mainImageUrl = getImageUrl(product.image || product.imageUrl || "");
+    return mainImageUrl ? [mainImageUrl] : [];
   }, [product.images, product.image, product.imageUrl]);
 
 
@@ -165,13 +166,15 @@ export default function ProductDetailDesktop({
                 borderRadius: 3,
                 overflow: "hidden"
               }}>
-                <Image
-                  src={productImages[currentImageIndex]}
-                  alt={product.name}
-                  fill
-                  style={{ objectFit: "contain", zIndex: 2 }}
-                  priority
-                />
+                {productImages.length > 0 && productImages[currentImageIndex] && (
+                  <Image
+                    src={productImages[currentImageIndex]}
+                    alt={product.name}
+                    fill
+                    style={{ objectFit: "contain", zIndex: 2 }}
+                    priority
+                  />
+                )}
                 
                 {/* Discount Badge */}
                 {discountPercent > 0 && (
@@ -240,12 +243,14 @@ export default function ProductDetailDesktop({
                       borderRadius: 2,
                       overflow: "hidden"
                     }}>
-                      <Image
-                        src={image}
-                        alt={`${product.name} ${index + 1}`}
-                        fill
-                        style={{ objectFit: "cover", borderRadius: 8, zIndex: 1 }}
-                      />
+                      {image && (
+                        <Image
+                          src={image}
+                          alt={`${product.name} ${index + 1}`}
+                          fill
+                          style={{ objectFit: "cover", borderRadius: 8, zIndex: 1 }}
+                        />
+                      )}
                     </Box>
                   </Card>
                 ))}

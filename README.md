@@ -11,6 +11,19 @@ A modern, mobile-first pet e-commerce website built with Next.js 15, TypeScript,
 - **Search Functionality**: Search pets with collapsible search bar
 - **Favorites**: Mark pets as favorites
 - **Modern UI**: Clean, modern interface with smooth animations
+- **LINE Integration**: 
+  - LINE Login for authentication
+  - LINE LIFF for seamless mobile experience
+  - LINE Messaging API for order receipts
+  - **Admin Notifications**: Auto-notify admin on new orders
+- **Payment Integration**:
+  - Stripe payment gateway for credit cards
+  - Bank transfer support
+  - Deposit payment for pets
+- **Order Management**:
+  - Real-time order status tracking
+  - Automatic receipt delivery via LINE
+  - Admin notification system for new orders
 
 ## 🎨 Design
 
@@ -27,6 +40,11 @@ A modern, mobile-first pet e-commerce website built with Next.js 15, TypeScript,
 - **Styling**: Emotion (CSS-in-JS)
 - **Icons**: Material-UI Icons
 - **Font**: Prompt (Google Fonts)
+- **Database**: MySQL with Prisma ORM
+- **Authentication**: NextAuth.js with LINE provider
+- **Payment**: Stripe API
+- **Messaging**: LINE Messaging API
+- **LIFF**: LINE Front-end Framework
 
 ## 📱 Pages
 
@@ -47,12 +65,33 @@ cd corgi-shop
 npm install
 ```
 
-3. Run the development server:
+3. Set up environment variables:
+```bash
+cp .env.local.example .env.local
+```
+
+Edit `.env.local` and configure:
+- Database connection (MySQL)
+- NextAuth settings
+- LINE credentials (Client ID, Secret, LIFF ID)
+- LINE Messaging API (Channel Access Token)
+- **LINE_ADMIN_USER_ID** (for admin notifications)
+- Stripe keys (Public & Secret)
+
+See [docs/LINE_ADMIN_NOTIFICATION.md](docs/LINE_ADMIN_NOTIFICATION.md) for LINE admin setup.
+
+4. Set up database:
+```bash
+npx prisma migrate dev
+npx prisma db seed
+```
+
+5. Run the development server:
 ```bash
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+6. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 📁 Project Structure
 
@@ -131,6 +170,38 @@ The app is ready for deployment on platforms like:
 - Netlify
 - AWS Amplify
 - Any Node.js hosting platform
+
+### Environment Variables for Production
+
+Make sure to set these in your hosting platform:
+- `DATABASE_URL`
+- `NEXTAUTH_URL` (your production domain)
+- `NEXTAUTH_SECRET`
+- `LINE_CLIENT_ID`, `LINE_CLIENT_SECRET`
+- `LINE_CHANNEL_ACCESS_TOKEN`
+- `LINE_ADMIN_USER_ID` (for admin notifications)
+- `NEXT_PUBLIC_LIFF_ID`
+- `STRIPE_SECRET_KEY`, `NEXT_PUBLIC_STRIPE_PUBLIC_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+
+## 📚 Documentation
+
+- [LINE Admin Notification Setup](docs/LINE_ADMIN_NOTIFICATION.md) - How to set up admin notifications
+- [How to Get LINE User ID](docs/HOW_TO_GET_LINE_USER_ID.md) - Step-by-step guide to find your LINE User ID
+
+## 💡 New Features
+
+### Admin Notification System
+When a customer places an order (via credit card or bank transfer), the system automatically sends:
+
+1. **To Customer**: Full receipt with order details, payment summary, and shipping info
+2. **To Admin**: Concise notification with:
+   - Order number and customer info
+   - Total amount to collect
+   - Payment status (paid/pending)
+   - Quick link to admin panel
+
+See [docs/LINE_ADMIN_NOTIFICATION.md](docs/LINE_ADMIN_NOTIFICATION.md) for setup instructions.
 
 ## 🤝 Contributing
 

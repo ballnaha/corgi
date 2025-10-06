@@ -20,6 +20,8 @@ export async function GET() {
         imageAlt: true,
         background: true,
         linkUrl: true,
+        bannerUrl: true,
+        bannerType: true,
         sortOrder: true,
       }
     });

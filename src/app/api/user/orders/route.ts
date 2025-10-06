@@ -134,7 +134,7 @@ export async function GET() {
             items: order.orderItems.map((item) => {
                 // Get main image from product_images where is_main = true
                 const mainImage = item.product.images?.find(img => img.isMain);
-                const imageUrl = mainImage?.imageUrl || item.product.imageUrl || '';
+                const imageUrl = mainImage?.imageUrl || item.product.imageUrl || null;
                 
                 return {
                     id: item.id,

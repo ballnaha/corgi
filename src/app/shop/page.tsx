@@ -290,17 +290,17 @@ export default function ShopPage() {
           
         }}
       >
+        {/* Banner Section with Container */}
+        <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
+          <BannerSection />
+        </Container>
+
         {/* Category Filter with Container */}
         <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
           <CategoryFilter
             selectedCategory={selectedCategory}
             onCategoryChange={setSelectedCategory}
           />
-        </Container>
-
-        {/* Banner Section with Container */}
-        <Container maxWidth={false} sx={{ maxWidth: 1200, px: { xs: 2, md: 3 } }}>
-          <BannerSection />
         </Container>
 
         {loading ? (
