@@ -52,6 +52,13 @@ export async function POST(request: NextRequest) {
     const originalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const filename = `${timestamp}_${originalName}`;
 
+    console.log(`📤 Upload request:`, {
+      originalFilename: file.name,
+      sanitizedFilename: filename,
+      size: `${(file.size / 1024).toFixed(2)} KB`,
+      type: file.type,
+    });
+
     // Determine upload directory based on usage
     const usage = formData.get("usage") as string || "products";
     const oldImageUrl = formData.get("oldImageUrl") as string; // For deleting old image
@@ -67,7 +74,11 @@ export async function POST(request: NextRequest) {
       uploadDir = path.join(process.cwd(), "public", "uploads", "products");
     }
     
+    console.log(`📁 Upload directory:`, uploadDir);
+    console.log(`🔧 Usage type:`, usage);
+    
     await mkdir(uploadDir, { recursive: true });
+    console.log(`✅ Directory ready`);
 
     // Delete old image if provided
     if (oldImageUrl && oldImageUrl.startsWith('/uploads/')) {
@@ -152,9 +163,7 @@ export async function POST(request: NextRequest) {
       await writeFile(filePath, processedBuffer);
       
       // Log successful upload in development
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`✅ Saved image: ${filePath}`);
-      }
+      console.log(`✅ Saved: ${sizeFilename} (${(processedBuffer.length / 1024).toFixed(2)} KB) -> ${filePath}`);
 
       let uploadPath: string;
       if (isForBlog) {
@@ -178,7 +187,9 @@ export async function POST(request: NextRequest) {
     const mainImage = savedImages.find(img => img.size === "large") || savedImages[0];
     
     // Log upload success
-    console.log(`✅ Upload successful: ${mainImage.url}`);
+    console.log(`✅ Upload complete!`);
+    console.log(`📸 Main image URL: ${mainImage.url}`);
+    console.log(`📦 All images:`, savedImages.map(img => `${img.size}: ${img.url}`));
     
     let message: string;
     let aspectRatio: string;
