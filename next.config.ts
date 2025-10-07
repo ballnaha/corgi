@@ -57,15 +57,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Remove unnecessary rewrites for static files
-  // async rewrites() {
-  //   return [
-  //     {
-  //       source: "/uploads/:path*", 
-  //       destination: "/uploads/:path*",
-  //     },
-  //   ];
-  // },
+  async rewrites() {
+    return [
+      {
+        source: '/uploads/:path*',
+        destination: '/api/images/uploads/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

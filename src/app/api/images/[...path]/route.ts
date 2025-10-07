@@ -14,6 +14,8 @@ export async function GET(
   try {
     const imagePath = resolvedParams.path.join('/');
     
+    console.log(`🖼️ Image API request: /api/images/${imagePath}`);
+    
     // Security check: prevent directory traversal
     if (imagePath.includes('..') || imagePath.includes('\\')) {
       return new NextResponse('Forbidden', { status: 403 });
@@ -30,8 +32,12 @@ export async function GET(
       filePath = path.join(process.cwd(), 'public', 'images', imagePath);
     }
 
+    console.log(`📁 Attempting to read: ${filePath}`);
+
     try {
       const fileBuffer = await readFile(filePath);
+      
+      console.log(`✅ File found, serving: ${imagePath}`);
       
       // Determine content type based on file extension
       const ext = path.extname(imagePath).toLowerCase();
@@ -67,7 +73,8 @@ export async function GET(
         },
       });
     } catch (fileError) {
-      console.error('File not found:', filePath, fileError);
+      console.error(`❌ File not found at: ${filePath}`);
+      console.error(`❌ Error details:`, fileError);
       
       // Try alternative file paths for blog images
       if (imagePath.includes('blog/')) {
