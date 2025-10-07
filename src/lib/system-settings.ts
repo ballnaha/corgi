@@ -5,12 +5,12 @@ import { prisma } from "./prisma";
  */
 export async function getSystemSetting(key: string): Promise<string | null> {
   try {
-    const settings = await prisma.$queryRaw<any[]>`
-      SELECT value FROM system_settings WHERE \`key\` = ${key}
-    `;
-    return settings[0]?.value || null;
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key },
+    });
+    return setting?.value || null;
   } catch (error) {
-    console.error(`Error fetching system setting ${key}:`, error);
+    console.error(`❌ Error fetching system setting ${key}:`, error);
     return null;
   }
 }
@@ -58,28 +58,46 @@ export async function getDepositSettings() {
  */
 export async function updateSystemSetting(key: string, value: string, type: string = "string", category: string = "general"): Promise<boolean> {
   try {
+    console.log(`📝 Updating system setting: ${key} = ${value} (type: ${type}, category: ${category})`);
+    
     // ตรวจสอบว่า key มีอยู่หรือไม่
-    const existing = await prisma.$queryRaw<any[]>`
-      SELECT id FROM system_settings WHERE \`key\` = ${key}
-    `;
+    const existing = await prisma.systemSetting.findUnique({
+      where: { key },
+    });
 
-    if (existing.length > 0) {
+    if (existing) {
       // อัปเดต
-      await prisma.$executeRaw`
-        UPDATE system_settings 
-        SET value = ${value}, updated_at = NOW()
-        WHERE \`key\` = ${key}
-      `;
+      await prisma.systemSetting.update({
+        where: { key },
+        data: {
+          value,
+          type,
+          category,
+          updatedAt: new Date(),
+        },
+      });
+      console.log(`✅ Updated system setting: ${key}`);
     } else {
       // สร้างใหม่
-      await prisma.$executeRaw`
-        INSERT INTO system_settings (\`key\`, value, type, category, is_active, created_at, updated_at)
-        VALUES (${key}, ${value}, ${type}, ${category}, true, NOW(), NOW())
-      `;
+      await prisma.systemSetting.create({
+        data: {
+          key,
+          value,
+          type,
+          category,
+          isActive: true,
+        },
+      });
+      console.log(`✅ Created system setting: ${key}`);
     }
     return true;
-  } catch (error) {
-    console.error(`Error updating system setting ${key}:`, error);
+  } catch (error: any) {
+    console.error(`❌ Error updating system setting ${key}:`, error);
+    console.error(`❌ Error details:`, {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+    });
     return false;
   }
 }
@@ -115,11 +133,21 @@ export async function initializeDepositSettings() {
   for (const setting of defaultSettings) {
     const exists = await getSystemSetting(setting.key);
     if (!exists) {
-      await prisma.$executeRaw`
-        INSERT INTO system_settings (\`key\`, value, type, category, description, is_active, created_at, updated_at)
-        VALUES (${setting.key}, ${setting.value}, ${setting.type}, ${setting.category}, ${setting.description}, true, NOW(), NOW())
-      `;
-      console.log(`Created default system setting: ${setting.key}`);
+      try {
+        await prisma.systemSetting.create({
+          data: {
+            key: setting.key,
+            value: setting.value,
+            type: setting.type,
+            category: setting.category,
+            description: setting.description,
+            isActive: true,
+          },
+        });
+        console.log(`✅ Created default system setting: ${setting.key}`);
+      } catch (error) {
+        console.error(`❌ Error creating default setting ${setting.key}:`, error);
+      }
     }
   }
 }
@@ -129,13 +157,15 @@ export async function initializeDepositSettings() {
  */
 export async function getAllSystemSettings() {
   try {
-    const settings = await prisma.$queryRaw<any[]>`
-      SELECT * FROM system_settings 
-      ORDER BY category ASC, \`key\` ASC
-    `;
+    const settings = await prisma.systemSetting.findMany({
+      orderBy: [
+        { category: 'asc' },
+        { key: 'asc' },
+      ],
+    });
     return settings;
   } catch (error) {
-    console.error("Error fetching all system settings:", error);
+    console.error("❌ Error fetching all system settings:", error);
     return [];
   }
 }
@@ -145,14 +175,13 @@ export async function getAllSystemSettings() {
  */
 export async function getSystemSettingsByCategory(category: string) {
   try {
-    const settings = await prisma.$queryRaw<any[]>`
-      SELECT * FROM system_settings 
-      WHERE category = ${category}
-      ORDER BY \`key\` ASC
-    `;
+    const settings = await prisma.systemSetting.findMany({
+      where: { category },
+      orderBy: { key: 'asc' },
+    });
     return settings;
   } catch (error) {
-    console.error(`Error fetching system settings for category ${category}:`, error);
+    console.error(`❌ Error fetching system settings for category ${category}:`, error);
     return [];
   }
 }
@@ -162,18 +191,28 @@ export async function getSystemSettingsByCategory(category: string) {
  */
 export async function createSystemSetting(key: string, value: string, type: string = "string", category: string = "general", description?: string) {
   try {
-    const result = await prisma.$executeRaw`
-      INSERT INTO system_settings (\`key\`, value, type, category, description, is_active, created_at, updated_at)
-      VALUES (${key}, ${value}, ${type}, ${category}, ${description || null}, true, NOW(), NOW())
-    `;
+    console.log(`📝 Creating system setting: ${key} = ${value}`);
     
-    // ดึงข้อมูลที่เพิ่งสร้าง
-    const settings = await prisma.$queryRaw<any[]>`
-      SELECT * FROM system_settings WHERE \`key\` = ${key}
-    `;
-    return settings[0];
-  } catch (error) {
-    console.error(`Error creating system setting ${key}:`, error);
+    const setting = await prisma.systemSetting.create({
+      data: {
+        key,
+        value,
+        type,
+        category,
+        description: description || null,
+        isActive: true,
+      },
+    });
+    
+    console.log(`✅ Created system setting: ${key}`);
+    return setting;
+  } catch (error: any) {
+    console.error(`❌ Error creating system setting ${key}:`, error);
+    console.error(`❌ Error details:`, {
+      message: error.message,
+      code: error.code,
+      meta: error.meta,
+    });
     throw error;
   }
 }
