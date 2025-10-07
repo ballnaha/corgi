@@ -21,7 +21,12 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
     console.log("Notification ID:", params.notificationId);
 
     const session = await getServerSession(authOptions);
-    console.log("Session user:", session?.user?.id);
+    console.log("Session user:", {
+      id: session?.user?.id,
+      lineUserId: session?.user?.lineUserId,
+      isAdmin: session?.user?.isAdmin,
+      role: session?.user?.role
+    });
 
     // ตรวจสอบว่าผู้ใช้ login แล้วและเป็น admin
     if (!session?.user?.id) {
@@ -32,21 +37,20 @@ export async function DELETE(request: NextRequest, context: RouteParams) {
       );
     }
 
-    // ตรวจสอบสิทธิ์ admin - ใช้ lineUserId แทน id
-    const user = await prisma.user.findUnique({
-      where: { lineUserId: session.user.id },
-      select: { isAdmin: true, role: true, displayName: true, email: true }
-    });
-
-    console.log("User admin status:", { isAdmin: user?.isAdmin, role: user?.role, user: user?.displayName });
-
-    if (!user?.isAdmin || user.role !== 'ADMIN') {
-      console.log("❌ Forbidden - Not admin");
+    // ตรวจสอบสิทธิ์ admin - ใช้ข้อมูลจาก session โดยตรง
+    if (!session.user.isAdmin && !session.user.role?.includes("ADMIN")) {
+      console.log("❌ Forbidden - Not admin", {
+        isAdmin: session.user.isAdmin,
+        role: session.user.role
+      });
       return NextResponse.json(
         { error: "Forbidden - Admin access required" },
         { status: 403 }
       );
     }
+
+    console.log("✅ Admin access granted");
+
 
     const { notificationId } = params;
 
