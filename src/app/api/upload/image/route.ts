@@ -3,11 +3,23 @@ import { writeFile, mkdir, unlink, access } from "fs/promises";
 import path from "path";
 import sharp from "sharp";
 import { requireAdmin } from "@/lib/admin-utils";
+import { isLocalStorageAvailable, logStorageInfo } from "@/lib/upload-storage";
 
 export async function POST(request: NextRequest) {
   try {
     // Check admin authorization
     await requireAdmin();
+
+    // Log storage configuration (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      await logStorageInfo();
+    }
+
+    // Check if local storage is available
+    const storageAvailable = await isLocalStorageAvailable();
+    if (!storageAvailable) {
+      console.error('❌ Local storage is not available. Please check permissions or use cloud storage.');
+    }
 
     const formData = await request.formData();
     const file = formData.get("image") as File;
@@ -138,6 +150,11 @@ export async function POST(request: NextRequest) {
 
       const filePath = path.join(uploadDir, sizeFilename);
       await writeFile(filePath, processedBuffer);
+      
+      // Log successful upload in development
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`✅ Saved image: ${filePath}`);
+      }
 
       let uploadPath: string;
       if (isForBlog) {
@@ -159,6 +176,9 @@ export async function POST(request: NextRequest) {
 
     // Return the large image URL as the main URL for easier usage
     const mainImage = savedImages.find(img => img.size === "large") || savedImages[0];
+    
+    // Log upload success
+    console.log(`✅ Upload successful: ${mainImage.url}`);
     
     let message: string;
     let aspectRatio: string;
@@ -182,7 +202,12 @@ export async function POST(request: NextRequest) {
       aspectRatio: aspectRatio,
     });
   } catch (error: any) {
-    console.error("Error uploading image:", error);
+    console.error("❌ Error uploading image:", error);
+    console.error("Error details:", {
+      message: error.message,
+      stack: error.stack,
+      code: error.code
+    });
 
     // Handle admin authorization error
     if (error.message === "Unauthorized: Admin access required") {
